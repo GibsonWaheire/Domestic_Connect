@@ -164,15 +164,15 @@ const ProfileModal = ({ isOpen, onClose, housegirl }: ProfileModalProps) => {
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">
-                      <div className="w-24 h-24 bg-blue-100 rounded-full flex items-center justify-center">
+                      <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center">
                         {housegirl.image ? (
                           <img 
                             src={housegirl.image} 
                             alt={housegirl.name}
-                            className="w-24 h-24 rounded-full object-cover"
+                            className="w-32 h-32 rounded-full object-cover"
                           />
                         ) : (
-                          <User className="h-12 w-12 text-blue-600" />
+                          <User className="h-16 w-16 text-blue-600" />
                         )}
                       </div>
                       <div className="flex-1">
