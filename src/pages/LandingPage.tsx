@@ -89,6 +89,9 @@ const LandingPage = () => {
                   <span className="text-sm text-gray-600">
                     Karibu, {user.first_name}
                   </span>
+                  <Button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-full">
+                    Go to Dashboard
+                  </Button>
                   <Button variant="outline" onClick={signOut} className="border-pink-300 hover:bg-pink-50 rounded-full">
                     Logout
                   </Button>
@@ -130,14 +133,25 @@ const LandingPage = () => {
           </p>
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
-            <Button 
-              onClick={() => openAuthModal('signup')}
-              size="lg" 
-              className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-            >
-              <User className="h-6 w-6 mr-3" />
-              Find My Perfect Housegirl →
-            </Button>
+            {user ? (
+              <Button 
+                onClick={() => navigate('/dashboard')}
+                size="lg" 
+                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <User className="h-6 w-6 mr-3" />
+                Go to Dashboard →
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => openAuthModal('signup')}
+                size="lg" 
+                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <User className="h-6 w-6 mr-3" />
+                Find My Perfect Housegirl →
+              </Button>
+            )}
           </div>
           
           <div className="flex items-center justify-center space-x-8 text-sm text-gray-500">
@@ -252,14 +266,25 @@ const LandingPage = () => {
             <p className="text-xl text-gray-600 mb-8">
               Join thousands of happy families who found their perfect housegirl for just <span className="text-pink-600 font-bold text-2xl">200 bob</span>
             </p>
-            <Button 
-              onClick={() => openAuthModal('signup')}
-              size="lg" 
-              className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-            >
-              <User className="h-6 w-6 mr-3" />
-              Start My Search Now →
-            </Button>
+            {user ? (
+              <Button 
+                onClick={() => navigate('/dashboard')}
+                size="lg" 
+                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <User className="h-6 w-6 mr-3" />
+                Go to Dashboard →
+              </Button>
+            ) : (
+              <Button 
+                onClick={() => openAuthModal('signup')}
+                size="lg" 
+                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+              >
+                <User className="h-6 w-6 mr-3" />
+                Start My Search Now →
+              </Button>
+            )}
           </div>
         </div>
       </section>
