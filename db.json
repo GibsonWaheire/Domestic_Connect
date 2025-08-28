@@ -1,0 +1,79 @@
+{
+  "profiles": [
+    {
+      "id": "1",
+      "user_id": "user1",
+      "first_name": "John",
+      "last_name": "Doe",
+      "email": "john@example.com",
+      "phone_number": "+1234567890",
+      "user_type": "employer",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "employer_profiles": [
+    {
+      "id": "1",
+      "profile_id": "1",
+      "company_name": "Sample Company",
+      "location": "New York",
+      "description": "A sample company looking for domestic help",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "housegirl_profiles": [
+    {
+      "id": "1",
+      "profile_id": "2",
+      "age": 25,
+      "bio": "Experienced domestic worker",
+      "current_location": "Los Angeles",
+      "location": "Los Angeles",
+      "education": "diploma",
+      "experience": "3_years",
+      "expected_salary": 2500,
+      "accommodation_type": "live_in",
+      "tribe": "Sample",
+      "is_available": true,
+      "profile_photo_url": null,
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "agency_profiles": [
+    {
+      "id": "1",
+      "profile_id": "3",
+      "agency_name": "Sample Agency",
+      "location": "Chicago",
+      "description": "Professional domestic worker agency",
+      "license_number": "LIC123456",
+      "created_at": "2024-01-01T00:00:00.000Z",
+      "updated_at": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "payment_packages": [
+    {
+      "id": "1",
+      "name": "Basic Package",
+      "description": "Access to 10 contacts",
+      "price": 29.99,
+      "contacts_included": 10,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "2",
+      "name": "Premium Package",
+      "description": "Access to 50 contacts",
+      "price": 79.99,
+      "contacts_included": 50,
+      "is_active": true,
+      "created_at": "2024-01-01T00:00:00.000Z"
+    }
+  ],
+  "user_purchases": [],
+  "contact_access": []
+}
