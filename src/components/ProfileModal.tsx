@@ -7,6 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAuth } from '@/hooks/useAuth';
 import { initiateMpesaPayment, initiateCardPayment, PaymentResponse } from '@/lib/payment';
 import { toast } from '@/hooks/use-toast';
+import ReturnToHome from '@/components/ReturnToHome';
 import { 
   User, 
   MapPin, 
@@ -139,13 +140,11 @@ const ProfileModal = ({ isOpen, onClose, housegirl }: ProfileModalProps) => {
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <DialogTitle className="text-2xl font-bold text-gray-900">
               {housegirl.name}'s Profile
             </DialogTitle>
-            <Button variant="ghost" size="sm" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
+            <ReturnToHome variant="ghost" size="sm" className="text-gray-500 hover:text-gray-700" />
           </div>
         </DialogHeader>
 
