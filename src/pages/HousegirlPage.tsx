@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import AuthModal from '@/components/AuthModal';
 import PhotoUpload from '@/components/PhotoUpload';
+import ReturnToHome from '@/components/ReturnToHome';
 import { 
   Heart, 
   User, 
@@ -57,6 +58,8 @@ const HousegirlPage = () => {
                   Domestic Connect
                 </h1>
               </div>
+              
+              <ReturnToHome variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50" />
               
               <nav className="hidden md:flex items-center space-x-6">
                 <Button variant="ghost" className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-full" onClick={() => navigate('/')}>
