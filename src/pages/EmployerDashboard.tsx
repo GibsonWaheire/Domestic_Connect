@@ -90,7 +90,7 @@ const mockHousegirls = [
     experience: "5 Years",
     education: "University",
     salary: "KES 12,000",
-    accommodation: "Live-out",
+    accommodation: "Day Worker",
     status: "Available",
     image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
     bio: "University-educated house help with extensive experience in modern household management and childcare.",
@@ -147,7 +147,7 @@ const mockHousegirls = [
     experience: "2 Years",
     education: "Form 4 and Above",
     salary: "KES 7,500",
-    accommodation: "Live-out",
+    accommodation: "Day Worker",
     status: "Available",
     image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
     bio: "Young and energetic house help with fresh ideas and modern approaches to domestic work. Very reliable.",
@@ -367,295 +367,458 @@ const EmployerDashboard = () => {
       </header>
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Compact Filters Section */}
-        <Card className="mb-6 border-gray-200 shadow-sm">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Search & Filters</h2>
-              <Button 
-                variant="ghost" 
-                onClick={resetFilters}
-                size="sm"
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <FilterX className="h-4 w-4 mr-1" />
-                Reset
-              </Button>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* Enhanced Header Section */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-2">Find Your Perfect Housegirl</h2>
+              <p className="text-sm text-gray-600">Browse through verified profiles and find the right match for your household</p>
             </div>
-            
-            {/* Compact Filter Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-              <div>
-                <Input
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-9 text-sm border-gray-300 focus:border-blue-500"
-                />
+            <div className="flex items-center space-x-3">
+              <div className="text-right">
+                <div className="text-2xl font-bold text-blue-600">{filteredHousegirls.length}</div>
+                <div className="text-sm text-gray-500">Available Profiles</div>
               </div>
-              <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Locations">All Locations</SelectItem>
-                  <SelectItem value="Nairobi">Nairobi</SelectItem>
-                  <SelectItem value="Mombasa">Mombasa</SelectItem>
-                  <SelectItem value="Kisumu">Kisumu</SelectItem>
-                  <SelectItem value="Nakuru">Nakuru</SelectItem>
-                  <SelectItem value="Bungoma">Bungoma</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.experience} onValueChange={(value) => handleFilterChange('experience', value)}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Experience" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Experience Levels">All Experience</SelectItem>
-                  <SelectItem value="1 Year">1 Year</SelectItem>
-                  <SelectItem value="2 Years">2 Years</SelectItem>
-                  <SelectItem value="3 Years">3 Years</SelectItem>
-                  <SelectItem value="4 Years">4 Years</SelectItem>
-                  <SelectItem value="5+ Years">5+ Years</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.accommodation} onValueChange={(value) => handleFilterChange('accommodation', value)}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Accommodation" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Types">All Types</SelectItem>
-                  <SelectItem value="Live-in">Live-in</SelectItem>
-                  <SelectItem value="Live-out">Live-out</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.community} onValueChange={(value) => handleFilterChange('community', value)}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Community" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Communities">All Communities</SelectItem>
-                  <SelectItem value="Kikuyu">Kikuyu</SelectItem>
-                  <SelectItem value="Luo">Luo</SelectItem>
-                  <SelectItem value="Luhya">Luhya</SelectItem>
-                  <SelectItem value="Kamba">Kamba</SelectItem>
-                  <SelectItem value="Taita">Taita</SelectItem>
-                  <SelectItem value="Meru">Meru</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.education} onValueChange={(value) => handleFilterChange('education', value)}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Education" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Levels">All Levels</SelectItem>
-                  <SelectItem value="Class 8 and Above">Class 8+</SelectItem>
-                  <SelectItem value="Form 4 and Above">Form 4+</SelectItem>
-                  <SelectItem value="Diploma">Diploma</SelectItem>
-                  <SelectItem value="University">University</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange('salaryRange', value)}>
-                <SelectTrigger className="h-9 text-sm border-gray-300 focus:border-blue-500">
-                  <SelectValue placeholder="Salary" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="All Salaries">All Salaries</SelectItem>
-                  <SelectItem value="KES 5,000 - 8,000">KES 5K-8K</SelectItem>
-                  <SelectItem value="KES 8,000 - 12,000">KES 8K-12K</SelectItem>
-                  <SelectItem value="KES 12,000 - 15,000">KES 12K-15K</SelectItem>
-                  <SelectItem value="KES 15,000+">KES 15K+</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
+                <Users className="h-6 w-6 text-white" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Agency Advert Section */}
+        <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-emerald-50 to-teal-50">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">Need Professional Help?</h3>
+                  <p className="text-sm text-gray-600">Want to contact an agency and get a verified caregiver or housegirl?</p>
+                </div>
+              </div>
+              <Button 
+                onClick={() => navigate('/agencies')}
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium px-6"
+              >
+                <Building2 className="h-4 w-4 mr-2" />
+                Contact Agencies
+              </Button>
             </div>
           </CardContent>
         </Card>
 
-        {/* Results Count */}
-        <div className="mb-4">
-          <p className="text-sm text-gray-600">
-            Showing <span className="font-medium text-blue-600">{indexOfFirstProfile + 1}-{Math.min(indexOfLastProfile, filteredHousegirls.length)}</span> of <span className="font-medium text-blue-600">{filteredHousegirls.length}</span> available housegirls
-            {totalPages > 1 && (
-              <span className="ml-2 text-gray-500">
-                (Page {currentPage} of {totalPages})
-              </span>
-            )}
-          </p>
+        {/* Enhanced Filters Section */}
+        <Card className="mb-8 border-0 shadow-lg bg-gradient-to-r from-white to-blue-50">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Filter className="h-5 w-5 text-blue-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">Advanced Search & Filters</h3>
+              </div>
+              <Button 
+                variant="outline" 
+                onClick={resetFilters}
+                size="sm"
+                className="border-blue-300 text-blue-600 hover:bg-blue-50"
+              >
+                <FilterX className="h-4 w-4 mr-2" />
+                Clear All Filters
+              </Button>
+            </div>
+            
+            {/* Mobile-Friendly Single Row Filter Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
+              {/* Search Input - Full Width on Mobile */}
+              <div className="lg:col-span-2 xl:col-span-1">
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Search</label>
+                <div className="relative">
+                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  <Input
+                    placeholder="Name, location, skills..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-9 pl-7 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                  />
+                </div>
+              </div>
+              
+              {/* Location Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Location</label>
+                <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
+                  <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
+                    <SelectValue placeholder="Location" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Locations">All Locations</SelectItem>
+                    <SelectItem value="Nairobi">Nairobi</SelectItem>
+                    <SelectItem value="Mombasa">Mombasa</SelectItem>
+                    <SelectItem value="Kisumu">Kisumu</SelectItem>
+                    <SelectItem value="Nakuru">Nakuru</SelectItem>
+                    <SelectItem value="Bungoma">Bungoma</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Experience Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Experience</label>
+                <Select value={filters.experience} onValueChange={(value) => handleFilterChange('experience', value)}>
+                  <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
+                    <SelectValue placeholder="Experience" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Experience Levels">All Experience</SelectItem>
+                    <SelectItem value="1 Year">1 Year</SelectItem>
+                    <SelectItem value="2 Years">2 Years</SelectItem>
+                    <SelectItem value="3 Years">3 Years</SelectItem>
+                    <SelectItem value="4 Years">4 Years</SelectItem>
+                    <SelectItem value="5+ Years">5+ Years</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Accommodation Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Type</label>
+                <Select value={filters.accommodation} onValueChange={(value) => handleFilterChange('accommodation', value)}>
+                  <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
+                    <SelectValue placeholder="Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Types">All Types</SelectItem>
+                    <SelectItem value="Live-in">Live-in</SelectItem>
+                    <SelectItem value="Day Worker">Day Worker</SelectItem>
+                    <SelectItem value="Part-time">Part-time</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Community Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Community</label>
+                <Select value={filters.community} onValueChange={(value) => handleFilterChange('community', value)}>
+                  <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
+                    <SelectValue placeholder="Community" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Communities">All Communities</SelectItem>
+                    <SelectItem value="Kikuyu">Kikuyu</SelectItem>
+                    <SelectItem value="Luo">Luo</SelectItem>
+                    <SelectItem value="Luhya">Luhya</SelectItem>
+                    <SelectItem value="Kamba">Kamba</SelectItem>
+                    <SelectItem value="Kisii">Kisii</SelectItem>
+                    <SelectItem value="Meru">Meru</SelectItem>
+                    <SelectItem value="Embu">Embu</SelectItem>
+                    <SelectItem value="Tharaka">Tharaka</SelectItem>
+                    <SelectItem value="Mijikenda">Mijikenda</SelectItem>
+                    <SelectItem value="Taita">Taita</SelectItem>
+                    <SelectItem value="Pokomo">Pokomo</SelectItem>
+                    <SelectItem value="Orma">Orma</SelectItem>
+                    <SelectItem value="Rendile">Rendile</SelectItem>
+                    <SelectItem value="Samburu">Samburu</SelectItem>
+                    <SelectItem value="Maasai">Maasai</SelectItem>
+                    <SelectItem value="Turkana">Turkana</SelectItem>
+                    <SelectItem value="Kalenjin">Kalenjin</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Education Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Education</label>
+                <Select value={filters.education} onValueChange={(value) => handleFilterChange('education', value)}>
+                  <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
+                    <SelectValue placeholder="Education" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Levels">All Levels</SelectItem>
+                    <SelectItem value="Class 8 and Above">Class 8+</SelectItem>
+                    <SelectItem value="Form 4 and Above">Form 4+</SelectItem>
+                    <SelectItem value="Diploma">Diploma</SelectItem>
+                    <SelectItem value="University">University</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              {/* Salary Filter */}
+              <div>
+                <label className="text-xs font-medium text-gray-600 mb-1 block">Salary</label>
+                <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange('salaryRange', value)}>
+                  <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
+                    <SelectValue placeholder="Salary" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="All Salaries">All Salaries</SelectItem>
+                    <SelectItem value="KES 5,000 - 8,000">KES 5K-8K</SelectItem>
+                    <SelectItem value="KES 8,000 - 12,000">KES 8K-12K</SelectItem>
+                    <SelectItem value="KES 12,000 - 15,000">KES 12K-15K</SelectItem>
+                    <SelectItem value="KES 15,000+">KES 15K+</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Enhanced Results Count */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className="w-3 h-3 bg-green-500 rounded-full"></div>
+                <span className="text-sm font-medium text-gray-700">
+                  Showing <span className="text-blue-600">{indexOfFirstProfile + 1}-{Math.min(indexOfLastProfile, filteredHousegirls.length)}</span> of <span className="text-blue-600">{filteredHousegirls.length}</span> profiles
+                </span>
+              </div>
+              {totalPages > 1 && (
+                <Badge variant="outline" className="border-blue-200 text-blue-700 bg-blue-50">
+                  Page {currentPage} of {totalPages}
+                </Badge>
+              )}
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <Clock className="h-4 w-4" />
+              <span>Last updated: {new Date().toLocaleDateString()}</span>
+            </div>
+          </div>
         </div>
 
-        {/* Housegirls Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Enhanced Housegirls Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {currentProfiles.map((housegirl) => (
-            <Card key={housegirl.id} className="hover:shadow-md transition-shadow duration-200 border-gray-200">
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200">
-                      {housegirl.image ? (
-                        <img 
-                          src={housegirl.image} 
-                          alt={housegirl.name}
-                          className="w-12 h-12 object-cover"
-                        />
-                      ) : (
-                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                          <User className="h-6 w-6 text-blue-600" />
-                        </div>
-                      )}
+            <Card key={housegirl.id} className="group hover:shadow-xl transition-all duration-300 border-0 bg-white hover:bg-gradient-to-br hover:from-white hover:to-blue-50">
+              <CardHeader className="pb-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex items-center space-x-4">
+                    <div className="relative">
+                      <div className="w-16 h-16 rounded-full overflow-hidden border-3 border-blue-200 shadow-lg">
+                        {housegirl.image ? (
+                          <img 
+                            src={housegirl.image} 
+                            alt={housegirl.name}
+                            className="w-16 h-16 object-cover group-hover:scale-110 transition-transform duration-300"
+                          />
+                        ) : (
+                          <div className="w-16 h-16 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-full flex items-center justify-center">
+                            <User className="h-8 w-8 text-blue-600" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                        <div className="w-2 h-2 bg-white rounded-full"></div>
+                      </div>
                     </div>
                     <div>
-                      <h3 className="font-medium text-gray-900">{housegirl.name}</h3>
-                      <Badge className="bg-green-100 text-green-800 text-xs border-green-200">
+                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-700 transition-colors">{housegirl.name}</h3>
+                      <Badge className="bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border-green-200 text-xs font-medium">
                         {housegirl.status}
                       </Badge>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-2">
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSaveProfile(housegirl.id)}
-                      className="p-1 h-8 w-8 hover:bg-blue-50 text-blue-600"
+                      className="p-2 h-9 w-9 hover:bg-blue-50 text-blue-600 rounded-full"
+                      title="Save to Favorites"
                     >
                       <Bookmark className="h-4 w-4" />
                     </Button>
-                    <div className="p-1 bg-gray-100 rounded h-8 w-8 flex items-center justify-center">
-                      <Lock className="h-4 w-4 text-gray-500" />
+                    <div className="p-2 bg-gradient-to-r from-amber-100 to-orange-100 rounded-full h-9 w-9 flex items-center justify-center">
+                      <Lock className="h-4 w-4 text-amber-600" />
                     </div>
+                  </div>
+                </div>
+                
+                {/* Salary Highlight */}
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 border border-blue-100">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-blue-600">{housegirl.salary}</div>
+                    <div className="text-xs text-blue-500 font-medium">Expected Salary</div>
                   </div>
                 </div>
               </CardHeader>
               
               <CardContent className="pt-0">
-                <div className="grid grid-cols-2 gap-3 mb-4">
-                  <div className="space-y-1.5">
-                    <div className="text-sm">
-                      <span className="font-semibold text-blue-600">{housegirl.salary}</span>
+                {/* Key Details Grid */}
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-1.5 bg-blue-100 rounded-lg">
+                        <MapPin className="h-3 w-3 text-blue-600" />
+                      </div>
+                      <div className="text-xs">
+                        <div className="font-medium text-gray-900">{housegirl.location}</div>
+                        <div className="text-gray-500">{housegirl.nationality}</div>
+                      </div>
                     </div>
-                    <div className="flex items-center text-xs text-gray-600">
-                      <MapPin className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.nationality}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Home className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.community}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Calendar className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.age} years
+                    
+                    <div className="flex items-center space-x-2">
+                      <div className="p-1.5 bg-green-100 rounded-lg">
+                        <Home className="h-3 w-3 text-green-600" />
+                      </div>
+                      <div className="text-xs">
+                        <div className="font-medium text-gray-900">{housegirl.community}</div>
+                        <div className="text-gray-500">{housegirl.accommodation}</div>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="space-y-1.5">
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Home className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.accommodation}
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-1.5 bg-purple-100 rounded-lg">
+                        <Clock className="h-3 w-3 text-purple-600" />
+                      </div>
+                      <div className="text-xs">
+                        <div className="font-medium text-gray-900">{housegirl.experience}</div>
+                        <div className="text-gray-500">{housegirl.age} years old</div>
+                      </div>
                     </div>
-                    <div className="flex items-center text-xs text-gray-600">
-                      <MapPin className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.location}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-600">
-                      <Clock className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.experience}
-                    </div>
-                    <div className="flex items-center text-xs text-gray-600">
-                      <GraduationCap className="h-3 w-3 mr-1 text-gray-400" />
-                      {housegirl.education}
+                    
+                    <div className="flex items-center space-x-2">
+                      <div className="p-1.5 bg-orange-100 rounded-lg">
+                        <GraduationCap className="h-3 w-3 text-orange-600" />
+                      </div>
+                      <div className="text-xs">
+                        <div className="font-medium text-gray-900">{housegirl.education}</div>
+                        <div className="text-gray-500">Education Level</div>
+                      </div>
                     </div>
                   </div>
                 </div>
                 
-                <Button 
-                  onClick={() => handleViewProfile(housegirl)}
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-9"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  View Profile
-                </Button>
+                {/* Action Buttons */}
+                <div className="space-y-2">
+                  <Button 
+                    onClick={() => handleViewProfile(housegirl)}
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-medium h-10 group-hover:shadow-lg transition-all duration-300"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View Full Profile
+                  </Button>
+                  
+                  <div className="text-center">
+                    <span className="text-xs text-gray-500">
+                      Unlock contact details for KES 200
+                    </span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           ))}
         </div>
 
-        {/* No Results */}
+        {/* Enhanced No Results */}
         {filteredHousegirls.length === 0 && (
-          <div className="text-center py-12">
-            <div className="p-4 bg-gray-100 rounded-full inline-block mb-4">
-              <Search className="h-8 w-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No housegirls found</h3>
-            <p className="text-sm text-gray-600 mb-4">Try adjusting your filters or search terms</p>
-            <Button onClick={resetFilters} variant="outline" size="sm" className="border-gray-300 text-gray-600 hover:bg-gray-50">
-              Reset All Filters
-            </Button>
+          <div className="text-center py-16">
+            <Card className="max-w-md mx-auto border-0 shadow-lg bg-gradient-to-r from-gray-50 to-blue-50">
+              <CardContent className="p-8">
+                <div className="p-4 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full inline-block mb-6">
+                  <Search className="h-10 w-10 text-blue-600" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-3">No Profiles Found</h3>
+                <p className="text-gray-600 mb-6">Try adjusting your search criteria or filters to find more housegirls</p>
+                <div className="space-y-3">
+                  <Button 
+                    onClick={resetFilters} 
+                    variant="default" 
+                    size="lg" 
+                    className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  >
+                    <FilterX className="h-4 w-4 mr-2" />
+                    Reset All Filters
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="w-full border-blue-300 text-blue-600 hover:bg-blue-50"
+                    onClick={() => setSearchTerm('')}
+                  >
+                    Clear Search
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
 
-        {/* Pagination Controls */}
+        {/* Enhanced Pagination Controls */}
         {totalPages > 1 && (
-          <div className="mt-8 flex items-center justify-center">
-            <div className="flex items-center space-x-2">
-              {/* Previous Button */}
-              <Button
-                variant="outline"
-                onClick={goToPreviousPage}
-                disabled={currentPage === 1}
-                className="px-3 py-2 text-sm border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
+          <div className="mt-12 flex items-center justify-center">
+            <Card className="border-0 shadow-lg bg-gradient-to-r from-white to-blue-50">
+              <CardContent className="p-4">
+                <div className="flex items-center space-x-3">
+                  {/* Previous Button */}
+                  <Button
+                    variant="outline"
+                    onClick={goToPreviousPage}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 text-sm border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-full"
+                  >
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Previous
+                  </Button>
 
-              {/* Page Numbers */}
-              <div className="flex items-center space-x-1">
-                {Array.from({ length: totalPages }, (_, index) => {
-                  const pageNumber = index + 1;
-                  // Show first page, last page, current page, and pages around current page
-                  if (
-                    pageNumber === 1 ||
-                    pageNumber === totalPages ||
-                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
-                  ) {
-                    return (
-                      <Button
-                        key={pageNumber}
-                        variant={pageNumber === currentPage ? "default" : "outline"}
-                        onClick={() => goToPage(pageNumber)}
-                        className={`px-3 py-2 text-sm min-w-[40px] ${
-                          pageNumber === currentPage
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "border-gray-300 hover:bg-gray-50"
-                        }`}
-                      >
-                        {pageNumber}
-                      </Button>
-                    );
-                  } else if (
-                    pageNumber === currentPage - 2 ||
-                    pageNumber === currentPage + 2
-                  ) {
-                    return <span key={pageNumber} className="px-2 text-gray-400">...</span>;
-                  }
-                  return null;
-                })}
-              </div>
+                  {/* Page Numbers */}
+                  <div className="flex items-center space-x-2">
+                    {Array.from({ length: totalPages }, (_, index) => {
+                      const pageNumber = index + 1;
+                      // Show first page, last page, current page, and pages around current page
+                      if (
+                        pageNumber === 1 ||
+                        pageNumber === totalPages ||
+                        (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                      ) {
+                        return (
+                          <Button
+                            key={pageNumber}
+                            variant={pageNumber === currentPage ? "default" : "outline"}
+                            onClick={() => goToPage(pageNumber)}
+                            className={`px-4 py-2 text-sm min-w-[44px] rounded-full transition-all duration-200 ${
+                              pageNumber === currentPage
+                                ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-lg"
+                                : "border-blue-200 text-blue-600 hover:bg-blue-50 hover:border-blue-300"
+                            }`}
+                          >
+                            {pageNumber}
+                          </Button>
+                        );
+                      } else if (
+                        pageNumber === currentPage - 2 ||
+                        pageNumber === currentPage + 2
+                      ) {
+                        return <span key={pageNumber} className="px-3 text-gray-400 font-medium">...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
 
-              {/* Next Button */}
-              <Button
-                variant="outline"
-                onClick={goToNextPage}
-                disabled={currentPage === totalPages}
-                className="px-3 py-2 text-sm border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
+                  {/* Next Button */}
+                  <Button
+                    variant="outline"
+                    onClick={goToNextPage}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 text-sm border-blue-300 text-blue-600 hover:bg-blue-50 disabled:opacity-50 disabled:cursor-not-allowed rounded-full"
+                  >
+                    Next
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
+
       </div>
 
       {/* Profile Modal */}
