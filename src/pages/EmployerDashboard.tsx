@@ -384,8 +384,18 @@ const EmployerDashboard = () => {
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                      <User className="h-6 w-6 text-blue-600" />
+                    <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-gray-200">
+                      {housegirl.image ? (
+                        <img 
+                          src={housegirl.image} 
+                          alt={housegirl.name}
+                          className="w-12 h-12 object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                          <User className="h-6 w-6 text-blue-600" />
+                        </div>
+                      )}
                     </div>
                     <div>
                       <h3 className="font-medium text-gray-900">{housegirl.name}</h3>
