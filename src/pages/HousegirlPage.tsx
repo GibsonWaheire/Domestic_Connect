@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import AuthModal from '@/components/AuthModal';
+import PhotoUpload from '@/components/PhotoUpload';
 import { 
   Heart, 
   User, 
@@ -277,6 +278,31 @@ const HousegirlPage = () => {
           </div>
         </div>
       </section>
+
+      {/* Photo Upload Section - Only for logged in housegirls */}
+      {user && user.user_type === 'housegirl' && (
+        <section className="py-20 bg-white">
+          <div className="max-w-6xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <h3 className="text-4xl font-bold text-gray-900 mb-4">
+                Upload Your Profile Photo
+              </h3>
+              <p className="text-lg text-gray-600 max-w-3xl mx-auto">
+                A professional photo helps employers connect with you better. Stand out from the crowd!
+              </p>
+            </div>
+            
+            <div className="max-w-2xl mx-auto">
+              <PhotoUpload 
+                onPhotoUploaded={(photoUrl) => {
+                  console.log('Photo uploaded:', photoUrl);
+                  // In production, this would save to the user's profile
+                }}
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Final CTA */}
       <section className="py-20 bg-gradient-to-r from-blue-50 to-indigo-50">

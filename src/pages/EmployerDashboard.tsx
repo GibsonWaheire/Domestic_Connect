@@ -6,6 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import ProfileModal from '@/components/ProfileModal';
+import { toast } from '@/hooks/use-toast';
 import { 
   Heart, 
   User, 
@@ -38,7 +40,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-// Mock data for housegirls
+// Mock data for housegirls with photos
 const mockHousegirls = [
   {
     id: 1,
@@ -52,7 +54,12 @@ const mockHousegirls = [
     salary: "KES 8,000",
     accommodation: "Live-in",
     status: "Available",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    bio: "Professional house help with excellent experience in cooking, cleaning, and childcare. Very reliable and trustworthy.",
+    phoneNumber: "+254 700 123 456",
+    email: "mary.w@example.com",
+    skills: ["Cooking", "Cleaning", "Laundry", "Childcare", "Elderly Care"],
+    languages: ["English", "Swahili", "Taita"]
   },
   {
     id: 2,
@@ -66,7 +73,12 @@ const mockHousegirls = [
     salary: "KES 10,000",
     accommodation: "Live-in",
     status: "Available",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    bio: "Experienced domestic worker specializing in housekeeping and meal preparation. Very organized and efficient.",
+    phoneNumber: "+254 700 234 567",
+    email: "caroline.m@example.com",
+    skills: ["Housekeeping", "Cooking", "Laundry", "Organization"],
+    languages: ["English", "Swahili", "Meru"]
   },
   {
     id: 3,
@@ -80,7 +92,12 @@ const mockHousegirls = [
     salary: "KES 12,000",
     accommodation: "Live-out",
     status: "Available",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    bio: "University-educated house help with extensive experience in modern household management and childcare.",
+    phoneNumber: "+254 700 345 678",
+    email: "teresa.o@example.com",
+    skills: ["Childcare", "Education Support", "Cooking", "Cleaning", "Pet Care"],
+    languages: ["English", "Swahili", "Luo", "French"]
   },
   {
     id: 4,
@@ -94,7 +111,12 @@ const mockHousegirls = [
     salary: "KES 9,000",
     accommodation: "Live-in",
     status: "Available",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face",
+    bio: "Skilled domestic worker with expertise in traditional and modern cooking methods. Very patient with children.",
+    phoneNumber: "+254 700 456 789",
+    email: "grace.k@example.com",
+    skills: ["Traditional Cooking", "Modern Cooking", "Childcare", "Cleaning"],
+    languages: ["English", "Swahili", "Kamba"]
   },
   {
     id: 5,
@@ -108,7 +130,12 @@ const mockHousegirls = [
     salary: "KES 15,000",
     accommodation: "Live-in",
     status: "Available",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face",
+    bio: "Diploma holder in hospitality with extensive experience in luxury household management and guest services.",
+    phoneNumber: "+254 700 567 890",
+    email: "faith.n@example.com",
+    skills: ["Luxury Housekeeping", "Guest Services", "Event Planning", "Cooking", "Childcare"],
+    languages: ["English", "Swahili", "Luhya", "German"]
   },
   {
     id: 6,
@@ -122,7 +149,12 @@ const mockHousegirls = [
     salary: "KES 7,500",
     accommodation: "Live-out",
     status: "Available",
-    image: "/placeholder.svg"
+    image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face",
+    bio: "Young and energetic house help with fresh ideas and modern approaches to domestic work. Very reliable.",
+    phoneNumber: "+254 700 678 901",
+    email: "hope.a@example.com",
+    skills: ["Modern Cleaning", "Cooking", "Laundry", "Organization", "Technology"],
+    languages: ["English", "Swahili", "Kikuyu"]
   }
 ];
 
@@ -140,6 +172,8 @@ const EmployerDashboard = () => {
     salaryRange: 'All Salaries'
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedHousegirl, setSelectedHousegirl] = useState<any>(null);
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -174,14 +208,17 @@ const EmployerDashboard = () => {
            matchesExperience && matchesEducation && matchesAccommodation;
   });
 
-  const handleViewProfile = (housegirlId: number) => {
-    // This would typically unlock the profile for a fee
-    alert(`Profile unlocked! You can now view ${housegirls.find(h => h.id === housegirlId)?.name}'s full details.`);
+  const handleViewProfile = (housegirl: any) => {
+    setSelectedHousegirl(housegirl);
+    setIsProfileModalOpen(true);
   };
 
   const handleSaveProfile = (housegirlId: number) => {
     // This would save the profile to favorites
-    alert(`Profile saved to favorites!`);
+    toast({
+      title: "Profile Saved",
+      description: "Profile added to your favorites!",
+    });
   };
 
   if (!user) {
@@ -414,7 +451,7 @@ const EmployerDashboard = () => {
                 </div>
                 
                 <Button 
-                  onClick={() => handleViewProfile(housegirl.id)}
+                  onClick={() => handleViewProfile(housegirl)}
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white text-sm h-9"
                 >
                   <Eye className="h-4 w-4 mr-2" />
@@ -439,6 +476,16 @@ const EmployerDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Profile Modal */}
+      <ProfileModal
+        isOpen={isProfileModalOpen}
+        onClose={() => {
+          setIsProfileModalOpen(false);
+          setSelectedHousegirl(null);
+        }}
+        housegirl={selectedHousegirl}
+      />
     </div>
   );
 };
