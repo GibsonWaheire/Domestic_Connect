@@ -58,7 +58,7 @@ const AgencyPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-8">
-              <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+              <div className="flex items-center cursor-pointer" onClick={() => navigate('/home')}>
                 <div className="p-2 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl shadow-lg">
                   <Heart className="h-6 w-6 text-white" />
                 </div>
@@ -70,7 +70,7 @@ const AgencyPage = () => {
               <ReturnToHome variant="outline" size="sm" className="border-emerald-300 text-emerald-600 hover:bg-emerald-50" />
               
               <nav className="hidden md:flex items-center space-x-6">
-                <Button variant="ghost" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-full" onClick={() => navigate('/')}>
+                <Button variant="ghost" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-full" onClick={() => navigate('/home')}>
                   For Employers
                 </Button>
                 <Button variant="ghost" className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-full" onClick={() => navigate('/housegirls')}>

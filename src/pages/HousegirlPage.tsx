@@ -50,7 +50,7 @@ const HousegirlPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-8">
-              <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+              <div className="flex items-center cursor-pointer" onClick={() => navigate('/home')}>
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl shadow-lg">
                   <Heart className="h-6 w-6 text-white" />
                 </div>
@@ -62,7 +62,7 @@ const HousegirlPage = () => {
               <ReturnToHome variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50" />
               
               <nav className="hidden md:flex items-center space-x-6">
-                <Button variant="ghost" className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-full" onClick={() => navigate('/')}>
+                <Button variant="ghost" className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-full" onClick={() => navigate('/home')}>
                   For Employers
                 </Button>
                 <Button variant="ghost" className="text-blue-600 bg-blue-50 rounded-full">
