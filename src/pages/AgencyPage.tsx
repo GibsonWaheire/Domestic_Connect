@@ -23,28 +23,14 @@ import {
   Phone,
   Mail,
   MessageCircle,
-  Home,
   Building2,
   BarChart3,
-  Target,
-  DollarSign,
-  Globe,
-  Settings,
-  PieChart,
-  Activity,
-  Calendar,
-  FileText,
   CheckSquare,
-  ArrowUpRight,
   Users2,
   Handshake,
   Network,
   Rocket,
-  Lightbulb,
-  ShieldCheck,
-  Zap,
-  BarChart,
-  PieChart as PieChartIcon
+  BarChart
 } from 'lucide-react';
 
 const AgencyPage = () => {
