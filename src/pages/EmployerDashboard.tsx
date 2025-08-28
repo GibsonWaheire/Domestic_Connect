@@ -29,7 +29,6 @@ import {
   Bookmark,
   Eye,
   Lock,
-  Female,
   Calendar,
   GraduationCap,
   Home,
@@ -245,7 +244,7 @@ const EmployerDashboard = () => {
         <div className="mb-8">
           <div className="flex items-center mb-4">
             <div className="p-3 bg-gradient-to-r from-pink-500 to-orange-500 rounded-xl mr-4">
-              <Female className="h-8 w-8 text-white" />
+              <Users className="h-8 w-8 text-white" />
             </div>
             <h2 className="text-4xl font-bold text-gray-900">Available Housegirls</h2>
           </div>
