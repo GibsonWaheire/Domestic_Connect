@@ -80,18 +80,18 @@ const LandingPage = () => {
               </nav>
             </div>
             
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               {user ? (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-6">
                   <Badge variant="secondary" className="bg-gradient-to-r from-green-400 to-emerald-500 text-white border-0">
                     {user.user_type}
                   </Badge>
                   <span className="text-sm text-gray-600">
                     Karibu, {user.first_name}
                   </span>
-                                <Button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-pink-500 to-orange-600 hover:from-pink-600 hover:to-orange-700 text-white rounded-full">
-                Go to Dashboard
-              </Button>
+                  <Button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-pink-500 to-orange-600 hover:from-pink-600 hover:to-orange-700 text-white rounded-full">
+                    Go to Dashboard
+                  </Button>
                   <Button variant="outline" onClick={signOut} className="border-pink-300 hover:bg-pink-50 rounded-full">
                     Logout
                   </Button>
@@ -134,23 +134,29 @@ const LandingPage = () => {
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
             {user ? (
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button 
-                  onClick={() => navigate('/dashboard')}
-                  size="lg" 
-                  className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <User className="h-6 w-6 mr-3" />
-                  Go to Dashboard →
-                </Button>
-                <Button 
-                  variant="outline"
-                  size="lg" 
-                  className="border-2 border-pink-300 text-pink-600 hover:bg-pink-50 px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <Home className="h-6 w-6 mr-3" />
-                  Browse Home Page
-                </Button>
+              <div className="flex flex-col items-center gap-4">
+                <p className="text-lg text-gray-600 mb-2">
+                  Welcome back! What would you like to do?
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button 
+                    onClick={() => navigate('/dashboard')}
+                    size="lg" 
+                    className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    <User className="h-6 w-6 mr-3" />
+                    Go to Dashboard →
+                  </Button>
+                  <Button 
+                    variant="outline"
+                    size="lg" 
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="border-2 border-pink-300 text-pink-600 hover:bg-pink-50 px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+                  >
+                    <Home className="h-6 w-6 mr-3" />
+                    Explore More
+                  </Button>
+                </div>
               </div>
             ) : (
               <Button 
