@@ -30,7 +30,9 @@ import {
   Handshake,
   Network,
   Rocket,
-  BarChart
+  BarChart,
+  DollarSign,
+  Settings
 } from 'lucide-react';
 
 const AgencyPage = () => {
