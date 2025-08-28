@@ -155,6 +155,82 @@ const mockHousegirls = [
     email: "hope.a@example.com",
     skills: ["Modern Cleaning", "Cooking", "Laundry", "Organization", "Technology"],
     languages: ["English", "Swahili", "Kikuyu"]
+  },
+  {
+    id: 7,
+    name: "Sarah M.",
+    age: 29,
+    nationality: "Kenya",
+    location: "Eldoret",
+    community: "Kalenjin",
+    experience: "4 Years",
+    education: "Diploma",
+    salary: "KES 11,000",
+    accommodation: "Live-in",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&h=150&fit=crop&crop=face",
+    bio: "Experienced house help with strong background in hospitality and customer service. Very professional.",
+    phoneNumber: "+254 700 789 012",
+    email: "sarah.m@example.com",
+    skills: ["Hospitality", "Customer Service", "Cooking", "Cleaning", "Event Planning"],
+    languages: ["English", "Swahili", "Kalenjin"]
+  },
+  {
+    id: 8,
+    name: "Joyce W.",
+    age: 26,
+    nationality: "Kenya",
+    location: "Thika",
+    community: "Kamba",
+    experience: "3 Years",
+    education: "Form 4 and Above",
+    salary: "KES 8,500",
+    accommodation: "Live-out",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    bio: "Reliable and hardworking house help with excellent references. Specializes in childcare and cooking.",
+    phoneNumber: "+254 700 890 123",
+    email: "joyce.w@example.com",
+    skills: ["Childcare", "Cooking", "Cleaning", "Laundry", "First Aid"],
+    languages: ["English", "Swahili", "Kamba"]
+  },
+  {
+    id: 9,
+    name: "Nancy K.",
+    age: 31,
+    nationality: "Kenya",
+    location: "Kisii",
+    community: "Kisii",
+    experience: "7 Years",
+    education: "University",
+    salary: "KES 14,000",
+    accommodation: "Live-in",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    bio: "University-educated house help with extensive experience in luxury household management and education support.",
+    phoneNumber: "+254 700 901 234",
+    email: "nancy.k@example.com",
+    skills: ["Education Support", "Luxury Housekeeping", "Cooking", "Childcare", "Pet Care"],
+    languages: ["English", "Swahili", "Kisii", "French"]
+  },
+  {
+    id: 10,
+    name: "Esther N.",
+    age: 23,
+    nationality: "Kenya",
+    location: "Nyeri",
+    community: "Kikuyu",
+    experience: "1 Year",
+    education: "Form 4 and Above",
+    salary: "KES 6,500",
+    accommodation: "Live-in",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    bio: "Young and enthusiastic house help eager to learn and grow. Very honest and trustworthy.",
+    phoneNumber: "+254 700 012 345",
+    email: "esther.n@example.com",
+    skills: ["Basic Cleaning", "Cooking", "Laundry", "Childcare", "Learning"],
+    languages: ["English", "Swahili", "Kikuyu"]
   }
 ];
 
@@ -174,6 +250,8 @@ const EmployerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedHousegirl, setSelectedHousegirl] = useState<any>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [profilesPerPage] = useState(6);
 
   const handleFilterChange = (key: string, value: string) => {
     setFilters(prev => ({ ...prev, [key]: value }));
@@ -190,6 +268,7 @@ const EmployerDashboard = () => {
       salaryRange: 'All Salaries'
     });
     setSearchTerm('');
+    setCurrentPage(1);
   };
 
   const filteredHousegirls = housegirls.filter(housegirl => {
@@ -207,6 +286,28 @@ const EmployerDashboard = () => {
     return matchesSearch && matchesLocation && matchesNationality && matchesCommunity && 
            matchesExperience && matchesEducation && matchesAccommodation;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredHousegirls.length / profilesPerPage);
+  const indexOfLastProfile = currentPage * profilesPerPage;
+  const indexOfFirstProfile = indexOfLastProfile - profilesPerPage;
+  const currentProfiles = filteredHousegirls.slice(indexOfFirstProfile, indexOfLastProfile);
+
+  const goToPage = (pageNumber: number) => {
+    setCurrentPage(pageNumber);
+  };
+
+  const goToNextPage = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
+  };
+
+  const goToPreviousPage = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
 
   const handleViewProfile = (housegirl: any) => {
     setSelectedHousegirl(housegirl);
@@ -373,13 +474,18 @@ const EmployerDashboard = () => {
         {/* Results Count */}
         <div className="mb-4">
           <p className="text-sm text-gray-600">
-            Showing <span className="font-medium text-blue-600">{filteredHousegirls.length}</span> of {housegirls.length} available housegirls
+            Showing <span className="font-medium text-blue-600">{indexOfFirstProfile + 1}-{Math.min(indexOfLastProfile, filteredHousegirls.length)}</span> of <span className="font-medium text-blue-600">{filteredHousegirls.length}</span> available housegirls
+            {totalPages > 1 && (
+              <span className="ml-2 text-gray-500">
+                (Page {currentPage} of {totalPages})
+              </span>
+            )}
           </p>
         </div>
 
         {/* Housegirls Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredHousegirls.map((housegirl) => (
+          {currentProfiles.map((housegirl) => (
             <Card key={housegirl.id} className="hover:shadow-md transition-shadow duration-200 border-gray-200">
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between">
@@ -483,6 +589,69 @@ const EmployerDashboard = () => {
             <Button onClick={resetFilters} variant="outline" size="sm" className="border-gray-300 text-gray-600 hover:bg-gray-50">
               Reset All Filters
             </Button>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="mt-8 flex items-center justify-center">
+            <div className="flex items-center space-x-2">
+              {/* Previous Button */}
+              <Button
+                variant="outline"
+                onClick={goToPreviousPage}
+                disabled={currentPage === 1}
+                className="px-3 py-2 text-sm border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+
+              {/* Page Numbers */}
+              <div className="flex items-center space-x-1">
+                {Array.from({ length: totalPages }, (_, index) => {
+                  const pageNumber = index + 1;
+                  // Show first page, last page, current page, and pages around current page
+                  if (
+                    pageNumber === 1 ||
+                    pageNumber === totalPages ||
+                    (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                  ) {
+                    return (
+                      <Button
+                        key={pageNumber}
+                        variant={pageNumber === currentPage ? "default" : "outline"}
+                        onClick={() => goToPage(pageNumber)}
+                        className={`px-3 py-2 text-sm min-w-[40px] ${
+                          pageNumber === currentPage
+                            ? "bg-blue-600 text-white hover:bg-blue-700"
+                            : "border-gray-300 hover:bg-gray-50"
+                        }`}
+                      >
+                        {pageNumber}
+                      </Button>
+                    );
+                  } else if (
+                    pageNumber === currentPage - 2 ||
+                    pageNumber === currentPage + 2
+                  ) {
+                    return <span key={pageNumber} className="px-2 text-gray-400">...</span>;
+                  }
+                  return null;
+                })}
+              </div>
+
+              {/* Next Button */}
+              <Button
+                variant="outline"
+                onClick={goToNextPage}
+                disabled={currentPage === totalPages}
+                className="px-3 py-2 text-sm border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Next
+                <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
         )}
       </div>
