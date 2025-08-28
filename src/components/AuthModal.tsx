@@ -20,10 +20,15 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [userType, setUserType] = useState<'employer' | 'housegirl' | 'agency'>('employer');
+  const [userType, setUserType] = useState<'employer' | 'housegirl' | 'agency'>('housegirl');
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
+  const [age, setAge] = useState('');
+  const [location, setLocation] = useState('');
+  const [experience, setExperience] = useState('');
+  const [education, setEducation] = useState('');
+  const [community, setCommunity] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -98,15 +103,19 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             description: ''
           }),
           ...(userType === 'housegirl' && {
-            age: 18,
-            bio: '',
-            current_location: '',
-            location: '',
-            education: 'primary' as const,
-            experience: 'no_experience' as const,
-            expected_salary: 0,
-            accommodation_type: 'live_in' as const,
-            tribe: ''
+            age: parseInt(age) || 25,
+            bio: 'Professional house help with experience in cooking, cleaning, and childcare.',
+            current_location: location || 'Nairobi',
+            location: location || 'Nairobi',
+            education: education || 'Form 4 and Above',
+            experience: experience || '2 Years',
+            expected_salary: 8000,
+            accommodation_type: 'Housegirl',
+            community: community || 'Kikuyu',
+            nationality: 'Kenya',
+            status: 'Available',
+            skills: ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
+            languages: ['English', 'Swahili']
           }),
           ...(userType === 'agency' && {
             agency_name: '',
@@ -268,6 +277,82 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                       className="border-gray-300 focus:border-blue-500"
                     />
                   </div>
+
+                  {/* Additional fields for housegirls */}
+                  {userType === 'housegirl' && (
+                    <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <h4 className="text-sm font-semibold text-blue-800 mb-3">Profile Details (Optional)</h4>
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="age" className="text-gray-700 font-medium text-sm">Age</Label>
+                          <Input
+                            id="age"
+                            type="number"
+                            value={age}
+                            onChange={(e) => setAge(e.target.value)}
+                            placeholder="25"
+                            className="border-gray-300 focus:border-blue-500 text-sm"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location" className="text-gray-700 font-medium text-sm">Location</Label>
+                          <Input
+                            id="location"
+                            type="text"
+                            value={location}
+                            onChange={(e) => setLocation(e.target.value)}
+                            placeholder="Nairobi"
+                            className="border-gray-300 focus:border-blue-500 text-sm"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="experience" className="text-gray-700 font-medium text-sm">Experience</Label>
+                        <Select value={experience} onValueChange={setExperience}>
+                          <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                            <SelectValue placeholder="Select experience" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="1 Year">1 Year</SelectItem>
+                            <SelectItem value="2 Years">2 Years</SelectItem>
+                            <SelectItem value="3 Years">3 Years</SelectItem>
+                            <SelectItem value="4 Years">4 Years</SelectItem>
+                            <SelectItem value="5+ Years">5+ Years</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="education" className="text-gray-700 font-medium text-sm">Education</Label>
+                        <Select value={education} onValueChange={setEducation}>
+                          <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                            <SelectValue placeholder="Select education" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Class 8 and Above">Class 8+</SelectItem>
+                            <SelectItem value="Form 4 and Above">Form 4+</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="community" className="text-gray-700 font-medium text-sm">Community</Label>
+                        <Select value={community} onValueChange={setCommunity}>
+                          <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                            <SelectValue placeholder="Select community" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="Kikuyu">Kikuyu</SelectItem>
+                            <SelectItem value="Luo">Luo</SelectItem>
+                            <SelectItem value="Kamba">Kamba</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
