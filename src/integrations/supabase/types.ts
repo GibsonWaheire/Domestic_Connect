@@ -14,7 +14,286 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      agency_profiles: {
+        Row: {
+          agency_name: string
+          created_at: string
+          description: string | null
+          id: string
+          license_number: string | null
+          location: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          agency_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          license_number?: string | null
+          location: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          agency_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          license_number?: string | null
+          location?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contact_access: {
+        Row: {
+          accessed_at: string
+          id: string
+          purchaser_id: string
+          target_profile_id: string
+        }
+        Insert: {
+          accessed_at?: string
+          id?: string
+          purchaser_id: string
+          target_profile_id: string
+        }
+        Update: {
+          accessed_at?: string
+          id?: string
+          purchaser_id?: string
+          target_profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contact_access_target_profile_id_fkey"
+            columns: ["target_profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      employer_profiles: {
+        Row: {
+          company_name: string | null
+          created_at: string
+          description: string | null
+          id: string
+          location: string
+          profile_id: string
+          updated_at: string
+        }
+        Insert: {
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location: string
+          profile_id: string
+          updated_at?: string
+        }
+        Update: {
+          company_name?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          location?: string
+          profile_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "employer_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      housegirl_profiles: {
+        Row: {
+          accommodation_type: Database["public"]["Enums"]["accommodation_type"]
+          age: number
+          bio: string | null
+          created_at: string
+          current_location: string
+          education: Database["public"]["Enums"]["education_level"]
+          expected_salary: number
+          experience: Database["public"]["Enums"]["experience_level"]
+          id: string
+          is_available: boolean | null
+          location: string
+          profile_id: string
+          profile_photo_url: string | null
+          tribe: string
+          updated_at: string
+        }
+        Insert: {
+          accommodation_type: Database["public"]["Enums"]["accommodation_type"]
+          age: number
+          bio?: string | null
+          created_at?: string
+          current_location: string
+          education: Database["public"]["Enums"]["education_level"]
+          expected_salary: number
+          experience: Database["public"]["Enums"]["experience_level"]
+          id?: string
+          is_available?: boolean | null
+          location: string
+          profile_id: string
+          profile_photo_url?: string | null
+          tribe: string
+          updated_at?: string
+        }
+        Update: {
+          accommodation_type?: Database["public"]["Enums"]["accommodation_type"]
+          age?: number
+          bio?: string | null
+          created_at?: string
+          current_location?: string
+          education?: Database["public"]["Enums"]["education_level"]
+          expected_salary?: number
+          experience?: Database["public"]["Enums"]["experience_level"]
+          id?: string
+          is_available?: boolean | null
+          location?: string
+          profile_id?: string
+          profile_photo_url?: string | null
+          tribe?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "housegirl_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_packages: {
+        Row: {
+          contacts_included: number
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          price: number
+        }
+        Insert: {
+          contacts_included: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          price: number
+        }
+        Update: {
+          contacts_included?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          price?: number
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string | null
+          first_name: string
+          id: string
+          last_name: string
+          phone_number: string | null
+          updated_at: string
+          user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Insert: {
+          created_at?: string
+          email?: string | null
+          first_name: string
+          id?: string
+          last_name: string
+          phone_number?: string | null
+          updated_at?: string
+          user_id: string
+          user_type: Database["public"]["Enums"]["user_type"]
+        }
+        Update: {
+          created_at?: string
+          email?: string | null
+          first_name?: string
+          id?: string
+          last_name?: string
+          phone_number?: string | null
+          updated_at?: string
+          user_id?: string
+          user_type?: Database["public"]["Enums"]["user_type"]
+        }
+        Relationships: []
+      }
+      user_purchases: {
+        Row: {
+          amount_paid: number
+          contacts_remaining: number
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          mpesa_transaction_id: string | null
+          package_id: string
+          purchase_date: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          contacts_remaining: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          mpesa_transaction_id?: string | null
+          package_id: string
+          purchase_date?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          contacts_remaining?: number
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          mpesa_transaction_id?: string | null
+          package_id?: string
+          purchase_date?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_purchases_package_id_fkey"
+            columns: ["package_id"]
+            isOneToOne: false
+            referencedRelation: "payment_packages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +302,22 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      accommodation_type: "live_in" | "live_out" | "both"
+      education_level:
+        | "primary"
+        | "form_2"
+        | "form_4"
+        | "certificate"
+        | "diploma"
+        | "degree"
+      experience_level:
+        | "no_experience"
+        | "1_year"
+        | "2_years"
+        | "3_years"
+        | "4_years"
+        | "5_plus_years"
+      user_type: "employer" | "housegirl" | "agency"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +444,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      accommodation_type: ["live_in", "live_out", "both"],
+      education_level: [
+        "primary",
+        "form_2",
+        "form_4",
+        "certificate",
+        "diploma",
+        "degree",
+      ],
+      experience_level: [
+        "no_experience",
+        "1_year",
+        "2_years",
+        "3_years",
+        "4_years",
+        "5_plus_years",
+      ],
+      user_type: ["employer", "housegirl", "agency"],
+    },
   },
 } as const
