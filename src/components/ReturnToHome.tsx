@@ -1,30 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { Home, ArrowLeft } from 'lucide-react';
-
-// Custom hook to force navigation to home
-const useForceNavigateHome = () => {
-  const navigate = useNavigate();
-  
-  const forceNavigateHome = () => {
-    // Clear any stored navigation state that might cause redirects
-    sessionStorage.removeItem('redirectAfterLogin');
-    localStorage.removeItem('redirectAfterLogin');
-    
-    // Try React Router first
-    navigate('/home', { replace: true });
-    
-    // If that doesn't work, force a hard navigation
-    setTimeout(() => {
-      if (window.location.pathname !== '/home') {
-        console.log('React Router navigation failed, forcing hard navigation');
-        window.location.href = '/home';
-      }
-    }, 100);
-  };
-  
-  return forceNavigateHome;
-};
+import { ArrowLeft } from 'lucide-react';
 
 interface ReturnToHomeProps {
   variant?: 'default' | 'outline' | 'ghost';
@@ -39,13 +15,17 @@ const ReturnToHome = ({
   showIcon = true,
   className = ''
 }: ReturnToHomeProps) => {
-  const forceNavigateHome = useForceNavigateHome();
+  const navigate = useNavigate();
+
+  const handleReturnHome = () => {
+    navigate('/home', { replace: true });
+  };
 
   return (
     <Button
       variant={variant}
       size={size}
-      onClick={forceNavigateHome}
+      onClick={handleReturnHome}
       className={`rounded-full transition-all duration-200 hover:scale-105 ${className}`}
       title="Return to Home Page"
     >

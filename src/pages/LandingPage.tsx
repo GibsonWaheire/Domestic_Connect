@@ -103,7 +103,7 @@ const LandingPage = () => {
                   </Button>
                   <Button onClick={() => openAuthModal('signup')} className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-full shadow-lg">
                     Join today!
-                  </Button>
+                </Button>
                 </div>
               )}
             </div>
@@ -226,8 +226,8 @@ const LandingPage = () => {
                 Contact your chosen housegirl directly and arrange hiring. Simple as that!
               </p>
             </div>
-          </div>
-        </div>
+                  </div>
+                </div>
       </section>
 
       {/* Stats Section - New Addition */}
@@ -261,9 +261,9 @@ const LandingPage = () => {
               </div>
               <div className="text-3xl font-bold text-gray-900 mb-2">24hrs</div>
               <div className="text-gray-600 font-medium">Response Time</div>
-            </div>
-          </div>
-        </div>
+                </div>
+                  </div>
+                </div>
       </section>
 
       {/* Second CTA - Enhanced */}
@@ -280,7 +280,7 @@ const LandingPage = () => {
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <Button 
                   onClick={() => navigate('/dashboard')}
-                  size="lg" 
+                  size="lg"
                   className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
                   <User className="h-6 w-6 mr-3" />
@@ -288,13 +288,13 @@ const LandingPage = () => {
                 </Button>
                 <Button 
                   variant="outline"
-                  size="lg" 
+                  size="lg"
                   className="border-2 border-pink-300 text-pink-600 hover:bg-pink-50 px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
                 >
                   <Home className="h-6 w-6 mr-3" />
                   Stay on Home
                 </Button>
-              </div>
+                </div>
             ) : (
               <Button 
                 onClick={() => openAuthModal('signup')}

@@ -34,16 +34,10 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   useEffect(() => {
     if (user) {
       onClose();
-      // Redirect users based on their type
-      if (user.user_type === 'employer') {
-        navigate('/dashboard');
-      } else if (user.user_type === 'housegirl') {
-        navigate('/housegirls');
-      } else if (user.user_type === 'agency') {
-        navigate('/agencies');
-      }
+      // Don't automatically redirect - let users choose where to go
+      // The landing page will show appropriate options for logged-in users
     }
-  }, [user, onClose, navigate]);
+  }, [user, onClose]);
 
   useEffect(() => {
     setIsLogin(defaultMode === 'login');
