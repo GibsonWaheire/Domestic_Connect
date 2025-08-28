@@ -1,73 +1,139 @@
-# Welcome to your Lovable project
+# Domestic Connect
 
-## Project info
+A platform connecting employers with domestic workers and agencies.
 
-**URL**: https://lovable.dev/projects/885214ff-bbb8-4d57-8d4d-1012dc43956e
+## Features
 
-## How can I edit this code?
+- User authentication (employers, housegirls, agencies)
+- Profile management for different user types
+- Payment packages and contact access system
+- Modern React + TypeScript + Tailwind CSS UI
 
-There are several ways of editing your application.
+## Tech Stack
 
-**Use Lovable**
+- **Frontend**: React 18 + TypeScript + Vite
+- **UI Components**: Shadcn/ui + Tailwind CSS
+- **Database**: JSON Server (local development)
+- **State Management**: React Context + React Query
+- **Routing**: React Router DOM
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/885214ff-bbb8-4d57-8d4d-1012dc43956e) and start prompting.
+## Getting Started
 
-Changes made via Lovable will be committed automatically to this repo.
+### Prerequisites
 
-**Use your preferred IDE**
+- Node.js 18+ 
+- npm or yarn
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+### Installation
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+1. Clone the repository
+```bash
+git clone <repository-url>
+cd domestic-connect
+```
 
-Follow these steps:
+2. Install dependencies
+```bash
+npm install
+```
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+3. Start the JSON Server database
+```bash
+npm run db
+```
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+4. In a new terminal, start the development server
+```bash
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+5. Open your browser and navigate to `http://localhost:5173`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Database Setup
 
-**Use GitHub Codespaces**
+The app uses JSON Server for local development. The database file (`db.json`) contains:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+- **profiles**: User profile information
+- **employer_profiles**: Employer-specific details
+- **housegirl_profiles**: Domestic worker details
+- **agency_profiles**: Agency information
+- **payment_packages**: Available payment plans
+- **user_purchases**: User purchase history
+- **contact_access**: Contact access records
 
-## What technologies are used for this project?
+### Starting the Database Server
 
-This project is built with:
+```bash
+npm run db
+```
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+This starts JSON Server on port 3001 with the `db.json` file.
 
-## How can I deploy this project?
+## Project Structure
 
-Simply open [Lovable](https://lovable.dev/projects/885214ff-bbb8-4d57-8d4d-1012dc43956e) and click on Share -> Publish.
+```
+src/
+├── components/          # Reusable UI components
+├── hooks/              # Custom React hooks
+├── lib/                # Utility functions and API
+├── pages/              # Page components
+└── integrations/       # External service integrations
+```
 
-## Can I connect a custom domain to my Lovable project?
+## API Endpoints
 
-Yes, you can!
+All API endpoints are served through JSON Server at `http://localhost:3001`:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `GET /profiles` - Get all profiles
+- `POST /profiles` - Create a new profile
+- `GET /employer_profiles` - Get employer profiles
+- `GET /housegirl_profiles` - Get housegirl profiles
+- `GET /agency_profiles` - Get agency profiles
+- `GET /payment_packages` - Get payment packages
+- And more...
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+## Authentication
+
+The app uses local storage for user authentication in development. Users can:
+
+- Sign up with email, password, and user type
+- Sign in with existing credentials
+- Sign out to clear session
+
+## Development
+
+### Available Scripts
+
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run db` - Start JSON Server database
+- `npm run lint` - Run ESLint
+- `npm run preview` - Preview production build
+
+### Adding New Features
+
+1. Update the API interfaces in `src/lib/api.ts`
+2. Add new endpoints to the API functions
+3. Update the database schema in `db.json`
+4. Create new components and pages as needed
+
+## Production Deployment
+
+For production, you'll want to:
+
+1. Replace JSON Server with a real database (PostgreSQL, MySQL, etc.)
+2. Implement proper authentication (JWT, OAuth, etc.)
+3. Set up environment variables for API endpoints
+4. Configure CORS and security headers
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.

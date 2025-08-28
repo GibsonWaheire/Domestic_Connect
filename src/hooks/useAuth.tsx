@@ -1,11 +1,20 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { profilesApi, employerProfilesApi, housegirlProfilesApi, agencyProfilesApi } from '@/lib/api';
+
+interface User {
+  id: string;
+  email: string;
+  user_type: 'employer' | 'housegirl' | 'agency';
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+  created_at: string;
+  updated_at: string;
+}
 
 interface AuthContextType {
   user: User | null;
-  session: Session | null;
   loading: boolean;
   signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: any) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -22,102 +31,169 @@ export const useAuth = () => {
   return context;
 };
 
-const cleanupAuthState = () => {
-  // Remove all Supabase auth keys from localStorage
-  Object.keys(localStorage).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      localStorage.removeItem(key);
-    }
-  });
-  // Remove from sessionStorage if in use
-  Object.keys(sessionStorage || {}).forEach((key) => {
-    if (key.startsWith('supabase.auth.') || key.includes('sb-')) {
-      sessionStorage.removeItem(key);
-    }
-  });
+// Simple local storage user management
+const USER_STORAGE_KEY = 'domestic_connect_user';
+const USERS_STORAGE_KEY = 'domestic_connect_users';
+
+// Initialize with a test user if no users exist
+const initializeTestUser = () => {
+  const existingUsers = getStoredUsers();
+  if (Object.keys(existingUsers).length === 0) {
+    const testUser: User = {
+      id: 'test_user_1',
+      email: 'test@example.com',
+      user_type: 'employer',
+      first_name: 'Test',
+      last_name: 'User',
+      phone_number: '+1234567890',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    const testUsers = {
+      'test@example.com': {
+        email: 'test@example.com',
+        password: 'password123',
+        user: testUser
+      }
+    };
+    
+    setStoredUsers(testUsers);
+    return testUsers;
+  }
+  return existingUsers;
+};
+
+const getStoredUser = (): User | null => {
+  try {
+    const userData = localStorage.getItem(USER_STORAGE_KEY);
+    return userData ? JSON.parse(userData) : null;
+  } catch {
+    return null;
+  }
+};
+
+const setStoredUser = (user: User | null) => {
+  if (user) {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user));
+  } else {
+    localStorage.removeItem(USER_STORAGE_KEY);
+  }
+};
+
+const getStoredUsers = (): { [key: string]: { email: string; password: string; user: User } } => {
+  try {
+    const usersData = localStorage.getItem(USERS_STORAGE_KEY);
+    return usersData ? JSON.parse(usersData) : {};
+  } catch {
+    return {};
+  }
+};
+
+const setStoredUsers = (users: { [key: string]: { email: string; password: string; user: User } }) => {
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    // Initialize test user if no users exist
+    initializeTestUser();
+    
+    // Check for existing user on mount
+    const storedUser = getStoredUser();
+    if (storedUser) {
+      setUser(storedUser);
+    }
+    setLoading(false);
   }, []);
 
   const signUp = async (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: any) => {
     try {
-      cleanupAuthState();
+      const users = getStoredUsers();
       
-      // Attempt global sign out first
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
+      // Check if user already exists
+      if (users[email]) {
+        return { error: { message: 'User already exists with this email' } };
       }
 
-      const redirectUrl = `${window.location.origin}/`;
-      
-      const { data, error } = await supabase.auth.signUp({
+      // Create new user
+      const newUser: User = {
+        id: `user_${Date.now()}`,
         email,
-        password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            user_type: userType,
-            ...additionalData
-          }
-        }
-      });
+        user_type: userType,
+        first_name: additionalData.first_name || '',
+        last_name: additionalData.last_name || '',
+        phone_number: additionalData.phone_number || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
 
-      if (error) throw error;
+      // Store user credentials
+      users[email] = { email, password, user: newUser };
+      setStoredUsers(users);
 
-      if (data.user) {
-        // Create profile after successful sign up
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: data.user.id,
-            user_type: userType,
-            first_name: additionalData.first_name || '',
-            last_name: additionalData.last_name || '',
-            email: email,
-            phone_number: additionalData.phone_number || ''
+      // Create profile in the database
+      try {
+        const profile = await profilesApi.create({
+          user_id: newUser.id,
+          first_name: newUser.first_name,
+          last_name: newUser.last_name,
+          email: newUser.email,
+          phone_number: newUser.phone_number,
+          user_type: newUser.user_type,
+        });
+
+        // Create specific profile based on user type
+        if (userType === 'employer') {
+          await employerProfilesApi.create({
+            profile_id: profile.id,
+            company_name: additionalData.company_name || null,
+            location: additionalData.location || '',
+            description: additionalData.description || null,
           });
-
-        if (profileError) {
-          console.error('Profile creation error:', profileError);
-          toast({
-            title: "Profile Creation Error",
-            description: "Account created but profile setup failed. Please contact support.",
-            variant: "destructive"
+        } else if (userType === 'housegirl') {
+          await housegirlProfilesApi.create({
+            profile_id: profile.id,
+            age: additionalData.age || 18,
+            bio: additionalData.bio || null,
+            current_location: additionalData.current_location || '',
+            location: additionalData.location || '',
+            education: additionalData.education || 'primary',
+            experience: additionalData.experience || 'no_experience',
+            expected_salary: additionalData.expected_salary || 0,
+            accommodation_type: additionalData.accommodation_type || 'live_in',
+            tribe: additionalData.tribe || '',
+            is_available: true,
+            profile_photo_url: null,
+          });
+        } else if (userType === 'agency') {
+          await agencyProfilesApi.create({
+            profile_id: profile.id,
+            agency_name: additionalData.agency_name || '',
+            location: additionalData.location || '',
+            description: additionalData.description || null,
+            license_number: additionalData.license_number || null,
           });
         }
 
         toast({
           title: "Account Created",
-          description: "Please check your email to verify your account.",
+          description: "Your account has been created successfully!",
         });
-      }
 
-      return { error: null };
+        return { error: null };
+      } catch (profileError) {
+        console.error('Profile creation error:', profileError);
+        toast({
+          title: "Profile Creation Error",
+          description: "Account created but profile setup failed. Please contact support.",
+          variant: "destructive"
+        });
+        return { error: profileError };
+      }
     } catch (error: any) {
       return { error };
     }
@@ -125,24 +201,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      cleanupAuthState();
-      
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Continue even if this fails
+      const users = getStoredUsers();
+      const userData = users[email];
+
+      if (!userData || userData.password !== password) {
+        return { error: { message: 'Invalid email or password' } };
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      // Set user as logged in
+      setUser(userData.user);
+      setStoredUser(userData.user);
+
+      toast({
+        title: "Signed In",
+        description: "Welcome back!",
       });
-
-      if (error) throw error;
-
-      if (data.user) {
-        window.location.href = '/';
-      }
 
       return { error: null };
     } catch (error: any) {
@@ -152,15 +225,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      cleanupAuthState();
+      setUser(null);
+      setStoredUser(null);
       
-      try {
-        await supabase.auth.signOut({ scope: 'global' });
-      } catch (err) {
-        // Ignore errors
-      }
-      
-      window.location.href = '/auth';
+      toast({
+        title: "Signed Out",
+        description: "You have been signed out successfully.",
+      });
     } catch (error) {
       console.error('Sign out error:', error);
     }
@@ -168,7 +239,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const value = {
     user,
-    session,
     loading,
     signUp,
     signIn,
