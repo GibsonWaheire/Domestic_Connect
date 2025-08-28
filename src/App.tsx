@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import LandingPage from "./pages/LandingPage";
 import HousegirlPage from "./pages/HousegirlPage";
 import AgencyPage from "./pages/AgencyPage";
+import EmployerDashboard from "./pages/EmployerDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<LandingPage />} />
             <Route path="/housegirls" element={<HousegirlPage />} />
             <Route path="/agencies" element={<AgencyPage />} />
+            <Route path="/dashboard" element={<EmployerDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
