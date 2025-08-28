@@ -37,7 +37,8 @@ import {
   FilterX,
   Save,
   Heart as HeartIcon,
-  ArrowLeft
+  ArrowLeft,
+  RefreshCw
 } from 'lucide-react';
 
 // Mock data for housegirls with photos
@@ -52,7 +53,7 @@ const mockHousegirls = [
     experience: "3 Years",
     education: "Form 4 and Above",
     salary: "KES 8,000",
-    accommodation: "Live-in",
+    accommodation: "Housegirl",
     status: "Available",
     image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
     bio: "Professional house help with excellent experience in cooking, cleaning, and childcare. Very reliable and trustworthy.",
@@ -71,7 +72,7 @@ const mockHousegirls = [
     experience: "2 Years",
     education: "Class 8 and Above",
     salary: "KES 10,000",
-    accommodation: "Live-in",
+    accommodation: "Housegirl",
     status: "Available",
     image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
     bio: "Experienced domestic worker specializing in housekeeping and meal preparation. Very organized and efficient.",
@@ -89,8 +90,8 @@ const mockHousegirls = [
     community: "Luo",
     experience: "5 Years",
     education: "University",
-    salary: "KES 12,000",
-    accommodation: "Day Worker",
+    salary: "KES 800/day",
+    accommodation: "Day Bug",
     status: "Available",
     image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
     bio: "University-educated house help with extensive experience in modern household management and childcare.",
@@ -231,6 +232,82 @@ const mockHousegirls = [
     email: "esther.n@example.com",
     skills: ["Basic Cleaning", "Cooking", "Laundry", "Childcare", "Learning"],
     languages: ["English", "Swahili", "Kikuyu"]
+  },
+  {
+    id: 11,
+    name: "Grace W.",
+    age: 28,
+    nationality: "Kenya",
+    location: "Nakuru",
+    community: "Kikuyu",
+    experience: "4 Years",
+    education: "Diploma",
+    salary: "KES 900/day",
+    accommodation: "Day Bug",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    bio: "Experienced day worker specializing in deep cleaning and organization. Available for daily housekeeping tasks.",
+    phoneNumber: "+254 700 123 789",
+    email: "grace.w@example.com",
+    skills: ["Deep Cleaning", "Organization", "Laundry", "Ironing", "Window Cleaning"],
+    languages: ["English", "Swahili", "Kikuyu"]
+  },
+  {
+    id: 12,
+    name: "Faith M.",
+    age: 32,
+    nationality: "Kenya",
+    location: "Mombasa",
+    community: "Mijikenda",
+    experience: "6 Years",
+    education: "University",
+    salary: "KES 18,000",
+    accommodation: "Nanny",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face",
+    bio: "Professional nanny with extensive childcare experience and early childhood education background.",
+    phoneNumber: "+254 700 456 789",
+    email: "faith.m@example.com",
+    skills: ["Childcare", "Early Education", "Meal Planning", "Child Safety", "Creative Activities"],
+    languages: ["English", "Swahili", "Mijikenda", "Arabic"]
+  },
+  {
+    id: 13,
+    name: "Joyce K.",
+    age: 25,
+    nationality: "Kenya",
+    location: "Kisumu",
+    community: "Luo",
+    experience: "2 Years",
+    education: "Form 4 and Above",
+    salary: "KES 750/day",
+    accommodation: "Day Bug",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face",
+    bio: "Reliable day worker for cleaning, cooking, and basic household tasks. Very punctual and efficient.",
+    phoneNumber: "+254 700 789 123",
+    email: "joyce.k@example.com",
+    skills: ["Cleaning", "Cooking", "Laundry", "Basic Childcare", "Pet Care"],
+    languages: ["English", "Swahili", "Luo"]
+  },
+  {
+    id: 14,
+    name: "Sarah L.",
+    age: 35,
+    nationality: "Kenya",
+    location: "Eldoret",
+    community: "Kalenjin",
+    experience: "8 Years",
+    education: "Diploma",
+    salary: "KES 20,000",
+    accommodation: "Nanny",
+    status: "Available",
+    image: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face",
+    bio: "Experienced nanny specializing in newborn care and toddler development. Very patient and loving.",
+    phoneNumber: "+254 700 321 654",
+    email: "sarah.l@example.com",
+    skills: ["Newborn Care", "Toddler Development", "Meal Preparation", "Child Safety", "First Aid"],
+    languages: ["English", "Swahili", "Kalenjin"]
   }
 ];
 
@@ -282,9 +359,30 @@ const EmployerDashboard = () => {
     const matchesExperience = filters.experience === 'All Experience Levels' || housegirl.experience === filters.experience;
     const matchesEducation = filters.education === 'All Levels' || housegirl.education === filters.education;
     const matchesAccommodation = filters.accommodation === 'All Types' || housegirl.accommodation === filters.accommodation;
+    
+    // Handle salary range filtering for both daily and monthly rates
+    let matchesSalary = true;
+    if (filters.salaryRange !== 'All Salaries') {
+      if (filters.salaryRange === 'Daily Rates') {
+        // Check if accommodation is Day Bug (daily rates)
+        matchesSalary = housegirl.accommodation === 'Day Bug';
+      } else {
+        // Check monthly salary ranges for Housegirl and Nanny
+        const salary = parseInt(housegirl.salary.replace(/[^\d]/g, ''));
+        if (filters.salaryRange === 'KES 5,000 - 8,000') {
+          matchesSalary = salary >= 5000 && salary <= 8000;
+        } else if (filters.salaryRange === 'KES 8,000 - 12,000') {
+          matchesSalary = salary >= 8000 && salary <= 12000;
+        } else if (filters.salaryRange === 'KES 12,000 - 15,000') {
+          matchesSalary = salary >= 12000 && salary <= 15000;
+        } else if (filters.salaryRange === 'KES 15,000+') {
+          matchesSalary = salary >= 15000;
+        }
+      }
+    }
 
     return matchesSearch && matchesLocation && matchesNationality && matchesCommunity && 
-           matchesExperience && matchesEducation && matchesAccommodation;
+           matchesExperience && matchesEducation && matchesAccommodation && matchesSalary;
   });
 
   // Pagination logic
@@ -367,90 +465,29 @@ const EmployerDashboard = () => {
       </header>
 
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Enhanced Header Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900 mb-2">Find Your Perfect Housegirl</h2>
-              <p className="text-sm text-gray-600">Browse through verified profiles and find the right match for your household</p>
-            </div>
-            <div className="flex items-center space-x-3">
-              <div className="text-right">
-                <div className="text-2xl font-bold text-blue-600">{filteredHousegirls.length}</div>
-                <div className="text-sm text-gray-500">Available Profiles</div>
-              </div>
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full flex items-center justify-center">
-                <Users className="h-6 w-6 text-white" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Agency Advert Section */}
-        <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-emerald-50 to-teal-50">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900">Need Professional Help?</h3>
-                  <p className="text-sm text-gray-600">Want to contact an agency and get a verified caregiver or housegirl?</p>
-                </div>
-              </div>
-              <Button 
-                onClick={() => navigate('/agencies')}
-                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium px-6"
-              >
-                <Building2 className="h-4 w-4 mr-2" />
-                Contact Agencies
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="max-w-7xl mx-auto px-4">
         {/* Enhanced Filters Section */}
-        <Card className="mb-8 border-0 shadow-lg bg-gradient-to-r from-white to-blue-50">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-blue-100 rounded-lg">
-                  <Filter className="h-5 w-5 text-blue-600" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">Advanced Search & Filters</h3>
-              </div>
-              <Button 
-                variant="outline" 
-                onClick={resetFilters}
-                size="sm"
-                className="border-blue-300 text-blue-600 hover:bg-blue-50"
-              >
-                <FilterX className="h-4 w-4 mr-2" />
-                Clear All Filters
-              </Button>
-            </div>
-            
-            {/* Mobile-Friendly Single Row Filter Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3">
-              {/* Search Input - Full Width on Mobile */}
-              <div className="lg:col-span-2 xl:col-span-1">
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Search</label>
+        <Card className="mb-6 border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+          <CardContent className="p-4">
+            {/* Single Row Filter Layout */}
+            <div className="flex flex-wrap items-end gap-3">
+              {/* Search Input - Full Width */}
+              <div className="flex-1 min-w-[200px]">
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Search</label>
                 <div className="relative">
-                  <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-3 w-3 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-blue-500" />
                   <Input
-                    placeholder="Name, location, skills..."
+                    placeholder="Search by name, location, skills..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
-                    className="h-9 pl-7 text-xs border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white"
+                    className="h-10 pl-10 text-sm border-blue-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-gray-900 placeholder-gray-500"
                   />
                 </div>
               </div>
               
               {/* Location Filter */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Location</label>
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Location</label>
                 <Select value={filters.location} onValueChange={(value) => handleFilterChange('location', value)}>
                   <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
                     <SelectValue placeholder="Location" />
@@ -461,7 +498,16 @@ const EmployerDashboard = () => {
                     <SelectItem value="Mombasa">Mombasa</SelectItem>
                     <SelectItem value="Kisumu">Kisumu</SelectItem>
                     <SelectItem value="Nakuru">Nakuru</SelectItem>
+                    <SelectItem value="Eldoret">Eldoret</SelectItem>
+                    <SelectItem value="Thika">Thika</SelectItem>
+                    <SelectItem value="Kakamega">Kakamega</SelectItem>
+                    <SelectItem value="Nyeri">Nyeri</SelectItem>
+                    <SelectItem value="Machakos">Machakos</SelectItem>
+                    <SelectItem value="Kericho">Kericho</SelectItem>
+                    <SelectItem value="Kitale">Kitale</SelectItem>
                     <SelectItem value="Bungoma">Bungoma</SelectItem>
+                    <SelectItem value="Kisii">Kisii</SelectItem>
+                    <SelectItem value="Embu">Embu</SelectItem>
                     <SelectItem value="Other">Other</SelectItem>
                   </SelectContent>
                 </Select>
@@ -469,7 +515,7 @@ const EmployerDashboard = () => {
               
               {/* Experience Filter */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Experience</label>
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Experience</label>
                 <Select value={filters.experience} onValueChange={(value) => handleFilterChange('experience', value)}>
                   <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
                     <SelectValue placeholder="Experience" />
@@ -487,23 +533,23 @@ const EmployerDashboard = () => {
               
               {/* Accommodation Filter */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Type</label>
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Type</label>
                 <Select value={filters.accommodation} onValueChange={(value) => handleFilterChange('accommodation', value)}>
                   <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
                     <SelectValue placeholder="Type" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All Types">All Types</SelectItem>
-                    <SelectItem value="Live-in">Live-in</SelectItem>
-                    <SelectItem value="Day Worker">Day Worker</SelectItem>
-                    <SelectItem value="Part-time">Part-time</SelectItem>
+                    <SelectItem value="Housegirl">Housegirl (Monthly)</SelectItem>
+                    <SelectItem value="Day Bug">Day Bug (Daily Rate)</SelectItem>
+                    <SelectItem value="Nanny">Nanny (Monthly)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               {/* Community Filter */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Community</label>
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Community</label>
                 <Select value={filters.community} onValueChange={(value) => handleFilterChange('community', value)}>
                   <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
                     <SelectValue placeholder="Community" />
@@ -534,7 +580,7 @@ const EmployerDashboard = () => {
               
               {/* Education Filter */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Education</label>
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Education</label>
                 <Select value={filters.education} onValueChange={(value) => handleFilterChange('education', value)}>
                   <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
                     <SelectValue placeholder="Education" />
@@ -543,27 +589,42 @@ const EmployerDashboard = () => {
                     <SelectItem value="All Levels">All Levels</SelectItem>
                     <SelectItem value="Class 8 and Above">Class 8+</SelectItem>
                     <SelectItem value="Form 4 and Above">Form 4+</SelectItem>
-                    <SelectItem value="Diploma">Diploma</SelectItem>
-                    <SelectItem value="University">University</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               
               {/* Salary Filter */}
               <div>
-                <label className="text-xs font-medium text-gray-600 mb-1 block">Salary</label>
+                <label className="text-xs font-medium text-blue-700 mb-1 block">Salary</label>
                 <Select value={filters.salaryRange} onValueChange={(value) => handleFilterChange('salaryRange', value)}>
                   <SelectTrigger className="h-9 border-gray-300 focus:border-blue-500 focus:ring-blue-500 bg-white text-xs">
                     <SelectValue placeholder="Salary" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="All Salaries">All Salaries</SelectItem>
-                    <SelectItem value="KES 5,000 - 8,000">KES 5K-8K</SelectItem>
-                    <SelectItem value="KES 8,000 - 12,000">KES 8K-12K</SelectItem>
-                    <SelectItem value="KES 12,000 - 15,000">KES 12K-15K</SelectItem>
-                    <SelectItem value="KES 15,000+">KES 15K+</SelectItem>
+                    <SelectItem value="Daily Rates">Daily Rates (KES 700-900/day)</SelectItem>
+                    <SelectItem value="KES 5,000 - 8,000">KES 5K-8K/month</SelectItem>
+                    <SelectItem value="KES 8,000 - 12,000">KES 8K-12K/month</SelectItem>
+                    <SelectItem value="KES 12,000 - 15,000">KES 12K-15K/month</SelectItem>
+                    <SelectItem value="KES 15,000+">KES 15K+/month</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              
+              {/* Refresh Dashboard Button */}
+              <div className="min-w-[140px]">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    resetFilters();
+                    setCurrentPage(1);
+                  }}
+                  size="sm"
+                  className="h-9 w-full border-blue-300 text-blue-600 hover:bg-blue-50 hover:border-blue-400"
+                >
+                  <RefreshCw className="h-4 w-4 mr-1" />
+                  Refresh
+                </Button>
               </div>
             </div>
           </CardContent>
@@ -812,6 +873,35 @@ const EmployerDashboard = () => {
                   >
                     Next
                     <ArrowRight className="h-4 w-4 ml-2" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Agency Contact Popup - After Second Page */}
+        {currentPage >= 2 && (
+          <div className="mt-8 mb-6">
+            <Card className="border-0 shadow-lg bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full flex items-center justify-center">
+                      <Building2 className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-emerald-800">Need Agency Help?</h4>
+                      <p className="text-sm text-emerald-600">Get verified caregivers and professional placement assistance</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => navigate('/agencies')}
+                    size="lg"
+                    className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white"
+                  >
+                    <Building2 className="h-4 w-4 mr-2" />
+                    Contact Agencies
                   </Button>
                 </div>
               </CardContent>
