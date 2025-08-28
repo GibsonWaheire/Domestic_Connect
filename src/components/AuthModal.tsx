@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,12 +29,21 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
   const { signUp, signIn, user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
       onClose();
+      // Redirect users based on their type
+      if (user.user_type === 'employer') {
+        navigate('/dashboard');
+      } else if (user.user_type === 'housegirl') {
+        navigate('/housegirls');
+      } else if (user.user_type === 'agency') {
+        navigate('/agencies');
+      }
     }
-  }, [user, onClose]);
+  }, [user, onClose, navigate]);
 
   useEffect(() => {
     setIsLogin(defaultMode === 'login');
