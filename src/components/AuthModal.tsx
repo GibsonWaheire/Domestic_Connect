@@ -36,6 +36,93 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [bio, setBio] = useState('');
   const [customLocation, setCustomLocation] = useState('');
 
+  // Auto-update bio when relevant fields change
+  useEffect(() => {
+    if (userType === 'housegirl' && (age || experience || education || skills.length || languages.length || accommodationType || location || community || expectedSalary)) {
+      const generatedBio = generateBioDescription();
+      if (generatedBio && !bio) {
+        setBio(generatedBio);
+      }
+    }
+  }, [age, experience, education, skills, languages, accommodationType, location, community, expectedSalary, userType]);
+
+  // Auto-generate bio description based on form fields
+  const generateBioDescription = () => {
+    if (!age && !experience && !education && !skills.length && !languages.length) {
+      return '';
+    }
+
+    let description = 'I am';
+
+    // Add age if available
+    if (age) {
+      description += ` a ${age}-year-old`;
+    } else {
+      description += ' a';
+    }
+
+    // Add experience level
+    if (experience === 'No Experience') {
+      description += ' hardworking person looking for my first house help job. I am eager to learn and willing to work hard.';
+    } else if (experience === '1 Year') {
+      description += ' domestic worker with 1 year of experience. I am reliable and professional.';
+    } else if (experience === '2 Years') {
+      description += ' domestic worker with 2 years of experience. I am skilled and trustworthy.';
+    } else if (experience === '3+ Years') {
+      description += ' experienced domestic worker with 3+ years of experience. I am very professional and skilled.';
+    } else {
+      description += ' domestic worker. I am hardworking and reliable.';
+    }
+
+    // Add skills if available
+    if (skills.length > 0) {
+      const skillText = skills.join(', ');
+      description += ` I am skilled in ${skillText}.`;
+    }
+
+    // Add languages if available
+    if (languages.length > 0) {
+      const languageText = languages.join(', ');
+      description += ` I speak ${languageText}.`;
+    }
+
+    // Add accommodation preference
+    if (accommodationType === 'live_in') {
+      description += ' I prefer live-in arrangements.';
+    } else if (accommodationType === 'live_out') {
+      description += ' I prefer live-out arrangements.';
+    } else if (accommodationType === 'both') {
+      description += ' I am flexible with accommodation arrangements.';
+    }
+
+    // Add location if available
+    if (location && location !== 'Custom') {
+      description += ` I am located in ${location}.`;
+    } else if (location === 'Custom' && customLocation) {
+      description += ` I am located in ${customLocation}.`;
+    }
+
+    // Add education if available
+    if (education) {
+      description += ` I have ${education} education.`;
+    }
+
+    // Add community if available
+    if (community && community !== 'Other') {
+      description += ` I am from the ${community} community.`;
+    }
+
+    // Add salary expectation if available
+    if (expectedSalary) {
+      description += ` My expected salary is KSh ${expectedSalary}.`;
+    }
+
+    // Final touch
+    description += ' I am looking for a good family to work with and I am committed to providing excellent service.';
+
+    return description;
+  };
+
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -77,6 +164,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           });
         } else {
           onClose();
+          // Redirect to housegirl dashboard after successful sign in
+          // The dashboard will handle further routing based on user type
+          window.location.href = '/housegirl-dashboard';
         }
       } else {
         // Sign up validation
@@ -161,6 +251,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           });
         } else {
           onClose();
+          // Redirect based on user type
+          if (userType === 'housegirl') {
+            window.location.href = '/housegirl-dashboard';
+          } else if (userType === 'employer') {
+            window.location.href = '/dashboard';
+          } else if (userType === 'agency') {
+            window.location.href = '/agencies';
+          }
         }
       }
     } catch (error: any) {
@@ -382,7 +480,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                       </p>
                     )}
                     <p className="text-xs text-gray-500">
-                      Enter your M-Pesa number (e.g., 07XX XXX XXX, +254 7XX XXX XXX)
+                      Enter your phone number (e.g., 07XX XXX XXX, +254 7XX XXX XXX)
                     </p>
                   </div>
 
@@ -586,16 +684,42 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                       <div className="space-y-4">
                         <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">Tell us about yourself</h5>
                         
-                        <div className="space-y-2">
-                          <Label htmlFor="bio" className="text-gray-700 font-medium text-sm">Brief description</Label>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <Label htmlFor="bio" className="text-gray-700 font-medium text-sm">Brief description</Label>
+                              <p className="text-xs text-gray-500 mt-1">
+                                We'll create a professional description based on your details
+                              </p>
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                const generatedBio = generateBioDescription();
+                                if (generatedBio) {
+                                  setBio(generatedBio);
+                                }
+                              }}
+                              className="text-xs h-7 px-2"
+                            >
+                              Auto-generate
+                            </Button>
+                          </div>
                           <textarea
                             id="bio"
                             value={bio}
                             onChange={(e) => setBio(e.target.value)}
-                            placeholder="Example: I am a hardworking person who loves cooking and taking care of children. I have experience in housekeeping and I'm looking for a good family to work with."
+                            placeholder="Click 'Auto-generate' to create a description based on your details, or write your own..."
                             className="w-full border-gray-300 focus:border-blue-500 text-sm rounded-md p-3 min-h-[80px] resize-none"
                             rows={3}
                           />
+                          {bio && (
+                            <p className="text-xs text-gray-500">
+                              💡 You can edit this description to make it more personal
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

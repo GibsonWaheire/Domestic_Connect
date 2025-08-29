@@ -10,6 +10,17 @@
       "user_type": "employer",
       "created_at": "2024-01-01T00:00:00.000Z",
       "updated_at": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "5f23",
+      "user_id": "user_1756453166049",
+      "first_name": "Gibson",
+      "last_name": "Giteru",
+      "email": "pwriter455@gmail.com",
+      "phone_number": "+254726899113",
+      "user_type": "housegirl",
+      "created_at": "2025-08-29T07:39:26.049Z",
+      "updated_at": "2025-08-29T07:39:26.049Z"
     }
   ],
   "employer_profiles": [
@@ -40,6 +51,23 @@
       "profile_photo_url": null,
       "created_at": "2024-01-01T00:00:00.000Z",
       "updated_at": "2024-01-01T00:00:00.000Z"
+    },
+    {
+      "id": "5f35",
+      "profile_id": "5f23",
+      "age": 21,
+      "bio": "I am a 21-year-old domestic worker with 2 years of experience. I am skilled and trustworthy. I am skilled in Cooking, Laundry, Ironing, Shopping, Childcare, Cleaning. I speak English, Kikuyu. I am flexible with accommodation arrangements. I am located in Kisumu. I have Form 4+ education. I am from the Kamba community. My expected salary is KSh 100000. I am looking for a good family to work with and I am committed to providing excellent service.",
+      "current_location": "Kisumu",
+      "location": "Kisumu",
+      "education": "Form 4+",
+      "experience": "2 Years",
+      "expected_salary": 100000,
+      "accommodation_type": "both",
+      "tribe": "Kamba",
+      "is_available": true,
+      "profile_photo_url": null,
+      "created_at": "2025-08-29T07:39:26.127Z",
+      "updated_at": "2025-08-29T07:39:26.127Z"
     }
   ],
   "agency_profiles": [
