@@ -285,11 +285,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
     }
   };
 
-  const handleBackdropClick = (e: React.MouseEvent) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
+
 
   // Phone number validation and formatting for Kenya
   const formatPhoneNumber = (value: string) => {
@@ -336,7 +332,6 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
       return (
       <div 
         className="fixed inset-0 z-50 flex justify-center items-start overflow-y-auto bg-black/40 p-4"
-        onClick={handleBackdropClick}
       >
         <div className="w-full max-w-2xl relative my-8 mx-auto">
         {/* Close Button */}
@@ -344,12 +339,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="absolute -top-12 right-0 text-white hover:text-gray-300 hover:bg-white/10 rounded-full p-2"
+          className="absolute -top-12 right-0 bg-white/90 hover:bg-white text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-full p-3 shadow-lg border border-gray-200 hover:border-red-300 transition-all duration-200 z-10"
         >
-          <X className="h-5 w-5" />
+          <X className="h-6 w-6 font-bold" />
         </Button>
 
-        <Card className="w-full border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[90vh] flex flex-col">
+        <Card 
+          className="w-full border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[90vh] flex flex-col"
+        >
           <CardHeader className="text-center pb-4 shrink-0">
             <div className="flex items-center justify-center mb-4">
               <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">

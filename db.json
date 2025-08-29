@@ -21,6 +21,17 @@
       "user_type": "housegirl",
       "created_at": "2025-08-29T07:39:26.049Z",
       "updated_at": "2025-08-29T07:39:26.049Z"
+    },
+    {
+      "id": "d9fa",
+      "user_id": "user_1756454699206",
+      "first_name": "Gibson",
+      "last_name": "Giteru",
+      "email": "gibson.giteru@student.moringaschool.com",
+      "phone_number": "+254726899113",
+      "user_type": "housegirl",
+      "created_at": "2025-08-29T08:04:59.206Z",
+      "updated_at": "2025-08-29T08:04:59.206Z"
     }
   ],
   "employer_profiles": [
@@ -68,6 +79,23 @@
       "profile_photo_url": null,
       "created_at": "2025-08-29T07:39:26.127Z",
       "updated_at": "2025-08-29T07:39:26.127Z"
+    },
+    {
+      "id": "33fb",
+      "profile_id": "d9fa",
+      "age": 43,
+      "bio": "I am a 4-year-old domestic worker. I am hardworking and reliable. I am looking for a good family to work with and I am committed to providing excellent service.",
+      "current_location": "Mombasa",
+      "location": "Mombasa",
+      "education": "Class 8+",
+      "experience": "3+ Years",
+      "expected_salary": 10000,
+      "accommodation_type": "both",
+      "tribe": "Kamba",
+      "is_available": true,
+      "profile_photo_url": null,
+      "created_at": "2025-08-29T08:04:59.236Z",
+      "updated_at": "2025-08-29T08:04:59.236Z"
     }
   ],
   "agency_profiles": [
