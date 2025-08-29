@@ -7,9 +7,11 @@ import ProfileModal from '@/components/ProfileModal';
 import Sidebar from '@/components/employer/Sidebar';
 import DashboardHeader from '@/components/employer/DashboardHeader';
 import HousegirlsOverview from '@/components/employer/HousegirlsOverview';
+import CandidatesSection from '@/components/employer/CandidatesSection';
+import JobPostingModal from '@/components/JobPostingModal';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Briefcase, MessageCircle, Settings } from 'lucide-react';
+import { Briefcase, BarChart3, TrendingUp, Users } from 'lucide-react';
 
 interface Housegirl {
   id: number;
@@ -36,8 +38,9 @@ const EmployerDashboard = () => {
   const navigate = useNavigate();
   
   // State management
-  const [activeSection, setActiveSection] = useState<'overview' | 'jobs' | 'candidates' | 'messages' | 'settings'>('overview');
+  const [activeSection, setActiveSection] = useState<'overview' | 'jobs' | 'candidates' | 'analytics'>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showJobPostingModal, setShowJobPostingModal] = useState(false);
   const [selectedHousegirl, setSelectedHousegirl] = useState<Housegirl | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
@@ -50,6 +53,10 @@ const EmployerDashboard = () => {
   };
 
 
+
+  const handlePostJob = () => {
+    setShowJobPostingModal(true);
+  };
 
   const handleViewProfile = (housegirl: Housegirl) => {
     setSelectedHousegirl(housegirl);
@@ -106,12 +113,12 @@ const EmployerDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-12">
-                    <Briefcase className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Job posting feature coming soon</h3>
-                    <p className="text-gray-600 mb-4">You'll be able to post job opportunities to attract housegirls</p>
-                    <Button variant="outline" className="mt-4">
+                    <Briefcase className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Ready to hire?</h3>
+                    <p className="text-gray-600 mb-4">Post a job opportunity and connect with qualified housegirls in your area</p>
+                    <Button onClick={handlePostJob} className="mt-4 bg-blue-600 hover:bg-blue-700">
                       <Briefcase className="h-4 w-4 mr-2" />
-                      Post Job (Coming Soon)
+                      Post Job Now
                     </Button>
                   </div>
                 </CardContent>
@@ -121,57 +128,60 @@ const EmployerDashboard = () => {
 
           {/* Candidates Section */}
           {activeSection === 'candidates' && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Advanced Candidate Search</CardTitle>
-                  <CardDescription>Use advanced filters to find the perfect housegirl match</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <div className="h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">🔍</span>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced search coming soon</h3>
-                    <p className="text-gray-600 mb-4">Advanced filtering, saved searches, and candidate comparison tools</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+            <CandidatesSection
+              onViewProfile={handleViewProfile}
+              onContact={(application) => {
+                // Handle contact action - could open a modal or redirect
+                console.log('Contact application:', application);
+              }}
+            />
           )}
 
-          {/* Messages Section */}
-          {activeSection === 'messages' && (
+          {/* Analytics Section */}
+          {activeSection === 'analytics' && (
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Messages</CardTitle>
-                  <CardDescription>Communicate with candidates and applicants</CardDescription>
+                  <CardTitle className="text-xl">Dashboard Analytics</CardTitle>
+                  <CardDescription>Track your hiring performance and insights</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Messaging coming soon</h3>
-                    <p className="text-gray-600 mb-4">You'll be able to message candidates here</p>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <Card className="bg-blue-50 border-blue-200">
+                      <CardContent className="p-4 text-center">
+                        <BarChart3 className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+                        <h3 className="text-lg font-semibold text-blue-900">Total Applications</h3>
+                        <p className="text-2xl font-bold text-blue-700">24</p>
+                        <p className="text-sm text-blue-600">+12% from last month</p>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-green-50 border-green-200">
+                      <CardContent className="p-4 text-center">
+                        <TrendingUp className="h-8 w-8 text-green-600 mx-auto mb-2" />
+                        <h3 className="text-lg font-semibold text-green-900">Hiring Rate</h3>
+                        <p className="text-2xl font-bold text-green-700">85%</p>
+                        <p className="text-sm text-green-600">+5% from last month</p>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="bg-purple-50 border-purple-200">
+                      <CardContent className="p-4 text-center">
+                        <Users className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+                        <h3 className="text-lg font-semibold text-purple-900">Active Housegirls</h3>
+                        <p className="text-2xl font-bold text-purple-700">8</p>
+                        <p className="text-sm text-purple-600">Currently employed</p>
+                      </CardContent>
+                    </Card>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Settings Section */}
-          {activeSection === 'settings' && (
-            <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-xl">Settings</CardTitle>
-                  <CardDescription>Manage your account and preferences</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <Settings className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Settings coming soon</h3>
-                    <p className="text-gray-600 mb-4">You'll be able to manage your settings here</p>
+                  
+                  <div className="text-center py-8">
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Analytics dashboard coming soon</h3>
+                    <p className="text-gray-600 mb-4">Detailed insights, charts, and performance metrics</p>
+                    <Button variant="outline">
+                      <BarChart3 className="h-4 w-4 mr-2" />
+                      View Detailed Reports
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -181,6 +191,12 @@ const EmployerDashboard = () => {
       </div>
 
       {/* Modals */}
+      <JobPostingModal
+        isOpen={showJobPostingModal}
+        onClose={() => setShowJobPostingModal(false)}
+        user={user}
+      />
+
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => {

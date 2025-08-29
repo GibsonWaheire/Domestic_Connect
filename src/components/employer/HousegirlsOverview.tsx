@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,9 @@ import {
   Mail,
   Star,
   Users,
-  Briefcase
+  Briefcase,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface Housegirl {
@@ -51,6 +53,8 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
   const [locationFilter, setLocationFilter] = useState('all');
   const [experienceFilter, setExperienceFilter] = useState('all');
   const [showFavorites, setShowFavorites] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 6;
 
   // Mock data - in real app this would come from API
   const [housegirls] = useState<Housegirl[]>([
@@ -149,6 +153,17 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
 
     return matchesSearch && matchesLocation && matchesExperience && matchesFavorites;
   });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredHousegirls.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedHousegirls = filteredHousegirls.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, locationFilter, experienceFilter, showFavorites]);
 
   const handleViewProfile = (housegirl: Housegirl) => {
     onViewProfile(housegirl);
@@ -249,7 +264,7 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
 
       {/* Housegirls Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredHousegirls.map((housegirl) => (
+        {paginatedHousegirls.map((housegirl) => (
           <Card key={housegirl.id} className="hover:shadow-lg transition-shadow duration-200">
             <CardHeader className="pb-3">
               <div className="flex items-start justify-between">
@@ -404,6 +419,52 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center space-x-2 mt-8">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className="w-10 h-10"
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      )}
+
+      {/* Page Info */}
+      {filteredHousegirls.length > 0 && (
+        <div className="text-center text-sm text-gray-600 mt-4">
+          Showing {startIndex + 1}-{Math.min(endIndex, filteredHousegirls.length)} of {filteredHousegirls.length} housegirls
+        </div>
       )}
     </div>
   );
