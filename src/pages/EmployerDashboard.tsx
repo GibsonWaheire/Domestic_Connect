@@ -3,12 +3,33 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import ProfileModal from '@/components/ProfileModal';
-import JobPostingModal from '@/components/JobPostingModal';
+
 import Sidebar from '@/components/employer/Sidebar';
 import DashboardHeader from '@/components/employer/DashboardHeader';
-import JobPostingSection from '@/components/employer/JobPostingSection';
+import HousegirlsOverview from '@/components/employer/HousegirlsOverview';
+import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Briefcase, MessageCircle, Settings } from 'lucide-react';
+
+interface Housegirl {
+  id: number;
+  name: string;
+  age: number;
+  nationality: string;
+  location: string;
+  community: string;
+  experience: string;
+  education: string;
+  salary: string;
+  accommodation: string;
+  status: string;
+  image?: string;
+  bio?: string;
+  skills?: string[];
+  languages?: string[];
+  rating?: number;
+  reviews?: number;
+}
 
 const EmployerDashboard = () => {
   const { user, signOut } = useAuth();
@@ -17,21 +38,10 @@ const EmployerDashboard = () => {
   // State management
   const [activeSection, setActiveSection] = useState<'overview' | 'jobs' | 'candidates' | 'messages' | 'settings'>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showJobPostingModal, setShowJobPostingModal] = useState(false);
-  const [selectedHousegirl, setSelectedHousegirl] = useState<any>(null);
+  const [selectedHousegirl, setSelectedHousegirl] = useState<Housegirl | null>(null);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
-  // Mock data
-  const [postedJobs] = useState([
-    {
-      id: 1,
-      title: "Live-in House Help Needed",
-      location: "Westlands, Nairobi",
-      salary: "KES 15,000 - 20,000",
-      postedDate: "2 days ago",
-      applications: 3
-    }
-  ]);
+
 
   // Handlers
   const handleSignOut = async () => {
@@ -39,11 +49,9 @@ const EmployerDashboard = () => {
     navigate('/housegirls');
   };
 
-  const handlePostJob = () => {
-    setShowJobPostingModal(true);
-  };
 
-  const handleViewProfile = (housegirl: any) => {
+
+  const handleViewProfile = (housegirl: Housegirl) => {
     setSelectedHousegirl(housegirl);
     setIsProfileModalOpen(true);
   };
@@ -64,7 +72,7 @@ const EmployerDashboard = () => {
       {/* Sidebar */}
       <Sidebar
         activeSection={activeSection}
-        onSectionChange={setActiveSection}
+        onSectionChange={(section: string) => setActiveSection(section as 'overview' | 'jobs' | 'candidates' | 'messages' | 'settings')}
         sidebarCollapsed={sidebarCollapsed}
         onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
         onSignOut={handleSignOut}
@@ -83,9 +91,8 @@ const EmployerDashboard = () => {
         <div className="px-6 py-6">
           {/* Overview Section */}
           {activeSection === 'overview' && (
-            <JobPostingSection
-              onPostJob={handlePostJob}
-              postedJobs={postedJobs}
+            <HousegirlsOverview
+              onViewProfile={handleViewProfile}
             />
           )}
 
@@ -94,14 +101,18 @@ const EmployerDashboard = () => {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Job Postings</CardTitle>
-                  <CardDescription>Manage your posted jobs and applications</CardDescription>
+                  <CardTitle className="text-xl">Post Job Opportunity</CardTitle>
+                  <CardDescription>Create a job posting to attract qualified housegirls</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-12">
                     <Briefcase className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Job management coming soon</h3>
-                    <p className="text-gray-600 mb-4">You'll be able to manage your job postings here</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Job posting feature coming soon</h3>
+                    <p className="text-gray-600 mb-4">You'll be able to post job opportunities to attract housegirls</p>
+                    <Button variant="outline" className="mt-4">
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Post Job (Coming Soon)
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -113,16 +124,16 @@ const EmployerDashboard = () => {
             <div className="space-y-6">
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-xl">Browse Candidates</CardTitle>
-                  <CardDescription>Find qualified housegirls for your needs</CardDescription>
+                  <CardTitle className="text-xl">Advanced Candidate Search</CardTitle>
+                  <CardDescription>Use advanced filters to find the perfect housegirl match</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-12">
                     <div className="h-16 w-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <span className="text-2xl">👥</span>
+                      <span className="text-2xl">🔍</span>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Candidate browsing coming soon</h3>
-                    <p className="text-gray-600 mb-4">You'll be able to browse and filter candidates here</p>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Advanced search coming soon</h3>
+                    <p className="text-gray-600 mb-4">Advanced filtering, saved searches, and candidate comparison tools</p>
                   </div>
                 </CardContent>
               </Card>
@@ -170,12 +181,6 @@ const EmployerDashboard = () => {
       </div>
 
       {/* Modals */}
-      <JobPostingModal
-        isOpen={showJobPostingModal}
-        onClose={() => setShowJobPostingModal(false)}
-        user={user}
-      />
-
       <ProfileModal
         isOpen={isProfileModalOpen}
         onClose={() => {
