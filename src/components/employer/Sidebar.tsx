@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
-import { Heart, Home, Briefcase, Users, MessageCircle, Settings, ArrowLeft, ArrowRight, LogOut } from 'lucide-react';
+import { Heart, Home, Briefcase, Users, BarChart3, ArrowLeft, ArrowRight, LogOut } from 'lucide-react';
 
 interface SidebarProps {
-  activeSection: string;
-  onSectionChange: (section: string) => void;
+  activeSection: 'overview' | 'jobs' | 'candidates' | 'analytics';
+  onSectionChange: (section: 'overview' | 'jobs' | 'candidates' | 'analytics') => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   onSignOut: () => void;
@@ -22,8 +22,7 @@ const Sidebar = ({
     { id: 'overview', label: 'Overview', icon: Home, color: 'blue' },
     { id: 'jobs', label: 'Job Postings', icon: Briefcase, color: 'green' },
     { id: 'candidates', label: 'Candidates', icon: Users, color: 'purple' },
-    { id: 'messages', label: 'Messages', icon: MessageCircle, color: 'indigo' },
-    { id: 'settings', label: 'Settings', icon: Settings, color: 'gray' }
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'indigo' }
   ];
 
   return (
