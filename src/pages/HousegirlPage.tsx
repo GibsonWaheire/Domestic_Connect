@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AuthModal from '@/components/AuthModal';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
@@ -33,6 +33,13 @@ const HousegirlPage = () => {
   const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+
+  // Redirect logged-in housegirls to their dashboard
+  useEffect(() => {
+    if (user && user.user_type === 'housegirl') {
+      navigate('/housegirl-dashboard');
+    }
+  }, [user, navigate]);
 
   const openAuthModal = (mode: 'login' | 'signup') => {
     setAuthMode(mode);
@@ -83,6 +90,15 @@ const HousegirlPage = () => {
                   <span className="text-sm text-gray-600">
                     Karibu, {user.first_name}
                   </span>
+                  {user.user_type === 'housegirl' && (
+                    <Button 
+                      variant="default" 
+                      onClick={() => navigate('/housegirl-dashboard')} 
+                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full"
+                    >
+                      My Dashboard
+                    </Button>
+                  )}
                   <Button variant="outline" onClick={signOut} className="border-blue-300 hover:bg-blue-50 rounded-full">
                     Logout
                   </Button>

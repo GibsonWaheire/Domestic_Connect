@@ -110,7 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setLoading(false);
   }, []);
 
-  const signUp = async (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: any) => {
+  const signUp = async (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: Record<string, any>) => {
     try {
       const users = getStoredUsers();
       
@@ -158,16 +158,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           await housegirlProfilesApi.create({
             profile_id: profile.id,
             age: additionalData.age || 18,
-            bio: additionalData.bio || null,
+            bio: additionalData.bio || 'Professional house help with experience in cooking, cleaning, and childcare.',
             current_location: additionalData.current_location || '',
             location: additionalData.location || '',
             education: additionalData.education || 'primary',
             experience: additionalData.experience || 'no_experience',
             expected_salary: additionalData.expected_salary || 0,
             accommodation_type: additionalData.accommodation_type || 'live_in',
-            tribe: additionalData.tribe || '',
+            tribe: additionalData.community || '', // Use community field
             is_available: true,
             profile_photo_url: null,
+            // Note: skills and languages would need to be added to the HousegirlProfile interface
+            // For now, we'll store them in the bio or create a separate table
           });
         } else if (userType === 'agency') {
           await agencyProfilesApi.create({
