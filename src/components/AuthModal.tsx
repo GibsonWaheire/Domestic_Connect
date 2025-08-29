@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
-import { User, Heart, Building2, Eye, EyeOff, X } from 'lucide-react';
+import { User, Heart, Building2, Eye, EyeOff, X, Shield, CheckCircle, Clock } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -29,6 +29,14 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [experience, setExperience] = useState('');
   const [education, setEducation] = useState('');
   const [community, setCommunity] = useState('');
+  const [expectedSalary, setExpectedSalary] = useState('');
+  const [accommodationType, setAccommodationType] = useState('');
+  const [skills, setSkills] = useState<string[]>([]);
+  const [languages, setLanguages] = useState<string[]>([]);
+  const [bio, setBio] = useState('');
+  const [customLocation, setCustomLocation] = useState('');
+
+
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -43,7 +51,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
       if (user.user_type === 'employer') {
         navigate('/dashboard');
       } else if (user.user_type === 'housegirl') {
-        navigate('/housegirls');
+        navigate('/housegirl-dashboard');
       } else if (user.user_type === 'agency') {
         navigate('/agencies');
       }
@@ -92,6 +100,28 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           return;
         }
 
+        // Phone number validation
+        if (!validatePhoneNumber(phoneNumber)) {
+          toast({
+            title: "Invalid Phone Number",
+            description: "Please enter a valid Kenyan phone number (e.g., 07XX XXX XXX)",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
+        // Custom location validation
+        if (location === 'Custom' && !customLocation.trim()) {
+          toast({
+            title: "Location Required",
+            description: "Please enter your custom location",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+
         const { error } = await signUp(email, password, userType, {
           first_name: firstName,
           last_name: lastName,
@@ -102,21 +132,19 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             location: '',
             description: ''
           }),
-          ...(userType === 'housegirl' && {
-            age: parseInt(age) || 25,
-            bio: 'Professional house help with experience in cooking, cleaning, and childcare.',
-            current_location: location || 'Nairobi',
-            location: location || 'Nairobi',
-            education: education || 'Form 4 and Above',
-            experience: experience || '2 Years',
-            expected_salary: 8000,
-            accommodation_type: 'Housegirl',
-            community: community || 'Kikuyu',
-            nationality: 'Kenya',
-            status: 'Available',
-            skills: ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
-            languages: ['English', 'Swahili']
-          }),
+                      ...(userType === 'housegirl' && {
+              age: parseInt(age) || 25,
+              bio: bio || 'Professional house help with experience in cooking, cleaning, and childcare.',
+              current_location: location === 'Custom' ? customLocation : location || 'Nairobi',
+              location: location === 'Custom' ? customLocation : location || 'Nairobi',
+              education: education || 'Form 4 and Above',
+              experience: experience || '2 Years',
+              expected_salary: parseInt(expectedSalary) || 8000,
+              accommodation_type: accommodationType || 'live_in',
+              community: community || 'Kikuyu',
+              skills: skills.length > 0 ? skills : ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
+              languages: languages.length > 0 ? languages : ['English', 'Swahili']
+            }),
           ...(userType === 'agency' && {
             agency_name: '',
             location: '',
@@ -165,14 +193,54 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
     }
   };
 
+  // Phone number validation and formatting for Kenya
+  const formatPhoneNumber = (value: string) => {
+    // Remove all non-digit characters
+    const cleaned = value.replace(/\D/g, '');
+    
+    // If it starts with 0, replace with +254
+    if (cleaned.startsWith('0')) {
+      return '+254' + cleaned.substring(1);
+    }
+    
+    // If it starts with 254, add +
+    if (cleaned.startsWith('254')) {
+      return '+' + cleaned;
+    }
+    
+    // If it starts with 7, add +254
+    if (cleaned.startsWith('7')) {
+      return '+254' + cleaned;
+    }
+    
+    // If it already starts with +, return as is
+    if (value.startsWith('+')) {
+      return value;
+    }
+    
+    // Default: add +254 if it's a 9-digit number
+    if (cleaned.length === 9) {
+      return '+254' + cleaned;
+    }
+    
+    return value;
+  };
+
+  const validatePhoneNumber = (phone: string) => {
+    const formatted = formatPhoneNumber(phone);
+    // Kenyan phone numbers should be +254 followed by 9 digits
+    const phoneRegex = /^\+254[17]\d{8}$/;
+    return phoneRegex.test(formatted);
+  };
+
   if (!isOpen) return null;
 
-  return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
-      onClick={handleBackdropClick}
-    >
-      <div className="w-full max-w-md relative">
+      return (
+      <div 
+        className="fixed inset-0 z-50 flex justify-center items-start overflow-y-auto bg-black/40 p-4"
+        onClick={handleBackdropClick}
+      >
+        <div className="w-full max-w-2xl relative my-8 mx-auto">
         {/* Close Button */}
         <Button
           variant="ghost"
@@ -183,8 +251,8 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           <X className="h-5 w-5" />
         </Button>
 
-        <Card className="w-full border-0 shadow-2xl bg-white/95 backdrop-blur-sm">
-          <CardHeader className="text-center pb-6">
+        <Card className="w-full border-0 shadow-2xl bg-white/95 backdrop-blur-sm max-h-[90vh] flex flex-col">
+          <CardHeader className="text-center pb-4 shrink-0">
             <div className="flex items-center justify-center mb-4">
               <div className="p-2 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg">
                 <Heart className="h-6 w-6 text-white" />
@@ -203,8 +271,24 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+          <CardContent className="px-6 py-6 overflow-y-auto">
+            {/* Top Section with Info */}
+            <div className="text-center mb-8 max-w-2xl mx-auto">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full mb-4">
+                <User className="h-8 w-8 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-700 mb-2">
+                {isLogin ? 'Welcome Back!' : 'Join Our Community'}
+              </h3>
+              <p className="text-sm text-gray-500">
+                {isLogin 
+                  ? 'Sign in to access your account and find your perfect match'
+                  : 'Create your profile and start connecting with opportunities'
+                }
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-8 pt-4 max-w-3xl mx-auto">
               {!isLogin && (
                 <>
                   <div className="space-y-2">
@@ -239,8 +323,8 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                     </Select>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-3">
                       <Label htmlFor="firstName" className="text-gray-700 font-medium">First Name</Label>
                       <Input
                         id="firstName"
@@ -252,7 +336,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                         placeholder="Enter first name"
                       />
                     </div>
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <Label htmlFor="lastName" className="text-gray-700 font-medium">Last Name</Label>
                       <Input
                         id="lastName"
@@ -272,84 +356,247 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                       id="phoneNumber"
                       type="tel"
                       value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value)}
-                      placeholder="+254 700 000 000"
-                      className="border-gray-300 focus:border-blue-500"
+                      onChange={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setPhoneNumber(formatted);
+                      }}
+                      onBlur={(e) => {
+                        const formatted = formatPhoneNumber(e.target.value);
+                        setPhoneNumber(formatted);
+                      }}
+                      placeholder="07XX XXX XXX or +254 7XX XXX XXX"
+                      className={`border-gray-300 focus:border-blue-500 ${
+                        phoneNumber && !validatePhoneNumber(phoneNumber) 
+                          ? 'border-red-500 focus:border-red-500' 
+                          : ''
+                      }`}
                     />
+                    {phoneNumber && !validatePhoneNumber(phoneNumber) && (
+                      <p className="text-xs text-red-500">
+                        Please enter a valid Kenyan phone number (e.g., 07XX XXX XXX)
+                      </p>
+                    )}
+                    {phoneNumber && validatePhoneNumber(phoneNumber) && (
+                      <p className="text-xs text-green-600">
+                        ✓ Valid phone number format
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Enter your M-Pesa number (e.g., 07XX XXX XXX, +254 7XX XXX XXX)
+                    </p>
                   </div>
 
                   {/* Additional fields for housegirls */}
                   {userType === 'housegirl' && (
-                    <div className="space-y-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <h4 className="text-sm font-semibold text-blue-800 mb-3">Profile Details (Optional)</h4>
+                    <div className="space-y-8 p-6 bg-blue-50 rounded-lg border border-blue-200 my-8 max-w-2xl mx-auto">
+                      <h4 className="text-lg font-semibold text-blue-800 mb-6 text-center">Tell Us About Yourself</h4>
                       
-                      <div className="grid grid-cols-2 gap-4">
+                      {/* Basic Information */}
+                      <div className="space-y-6">
+                        <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">Basic Information</h5>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="age" className="text-gray-700 font-medium text-sm">Age</Label>
+                            <Input
+                              id="age"
+                              type="number"
+                              value={age}
+                              onChange={(e) => setAge(e.target.value)}
+                              placeholder="25"
+                              className="border-gray-300 focus:border-blue-500 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="location" className="text-gray-700 font-medium text-sm">Where are you?</Label>
+                            <Select value={location} onValueChange={setLocation}>
+                              <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                                <SelectValue placeholder="Select your city/town" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Nairobi">Nairobi</SelectItem>
+                                <SelectItem value="Mombasa">Mombasa</SelectItem>
+                                <SelectItem value="Kisumu">Kisumu</SelectItem>
+                                <SelectItem value="Nakuru">Nakuru</SelectItem>
+                                <SelectItem value="Eldoret">Eldoret</SelectItem>
+                                <SelectItem value="Thika">Thika</SelectItem>
+                                <SelectItem value="Machakos">Machakos</SelectItem>
+                                <SelectItem value="Kakamega">Kakamega</SelectItem>
+                                <SelectItem value="Nyeri">Nyeri</SelectItem>
+                                <SelectItem value="Embu">Embu</SelectItem>
+                                <SelectItem value="Meru">Meru</SelectItem>
+                                <SelectItem value="Kericho">Kericho</SelectItem>
+                                <SelectItem value="Bungoma">Bungoma</SelectItem>
+                                <SelectItem value="Kisii">Kisii</SelectItem>
+                                <SelectItem value="Garissa">Garissa</SelectItem>
+                                <SelectItem value="Custom">Custom Location</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {location === 'Custom' && (
+                              <Input
+                                type="text"
+                                placeholder="Enter your city/town name"
+                                value={customLocation || ''}
+                                onChange={(e) => setCustomLocation(e.target.value)}
+                                className="border-gray-300 focus:border-blue-500 text-sm mt-2"
+                              />
+                            )}
+                          </div>
+                        </div>
+
                         <div className="space-y-2">
-                          <Label htmlFor="age" className="text-gray-700 font-medium text-sm">Age</Label>
-                          <Input
-                            id="age"
-                            type="number"
-                            value={age}
-                            onChange={(e) => setAge(e.target.value)}
-                            placeholder="25"
-                            className="border-gray-300 focus:border-blue-500 text-sm"
+                          <Label htmlFor="community" className="text-gray-700 font-medium text-sm">Community</Label>
+                          <Select value={community} onValueChange={setCommunity}>
+                            <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                              <SelectValue placeholder="Select your community" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="Kikuyu">Kikuyu</SelectItem>
+                              <SelectItem value="Luo">Luo</SelectItem>
+                              <SelectItem value="Kamba">Kamba</SelectItem>
+                              <SelectItem value="Luhya">Luhya</SelectItem>
+                              <SelectItem value="Kisii">Kisii</SelectItem>
+                              <SelectItem value="Meru">Meru</SelectItem>
+                              <SelectItem value="Embu">Embu</SelectItem>
+                              <SelectItem value="Other">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Work Experience */}
+                      <div className="space-y-6">
+                        <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">Work Experience</h5>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="experience" className="text-gray-700 font-medium text-sm">Experience</Label>
+                            <Select value={experience} onValueChange={setExperience}>
+                              <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                                <SelectValue placeholder="Select experience" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="No Experience">No Experience</SelectItem>
+                                <SelectItem value="1 Year">1 Year</SelectItem>
+                                <SelectItem value="2 Years">2 Years</SelectItem>
+                                <SelectItem value="3+ Years">3+ Years</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="education" className="text-gray-700 font-medium text-sm">Education</Label>
+                            <Select value={education} onValueChange={setEducation}>
+                              <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                                <SelectValue placeholder="Select education" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Primary School">Primary School</SelectItem>
+                                <SelectItem value="Class 8+">Class 8+</SelectItem>
+                                <SelectItem value="Form 4+">Form 4+</SelectItem>
+                                <SelectItem value="Higher">Higher Education</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Work Preferences */}
+                      <div className="space-y-6">
+                        <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">Work Preferences</h5>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label htmlFor="accommodationType" className="text-gray-700 font-medium text-sm">Live-in or Live-out?</Label>
+                            <Select value={accommodationType} onValueChange={setAccommodationType}>
+                              <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
+                                <SelectValue placeholder="Select preference" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="live_in">Live-in</SelectItem>
+                                <SelectItem value="live_out">Live-out</SelectItem>
+                                <SelectItem value="both">Both are fine</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label htmlFor="expectedSalary" className="text-gray-700 font-medium text-sm">Expected Salary (KSh)</Label>
+                            <Input
+                              id="expectedSalary"
+                              type="number"
+                              value={expectedSalary}
+                              onChange={(e) => setExpectedSalary(e.target.value)}
+                              placeholder="15000"
+                              className="border-gray-300 focus:border-blue-500 text-sm"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Skills */}
+                      <div className="space-y-4">
+                        <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">What can you do?</h5>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          {['Cooking', 'Cleaning', 'Laundry', 'Childcare', 'Ironing', 'Shopping'].map((skill) => (
+                            <label key={skill} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={skills.includes(skill)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setSkills([...skills, skill]);
+                                  } else {
+                                    setSkills(skills.filter(s => s !== skill));
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{skill}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Languages */}
+                      <div className="space-y-4">
+                        <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">Languages you speak</h5>
+                        
+                        <div className="grid grid-cols-2 gap-3">
+                          {['English', 'Swahili', 'Kikuyu', 'Luo', 'Kamba', 'Other'].map((language) => (
+                            <label key={language} className="flex items-center space-x-2">
+                              <input
+                                type="checkbox"
+                                checked={languages.includes(language)}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setLanguages([...languages, language]);
+                                  } else {
+                                    setLanguages(languages.filter(s => s !== language));
+                                  }
+                                }}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                              />
+                              <span className="text-sm text-gray-700">{language}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* About You */}
+                      <div className="space-y-4">
+                        <h5 className="text-sm font-medium text-blue-700 border-b border-blue-200 pb-2">Tell us about yourself</h5>
+                        
+                        <div className="space-y-2">
+                          <Label htmlFor="bio" className="text-gray-700 font-medium text-sm">Brief description</Label>
+                          <textarea
+                            id="bio"
+                            value={bio}
+                            onChange={(e) => setBio(e.target.value)}
+                            placeholder="Example: I am a hardworking person who loves cooking and taking care of children. I have experience in housekeeping and I'm looking for a good family to work with."
+                            className="w-full border-gray-300 focus:border-blue-500 text-sm rounded-md p-3 min-h-[80px] resize-none"
+                            rows={3}
                           />
                         </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location" className="text-gray-700 font-medium text-sm">Location</Label>
-                          <Input
-                            id="location"
-                            type="text"
-                            value={location}
-                            onChange={(e) => setLocation(e.target.value)}
-                            placeholder="Nairobi"
-                            className="border-gray-300 focus:border-blue-500 text-sm"
-                          />
-                        </div>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="experience" className="text-gray-700 font-medium text-sm">Experience</Label>
-                        <Select value={experience} onValueChange={setExperience}>
-                          <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
-                            <SelectValue placeholder="Select experience" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="1 Year">1 Year</SelectItem>
-                            <SelectItem value="2 Years">2 Years</SelectItem>
-                            <SelectItem value="3 Years">3 Years</SelectItem>
-                            <SelectItem value="4 Years">4 Years</SelectItem>
-                            <SelectItem value="5+ Years">5+ Years</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="education" className="text-gray-700 font-medium text-sm">Education</Label>
-                        <Select value={education} onValueChange={setEducation}>
-                          <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
-                            <SelectValue placeholder="Select education" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Class 8 and Above">Class 8+</SelectItem>
-                            <SelectItem value="Form 4 and Above">Form 4+</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-2">
-                        <Label htmlFor="community" className="text-gray-700 font-medium text-sm">Community</Label>
-                        <Select value={community} onValueChange={setCommunity}>
-                          <SelectTrigger className="border-gray-300 focus:border-blue-500 text-sm">
-                            <SelectValue placeholder="Select community" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="Kikuyu">Kikuyu</SelectItem>
-                            <SelectItem value="Luo">Luo</SelectItem>
-                            <SelectItem value="Kamba">Kamba</SelectItem>
-                            <SelectItem value="Other">Other</SelectItem>
-                          </SelectContent>
-                        </Select>
                       </div>
                     </div>
                   )}
@@ -429,14 +676,40 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                 </div>
               )}
 
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 font-semibold" 
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
-              </Button>
+              {/* Sticky submit */}
+              <div className="sticky bottom-0 -mx-6 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/70 border-t px-6 py-4">
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white py-3 font-semibold" 
+                  disabled={loading}
+                >
+                  {loading ? 'Processing...' : isLogin ? 'Sign In' : 'Create Account'}
+                </Button>
+              </div>
             </form>
+
+            {/* Bottom Section with Additional Info */}
+            <div className="mt-12 text-center max-w-2xl mx-auto">
+              <div className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-lg p-6 border border-gray-200">
+                <div className="flex items-center justify-center space-x-6 mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Shield className="h-5 w-5 text-green-600" />
+                    <span className="text-sm text-gray-600">Safe & Secure</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-blue-600" />
+                    <span className="text-sm text-gray-600">Verified Profiles</span>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-5 w-5 text-purple-600" />
+                    <span className="text-sm text-gray-600">Quick Setup</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Your information is protected and will only be shared with verified users
+                </p>
+              </div>
+            </div>
 
             <div className="mt-6 text-center">
               <Button
