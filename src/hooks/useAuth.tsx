@@ -11,6 +11,17 @@ interface User {
   phone_number?: string;
   created_at: string;
   updated_at: string;
+  // Extended fields for housegirl profiles
+  age?: number;
+  location?: string;
+  experience?: string;
+  education?: string;
+  expectedSalary?: string;
+  accommodationType?: string;
+  community?: string;
+  skills?: string[];
+  languages?: string[];
+  bio?: string;
 }
 
 interface AuthContextType {
@@ -131,9 +142,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updated_at: new Date().toISOString(),
       };
 
-      // Store user credentials
-      users[email] = { email, password, user: newUser };
-      setStoredUsers(users);
+              // Store user credentials with extended profile data
+        users[email] = { email, password, user: newUser };
+        setStoredUsers(users);
+        
+        // Set the current user to the extended user object
+        setUser(newUser);
+        setStoredUser(newUser);
 
       // Create profile in the database
       try {
@@ -171,6 +186,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             // Note: skills and languages would need to be added to the HousegirlProfile interface
             // For now, we'll store them in the bio or create a separate table
           });
+
+          // Update the user object with profile data for immediate access
+          newUser = {
+            ...newUser,
+            age: additionalData.age || 25,
+            location: additionalData.location || 'Nairobi',
+            experience: additionalData.experience || '2 Years',
+            education: additionalData.education || 'Form 4 and Above',
+            expectedSalary: additionalData.expectedSalary || 'KSh 15,000',
+            accommodationType: additionalData.accommodationType || 'Live-in',
+            community: additionalData.community || 'Kikuyu',
+            skills: additionalData.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
+            languages: additionalData.languages || ['English', 'Swahili'],
+            bio: additionalData.bio || 'Professional house help with experience in cooking, cleaning, and childcare.'
+          };
         } else if (userType === 'agency') {
           await agencyProfilesApi.create({
             profile_id: profile.id,

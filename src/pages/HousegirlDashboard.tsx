@@ -31,7 +31,9 @@ import {
   Eye,
   Calendar,
   DollarSign,
-  MapPin as LocationIcon
+  MapPin as LocationIcon,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
@@ -45,6 +47,7 @@ interface JobOpportunity {
   employer: string;
   description: string;
   requirements: string[];
+  matchScore: number;
 }
 
 const HousegirlDashboard = () => {
@@ -53,7 +56,7 @@ const HousegirlDashboard = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'profile' | 'messages'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
 
-  // Mock data - in production this would come from API
+  // Enhanced mock data with match scores
   const [jobOpportunities] = useState<JobOpportunity[]>([
     {
       id: '1',
@@ -63,7 +66,8 @@ const HousegirlDashboard = () => {
       postedDate: '2 hours ago',
       employer: 'Family of 4',
       description: 'Looking for a reliable house help for cooking, cleaning, and basic childcare.',
-      requirements: ['Cooking skills', 'Cleaning experience', 'Basic English', 'Live-in preferred']
+      requirements: ['Cooking skills', 'Cleaning experience', 'Basic English', 'Live-in preferred'],
+      matchScore: 95
     },
     {
       id: '2',
@@ -73,7 +77,8 @@ const HousegirlDashboard = () => {
       postedDate: '1 day ago',
       employer: 'Single Professional',
       description: 'Need help with cleaning and laundry 3 times a week.',
-      requirements: ['Cleaning experience', 'Reliable', 'Live-out', 'Flexible schedule']
+      requirements: ['Cleaning experience', 'Reliable', 'Live-out', 'Flexible schedule'],
+      matchScore: 87
     },
     {
       id: '3',
@@ -83,7 +88,19 @@ const HousegirlDashboard = () => {
       postedDate: '3 days ago',
       employer: 'Family with 2 children',
       description: 'Experienced nanny needed for childcare and light housekeeping.',
-      requirements: ['Childcare experience', 'First aid knowledge', 'Patient with children', 'Live-in available']
+      requirements: ['Childcare experience', 'First aid knowledge', 'Patient with children', 'Live-in available'],
+      matchScore: 92
+    },
+    {
+      id: '4',
+      title: 'Weekend House Help',
+      location: 'Karen, Nairobi',
+      salary: 'KSh 6,000 - 8,000',
+      postedDate: '5 days ago',
+      employer: 'Busy Family',
+      description: 'Weekend assistance with cleaning and meal preparation.',
+      requirements: ['Cooking skills', 'Cleaning experience', 'Weekend availability'],
+      matchScore: 78
     }
   ]);
 
@@ -91,7 +108,8 @@ const HousegirlDashboard = () => {
     profileViews: 45,
     jobApplications: 3,
     messagesReceived: 8,
-    daysActive: 12
+    daysActive: 12,
+    profileCompletion: 85
   });
 
   useEffect(() => {
@@ -108,6 +126,25 @@ const HousegirlDashboard = () => {
   if (!user || user.user_type !== 'housegirl') {
     return null;
   }
+
+  // Get user's actual data from registration
+  const getUserData = () => {
+    // Use actual user data from registration, with fallbacks
+    return {
+      age: user.age || '25',
+      location: user.location || 'Nairobi',
+      experience: user.experience || '2 Years',
+      education: user.education || 'Form 4 and Above',
+      expectedSalary: user.expectedSalary || 'KSh 15,000',
+      accommodationType: user.accommodationType || 'Live-in',
+      community: user.community || 'Kikuyu',
+      skills: user.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
+      languages: user.languages || ['English', 'Swahili'],
+      bio: user.bio || 'Professional house help with experience in cooking, cleaning, and childcare.'
+    };
+  };
+
+  const userData = getUserData();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-50">
@@ -240,22 +277,49 @@ const HousegirlDashboard = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-medium text-orange-600">Days Active</p>
-                      <p className="text-2xl font-bold text-orange-900">{profileStats.daysActive}</p>
+                      <p className="text-sm font-medium text-orange-600">Profile Completion</p>
+                      <p className="text-2xl font-bold text-orange-900">{profileStats.profileCompletion}%</p>
                     </div>
-                    <Clock className="h-8 w-8 text-orange-600" />
+                    <CheckCircle2 className="h-8 w-8 text-orange-600" />
                   </div>
                 </CardContent>
               </Card>
             </div>
+
+            {/* Profile Completion Alert */}
+            {profileStats.profileCompletion < 100 && (
+              <Card className="border-orange-200 bg-orange-50">
+                <CardContent className="p-4">
+                  <div className="flex items-center space-x-3">
+                    <AlertCircle className="h-5 w-5 text-orange-600" />
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-orange-800">
+                        Complete your profile to get more job matches!
+                      </p>
+                      <p className="text-xs text-orange-600 mt-1">
+                        You're {100 - profileStats.profileCompletion}% away from a complete profile
+                      </p>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setActiveTab('profile')}
+                      className="border-orange-300 text-orange-700 hover:bg-orange-100"
+                    >
+                      Complete Profile
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Recent Job Opportunities */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl">Recent Job Opportunities</CardTitle>
-                    <CardDescription>Latest jobs that match your profile</CardDescription>
+                    <CardTitle className="text-xl">Top Job Matches</CardTitle>
+                    <CardDescription>Jobs that best match your skills and preferences</CardDescription>
                   </div>
                   <Button 
                     variant="outline" 
@@ -272,8 +336,13 @@ const HousegirlDashboard = () => {
                   {jobOpportunities.slice(0, 2).map((job) => (
                     <div key={job.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                       <div className="flex-1">
-                        <h4 className="font-semibold text-gray-900">{job.title}</h4>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600 mt-1">
+                        <div className="flex items-center space-x-3 mb-2">
+                          <h4 className="font-semibold text-gray-900">{job.title}</h4>
+                          <Badge variant="secondary" className="bg-green-100 text-green-800">
+                            {job.matchScore}% Match
+                          </Badge>
+                        </div>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
                           <span className="flex items-center">
                             <LocationIcon className="h-4 w-4 mr-1" />
                             {job.location}
@@ -305,15 +374,26 @@ const HousegirlDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Button variant="outline" className="h-20 flex-col space-y-2 border-blue-200 hover:bg-blue-50">
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2 border-blue-200 hover:bg-blue-50"
+                    onClick={() => setActiveTab('profile')}
+                  >
                     <Edit className="h-6 w-6 text-blue-600" />
                     <span className="text-sm">Update Profile</span>
                   </Button>
-                  <Button variant="outline" className="h-20 flex-col space-y-2 border-green-200 hover:bg-green-50">
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2 border-green-200 hover:bg-green-50"
+                    onClick={() => setActiveTab('jobs')}
+                  >
                     <Search className="h-6 w-6 text-green-600" />
                     <span className="text-sm">Search Jobs</span>
                   </Button>
-                  <Button variant="outline" className="h-20 flex-col space-y-2 border-purple-200 hover:bg-purple-50">
+                  <Button 
+                    variant="outline" 
+                    className="h-20 flex-col space-y-2 border-purple-200 hover:bg-purple-50"
+                  >
                     <Settings className="h-6 w-6 text-purple-600" />
                     <span className="text-sm">Preferences</span>
                   </Button>
@@ -340,6 +420,9 @@ const HousegirlDashboard = () => {
                             <div className="flex items-center space-x-3 mb-3">
                               <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
                               <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                {job.matchScore}% Match
+                              </Badge>
+                              <Badge variant="outline" className="bg-blue-50 text-blue-700">
                                 Active
                               </Badge>
                             </div>
@@ -437,6 +520,14 @@ const HousegirlDashboard = () => {
                           <label className="text-sm font-medium text-gray-700">Phone</label>
                           <p className="text-gray-900">{user.phone_number || 'Not provided'}</p>
                         </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Age</label>
+                          <p className="text-gray-900">{userData.age} years old</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Community</label>
+                          <p className="text-gray-900">{userData.community}</p>
+                        </div>
                       </div>
                     </div>
 
@@ -445,18 +536,36 @@ const HousegirlDashboard = () => {
                       <div className="space-y-4">
                         <div>
                           <label className="text-sm font-medium text-gray-700">Preferred Location</label>
-                          <p className="text-gray-900">Nairobi</p>
+                          <p className="text-gray-900">{userData.location}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Experience Level</label>
-                          <p className="text-gray-900">2+ Years</p>
+                          <p className="text-gray-900">{userData.experience}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Education</label>
+                          <p className="text-gray-900">{userData.education}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-gray-700">Expected Salary</label>
+                          <p className="text-gray-900">{userData.expectedSalary}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-gray-700">Accommodation</label>
-                          <p className="text-gray-900">Live-in preferred</p>
+                          <p className="text-gray-900">{userData.accommodationType}</p>
                         </div>
                       </div>
                     </div>
+                  </div>
+
+                  <Separator />
+
+                  {/* Bio */}
+                  <div>
+                    <h4 className="text-lg font-semibold text-gray-900 mb-4">About You</h4>
+                    <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
+                      {userData.bio}
+                    </p>
                   </div>
 
                   <Separator />
@@ -468,8 +577,8 @@ const HousegirlDashboard = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-2 block">Skills</label>
                         <div className="flex flex-wrap gap-2">
-                          {['Cooking', 'Cleaning', 'Laundry', 'Childcare', 'Ironing'].map((skill) => (
-                            <Badge key={skill} variant="secondary">
+                          {userData.skills.map((skill) => (
+                            <Badge key={skill} variant="secondary" className="bg-blue-100 text-blue-800">
                               {skill}
                             </Badge>
                           ))}
@@ -478,8 +587,8 @@ const HousegirlDashboard = () => {
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-2 block">Languages</label>
                         <div className="flex flex-wrap gap-2">
-                          {['English', 'Swahili', 'Kikuyu'].map((language) => (
-                            <Badge key={language} variant="outline">
+                          {userData.languages.map((language) => (
+                            <Badge key={language} variant="outline" className="bg-green-100 text-green-800">
                               {language}
                             </Badge>
                           ))}
