@@ -1,69 +1,33 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/hooks/use-toast'; 
-import ProfileModal from '@/components/ProfileModal';
-
-import Sidebar from '@/components/employer/Sidebar';
-import DashboardHeader from '@/components/employer/DashboardHeader';
-import HousegirlsOverview from '@/components/employer/HousegirlsOverview';
-import CandidatesSection from '@/components/employer/CandidatesSection';
-import JobPostingModal from '@/components/JobPostingModal';
+import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { 
-  Briefcase, 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  MessageCircle, 
-  Settings, 
-  Bell, 
-  Search,
-  Calendar,
-  Clock,
-  Star,
-  Eye,
-  Edit,
-  Trash2,
-  Plus,
-  Filter,
-  Download,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle,
-  Info,
-  MapPin,
-  LogOut,
-  Phone,
-  CreditCard
+  Briefcase, Users, MessageCircle, BarChart3, Settings, 
+  Search, Plus, Eye, Edit, Trash2, Phone, CreditCard,
+  CheckCircle, TrendingUp, MapPin, Clock, Star, LogOut
 } from 'lucide-react';
 
+// Types
 interface Housegirl {
   id: number;
   name: string;
   age: number;
-  nationality: string;
   location: string;
-  community: string;
   experience: string;
-  education: string;
   salary: string;
-  accommodation: string;
   status: string;
-  image?: string;
   bio?: string;
   skills?: string[];
-  languages?: string[];
   rating?: number;
   reviews?: number;
   contactUnlocked: boolean;
   unlockCount: number;
-  unlockedBy: string[];
-  lastUnlocked?: string;
   phone?: string;
   email?: string;
 }
@@ -73,13 +37,10 @@ interface JobPosting {
   title: string;
   location: string;
   salary: string;
-  status: 'active' | 'paused' | 'closed' | 'expired';
+  status: 'active' | 'paused' | 'closed';
   applications: number;
   views: number;
   postedDate: string;
-  expiryDate: string;
-  jobType: string;
-  accommodation: string;
 }
 
 interface Message {
@@ -89,268 +50,124 @@ interface Message {
   preview: string;
   timestamp: string;
   isRead: boolean;
-  type: 'application' | 'inquiry' | 'system';
 }
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: 'success' | 'warning' | 'info' | 'error';
-  timestamp: string;
-  isRead: boolean;
-}
+// Navigation items
+const NAV_ITEMS = [
+  { id: 'overview', label: 'Overview', icon: BarChart3, color: 'blue' },
+  { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'green' },
+  { id: 'candidates', label: 'Candidates', icon: Users, color: 'purple' },
+  { id: 'messages', label: 'Messages', icon: MessageCircle, color: 'indigo' },
+  { id: 'settings', label: 'Settings', icon: Settings, color: 'gray' }
+];
 
 const EmployerDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   
-  // State management
-  const [activeSection, setActiveSection] = useState<'overview' | 'jobs' | 'candidates' | 'messages' | 'analytics' | 'settings'>('overview');
+  // State
+  const [activeSection, setActiveSection] = useState('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showJobPostingModal, setShowJobPostingModal] = useState(false);
-  const [selectedHousegirl, setSelectedHousegirl] = useState<Housegirl | null>(null);
-  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showJobModal, setShowJobModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
+  const [selectedHousegirl, setSelectedHousegirl] = useState<Housegirl | null>(null);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
 
-  // Mock data - in real app this would come from API
-  const [jobPostings] = useState<JobPosting[]>([
+  // Mock data
+  const [housegirls] = useState<Housegirl[]>([
     {
-      id: 1,
-      title: "Live-in House Help",
-      location: "Westlands, Nairobi",
-      salary: "KES 18,000",
-      status: 'active',
-      applications: 12,
-      views: 45,
-      postedDate: "2024-01-10",
-      expiryDate: "2024-02-10",
-      jobType: "Full Time",
-      accommodation: "Provided"
+      id: 1, name: "Sarah Wanjiku", age: 28, location: "Westlands, Nairobi",
+      experience: "5 years", salary: "KES 18,000", status: "Available",
+      bio: "Experienced house help with excellent cooking skills.",
+      skills: ["Cooking", "Cleaning", "Childcare"], rating: 4.8, reviews: 12,
+      contactUnlocked: true, unlockCount: 3, phone: "+254700123456", email: "sarah.wanjiku@example.com"
     },
     {
-      id: 2,
-      title: "Part-time Cleaner",
-      location: "Kilimani, Nairobi",
-      salary: "KES 15,000",
-      status: 'active',
-      applications: 8,
-      views: 32,
-      postedDate: "2024-01-08",
-      expiryDate: "2024-02-08",
-      jobType: "Part Time",
-      accommodation: "Not Provided"
+      id: 2, name: "Grace Akinyi", age: 32, location: "Kilimani, Nairobi",
+      experience: "8 years", salary: "KES 22,000", status: "Available",
+      bio: "Professional house manager with extensive experience.",
+      skills: ["House Management", "Cooking", "Cleaning"], rating: 4.9, reviews: 18,
+      contactUnlocked: false, unlockCount: 0
     },
     {
-      id: 3,
-      title: "House Manager",
-      location: "Karen, Nairobi",
-      salary: "KES 25,000",
-      status: 'paused',
-      applications: 15,
-      views: 67,
-      postedDate: "2024-01-05",
-      expiryDate: "2024-02-05",
-      jobType: "Full Time",
-      accommodation: "Provided"
+      id: 3, name: "Mary Muthoni", age: 25, location: "Lavington, Nairobi",
+      experience: "3 years", salary: "KES 15,000", status: "Available",
+      bio: "Young and energetic house help. Great with children.",
+      skills: ["Cleaning", "Childcare", "Pet Care"], rating: 4.5, reviews: 8,
+      contactUnlocked: true, unlockCount: 1, phone: "+254700789012", email: "mary.muthoni@example.com"
     }
+  ]);
+
+  const [jobs] = useState<JobPosting[]>([
+    { id: 1, title: "Live-in House Help", location: "Westlands", salary: "KES 18,000", 
+      status: 'active', applications: 12, views: 45, postedDate: "2024-01-10" },
+    { id: 2, title: "Part-time Cleaner", location: "Kilimani", salary: "KES 15,000", 
+      status: 'active', applications: 8, views: 32, postedDate: "2024-01-08" },
+    { id: 3, title: "House Manager", location: "Karen", salary: "KES 25,000", 
+      status: 'paused', applications: 15, views: 67, postedDate: "2024-01-05" }
   ]);
 
   const [messages] = useState<Message[]>([
-    {
-      id: 1,
-      from: "Sarah Wanjiku",
-      subject: "Application for Live-in House Help",
-      preview: "I am very interested in your job posting and would love to discuss...",
-      timestamp: "2 hours ago",
-      isRead: false,
-      type: 'application'
-    },
-    {
-      id: 2,
-      from: "Grace Akinyi",
-      subject: "Interview Confirmation",
-      preview: "Thank you for considering my application. I confirm my availability...",
-      timestamp: "1 day ago",
-      isRead: true,
-      type: 'application'
-    },
-    {
-      id: 3,
-      from: "System",
-      subject: "Job Posting Expiring Soon",
-      preview: "Your job posting 'Live-in House Help' will expire in 3 days...",
-      timestamp: "2 days ago",
-      isRead: false,
-      type: 'system'
-    }
+    { id: 1, from: "Sarah Wanjiku", subject: "Application for Live-in House Help", 
+      preview: "I am very interested in your job posting...", timestamp: "2 hours ago", isRead: false },
+    { id: 2, from: "Grace Akinyi", subject: "Interview Confirmation", 
+      preview: "Thank you for considering my application...", timestamp: "1 day ago", isRead: true }
   ]);
 
-  const [notifications] = useState<Notification[]>([
-    {
-      id: 1,
-      title: "New Application Received",
-      message: "Sarah Wanjiku applied for your Live-in House Help position",
-      type: 'info',
-      timestamp: "2 hours ago",
-      isRead: false
-    },
-    {
-      id: 2,
-      title: "Job Posted Successfully",
-      message: "Your job posting has been published and is now live",
-      type: 'success',
-      timestamp: "1 day ago",
-      isRead: true
-    },
-    {
-      id: 3,
-      title: "Interview Scheduled",
-      message: "Interview with Grace Akinyi scheduled for tomorrow at 2 PM",
-      type: 'info',
-      timestamp: "2 days ago",
-      isRead: false
-    }
-  ]);
-
-  // Dashboard stats
-  const dashboardStats = {
+  // Stats
+  const stats = {
     totalApplications: 24,
-    activeJobs: jobPostings.filter(job => job.status === 'active').length,
-    totalViews: jobPostings.reduce((sum, job) => sum + job.views, 0),
-    unreadMessages: messages.filter(msg => !msg.isRead).length,
-    unreadNotifications: notifications.filter(notif => !notif.isRead).length,
-    hiringRate: 85,
-    averageResponseTime: "2.5 hours"
+    activeJobs: jobs.filter(j => j.status === 'active').length,
+    totalViews: jobs.reduce((sum, j) => sum + j.views, 0),
+    unreadMessages: messages.filter(m => !m.isRead).length,
+    hiringRate: 85
   };
 
   // Handlers
   const handleSignOut = async () => {
     try {
-      setIsLoading(true);
       await signOut();
-      toast({
-        title: "Signed Out Successfully",
-        description: "You have been logged out of your account.",
-      });
+      toast({ title: "Signed Out", description: "You have been logged out." });
       navigate('/housegirls');
     } catch (error) {
-      toast({
-        title: "Sign Out Failed",
-        description: "Please try again.",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
+      toast({ title: "Error", description: "Sign out failed.", variant: "destructive" });
     }
-  };
-
-  const handlePostJob = () => {
-    toast({
-      title: "Opening Job Form",
-      description: "Please fill in the details for your job posting.",
-    });
-    setShowJobPostingModal(true);
-  };
-
-  const handleViewProfile = (housegirl: Housegirl) => {
-    toast({
-      title: "Loading Profile",
-      description: `Opening ${housegirl.name}'s profile...`,
-    });
-    setSelectedHousegirl(housegirl);
-    setIsProfileModalOpen(true);
-  };
-
-  const handleJobAction = (jobId: number, action: 'edit' | 'pause' | 'delete') => {
-    switch (action) {
-      case 'edit':
-        toast({
-          title: "Edit Job",
-          description: "Job editing feature coming soon!",
-        });
-        break;
-      case 'pause':
-        toast({
-          title: "Job Paused",
-          description: "Your job posting has been paused.",
-        });
-        break;
-      case 'delete':
-        toast({
-          title: "Job Deleted",
-          description: "Your job posting has been removed.",
-        });
-        break;
-    }
-  };
-
-  const handleExportData = () => {
-    toast({
-      title: "Export Started",
-      description: "Your data is being prepared for download.",
-    });
   };
 
   const handleUnlockContact = (housegirl: Housegirl) => {
     if (housegirl.contactUnlocked) {
-      // Contact already unlocked - show info
-      const unlockMessage = housegirl.unlockCount > 1 
-        ? `Contact unlocked by ${housegirl.unlockCount} other employers`
-        : `Contact unlocked by ${housegirl.unlockCount} other employer`;
-      
-      toast({
-        title: "Contact Already Unlocked",
-        description: `${unlockMessage}. You can view contact details for free.`,
+      toast({ 
+        title: "Contact Unlocked", 
+        description: `Already unlocked by ${housegirl.unlockCount} employer${housegirl.unlockCount > 1 ? 's' : ''}.` 
       });
     } else {
-      // Show unlock modal
       setHousegirlToUnlock(housegirl);
       setShowUnlockModal(true);
     }
   };
 
-  const confirmUnlockContact = async () => {
+  const confirmUnlock = async () => {
     if (!housegirlToUnlock) return;
-
     setIsUnlocking(true);
     
     try {
-      // Simulate payment process
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      // Update housegirl data
       const updatedHousegirl = {
         ...housegirlToUnlock,
         contactUnlocked: true,
         unlockCount: housegirlToUnlock.unlockCount + 1,
-        unlockedBy: [...housegirlToUnlock.unlockedBy, user.first_name],
-        lastUnlocked: new Date().toLocaleDateString(),
-        phone: "+254700123456", // Mock phone number
-        email: `${housegirlToUnlock.name.toLowerCase().replace(' ', '.')}@example.com` // Mock email
+        phone: "+254700123456",
+        email: `${housegirlToUnlock.name.toLowerCase().replace(' ', '.')}@example.com`
       };
-
-      // Update the housegirl in the list (in real app, this would update the database)
-      // For now, we'll pass this updated data to the HousegirlsOverview component
+      
       setSelectedHousegirl(updatedHousegirl);
-
-      toast({
-        title: "Contact Unlocked Successfully!",
-        description: `You can now view ${housegirlToUnlock.name}'s contact details.`,
-      });
-
+      toast({ title: "Success!", description: "Contact unlocked successfully." });
       setShowUnlockModal(false);
       setHousegirlToUnlock(null);
     } catch (error) {
-      toast({
-        title: "Unlock Failed",
-        description: "Please try again.",
-        variant: "destructive"
-      });
+      toast({ title: "Error", description: "Unlock failed.", variant: "destructive" });
     } finally {
       setIsUnlocking(false);
     }
@@ -360,66 +177,44 @@ const EmployerDashboard = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in to access the dashboard</h2>
-          <Button onClick={() => navigate('/')}>Go to Home</Button>
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Please sign in</h2>
+          <Button onClick={() => navigate('/')}>Go Home</Button>
         </div>
       </div>
     );
   }
 
-  const renderOverviewSection = () => (
+  // Render sections
+  const renderOverview = () => (
     <div className="space-y-6">
-      {/* Quick Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-blue-600">Total Applications</p>
-                <p className="text-2xl font-bold text-blue-900">{dashboardStats.totalApplications}</p>
-                <p className="text-xs text-blue-600">+12% from last month</p>
-              </div>
-              <Users className="h-8 w-8 text-blue-600" />
-            </div>
+      {/* Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="bg-blue-50 border-blue-200">
+          <CardContent className="p-4 text-center">
+            <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-blue-900">{stats.totalApplications}</p>
+            <p className="text-sm text-blue-600">Applications</p>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-r from-green-50 to-green-100 border-green-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-green-600">Active Jobs</p>
-                <p className="text-2xl font-bold text-green-900">{dashboardStats.activeJobs}</p>
-                <p className="text-xs text-green-600">Currently posted</p>
-              </div>
-              <Briefcase className="h-8 w-8 text-green-600" />
-            </div>
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="p-4 text-center">
+            <Briefcase className="h-8 w-8 text-green-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-green-900">{stats.activeJobs}</p>
+            <p className="text-sm text-green-600">Active Jobs</p>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-r from-purple-50 to-purple-100 border-purple-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-purple-600">Total Views</p>
-                <p className="text-2xl font-bold text-purple-900">{dashboardStats.totalViews}</p>
-                <p className="text-xs text-purple-600">Job postings viewed</p>
-              </div>
-              <Eye className="h-8 w-8 text-purple-600" />
-            </div>
+        <Card className="bg-purple-50 border-purple-200">
+          <CardContent className="p-4 text-center">
+            <Eye className="h-8 w-8 text-purple-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-purple-900">{stats.totalViews}</p>
+            <p className="text-sm text-purple-600">Total Views</p>
           </CardContent>
         </Card>
-
-        <Card className="bg-gradient-to-r from-orange-50 to-orange-100 border-orange-200">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-orange-600">Hiring Rate</p>
-                <p className="text-2xl font-bold text-orange-900">{dashboardStats.hiringRate}%</p>
-                <p className="text-xs text-orange-600">+5% from last month</p>
-              </div>
-              <TrendingUp className="h-8 w-8 text-orange-600" />
-            </div>
+        <Card className="bg-orange-50 border-orange-200">
+          <CardContent className="p-4 text-center">
+            <TrendingUp className="h-8 w-8 text-orange-600 mx-auto mb-2" />
+            <p className="text-2xl font-bold text-orange-900">{stats.hiringRate}%</p>
+            <p className="text-sm text-orange-600">Hiring Rate</p>
           </CardContent>
         </Card>
       </div>
@@ -427,192 +222,133 @@ const EmployerDashboard = () => {
       {/* Quick Actions */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Quick Actions</CardTitle>
-          <CardDescription>Common tasks and shortcuts</CardDescription>
+          <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button 
-              onClick={handlePostJob}
-              className="h-20 flex flex-col items-center justify-center space-y-2 bg-blue-600 hover:bg-blue-700"
-            >
-              <Plus className="h-6 w-6" />
-              <span>Post New Job</span>
+            <Button onClick={() => setShowJobModal(true)} className="h-16">
+              <Plus className="h-5 w-5 mr-2" />
+              Post Job
             </Button>
-            
-            <Button 
-              variant="outline"
-              className="h-20 flex flex-col items-center justify-center space-y-2"
-              onClick={() => setActiveSection('candidates')}
-            >
-              <Users className="h-6 w-6" />
-              <span>View Candidates</span>
+            <Button variant="outline" onClick={() => setActiveSection('candidates')} className="h-16">
+              <Users className="h-5 w-5 mr-2" />
+              View Candidates
             </Button>
-            
-            <Button 
-              variant="outline"
-              className="h-20 flex flex-col items-center justify-center space-y-2"
-              onClick={() => setActiveSection('messages')}
-            >
-              <MessageCircle className="h-6 w-6" />
-              <span>Check Messages</span>
+            <Button variant="outline" onClick={() => setActiveSection('messages')} className="h-16">
+              <MessageCircle className="h-5 w-5 mr-2" />
+              Check Messages
             </Button>
           </div>
         </CardContent>
       </Card>
 
-      {/* Recent Activity */}
+      {/* Housegirls */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-xl">Recent Activity</CardTitle>
-          <CardDescription>Latest updates and notifications</CardDescription>
+          <CardTitle>Available Housegirls</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {notifications.slice(0, 5).map((notification) => (
-              <div key={notification.id} className="flex items-start space-x-3 p-3 rounded-lg hover:bg-gray-50">
-                <div className={`p-2 rounded-full ${
-                  notification.type === 'success' ? 'bg-green-100' :
-                  notification.type === 'warning' ? 'bg-yellow-100' :
-                  notification.type === 'error' ? 'bg-red-100' : 'bg-blue-100'
-                }`}>
-                  {notification.type === 'success' ? <CheckCircle className="h-4 w-4 text-green-600" /> :
-                   notification.type === 'warning' ? <AlertCircle className="h-4 w-4 text-yellow-600" /> :
-                   notification.type === 'error' ? <AlertCircle className="h-4 w-4 text-red-600" /> :
-                   <Info className="h-4 w-4 text-blue-600" />}
-                </div>
-                <div className="flex-1">
-                  <p className="font-medium text-gray-900">{notification.title}</p>
-                  <p className="text-sm text-gray-600">{notification.message}</p>
-                  <p className="text-xs text-gray-500 mt-1">{notification.timestamp}</p>
-                </div>
-                {!notification.isRead && (
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                )}
-              </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {housegirls.map(housegirl => (
+              <Card key={housegirl.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between mb-3">
+                    <div>
+                      <h3 className="font-semibold">{housegirl.name}</h3>
+                      <p className="text-sm text-gray-600">{housegirl.age} years • {housegirl.location}</p>
+                    </div>
+                    <Badge className={housegirl.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                      {housegirl.status}
+                    </Badge>
+                  </div>
+                  
+                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{housegirl.bio}</p>
+                  
+                  <div className="flex items-center space-x-2 mb-3">
+                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                    <span className="text-sm">{housegirl.rating} ({housegirl.reviews} reviews)</span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-green-600">{housegirl.salary}</span>
+                    <div className="flex space-x-2">
+                      <Button variant="outline" size="sm" onClick={() => setSelectedHousegirl(housegirl)}>
+                        <Eye className="h-3 w-3" />
+                      </Button>
+                      {housegirl.contactUnlocked ? (
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                          <CheckCircle className="h-3 w-3 mr-1" />
+                          Unlocked
+                        </Button>
+                      ) : (
+                        <Button size="sm" onClick={() => handleUnlockContact(housegirl)}>
+                          <Phone className="h-3 w-3 mr-1" />
+                          Unlock
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
+                    <Badge className="mt-2 bg-blue-100 text-blue-800 text-xs">
+                      {housegirl.unlockCount} unlock{housegirl.unlockCount > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </CardContent>
+              </Card>
             ))}
           </div>
         </CardContent>
       </Card>
-
-      {/* Housegirls Overview */}
-      <HousegirlsOverview 
-        onViewProfile={handleViewProfile} 
-        onUnlockContact={handleUnlockContact}
-        selectedHousegirl={selectedHousegirl}
-      />
     </div>
   );
 
-  const renderJobsSection = () => (
+  const renderJobs = () => (
     <div className="space-y-6">
-      {/* Header with Actions */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Job Postings</h2>
-          <p className="text-gray-600">Manage your active and inactive job postings</p>
+          <h2 className="text-2xl font-bold">Job Postings</h2>
+          <p className="text-gray-600">Manage your job postings</p>
         </div>
-        <Button onClick={handlePostJob} className="bg-blue-600 hover:bg-blue-700">
+        <Button onClick={() => setShowJobModal(true)}>
           <Plus className="h-4 w-4 mr-2" />
-          Post New Job
+          Post Job
         </Button>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex items-center space-x-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search job postings..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-            <Button variant="outline" onClick={handleExportData}>
-              <Download className="h-4 w-4 mr-2" />
-              Export
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Job Postings List */}
       <div className="space-y-4">
-        {jobPostings.map((job) => (
-          <Card key={job.id} className="hover:shadow-lg transition-shadow duration-200">
+        {jobs.map(job => (
+          <Card key={job.id} className="hover:shadow-md transition-shadow">
             <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                    <Badge className={
-                      job.status === 'active' ? 'bg-green-100 text-green-800 border-green-200' :
-                      job.status === 'paused' ? 'bg-yellow-100 text-yellow-800 border-yellow-200' :
-                      job.status === 'closed' ? 'bg-gray-100 text-gray-800 border-gray-200' :
-                      'bg-red-100 text-red-800 border-red-200'
-                    }>
-                      {job.status.charAt(0).toUpperCase() + job.status.slice(1)}
-                    </Badge>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-600 mb-4">
-                    <div className="flex items-center space-x-2">
-                      <MapPin className="h-4 w-4" />
-                      <span>{job.location}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Briefcase className="h-4 w-4" />
-                      <span>{job.jobType}</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Users className="h-4 w-4" />
-                      <span>{job.applications} applications</span>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Eye className="h-4 w-4" />
-                      <span>{job.views} views</span>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center space-x-4 text-sm text-gray-500">
-                    <span>Posted: {job.postedDate}</span>
-                    <span>Expires: {job.expiryDate}</span>
-                    <span className="font-medium text-green-600">{job.salary}</span>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">{job.title}</h3>
+                  <div className="flex items-center space-x-4 text-sm text-gray-600 mt-2">
+                    <span className="flex items-center">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {job.location}
+                    </span>
+                    <span className="flex items-center">
+                      <Users className="h-4 w-4 mr-1" />
+                      {job.applications} applications
+                    </span>
+                    <span className="flex items-center">
+                      <Eye className="h-4 w-4 mr-1" />
+                      {job.views} views
+                    </span>
                   </div>
                 </div>
-
                 <div className="flex items-center space-x-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleJobAction(job.id, 'edit')}
-                  >
-                    <Edit className="h-4 w-4 mr-2" />
-                    Edit
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleJobAction(job.id, 'pause')}
-                  >
-                    <Clock className="h-4 w-4 mr-2" />
-                    Pause
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleJobAction(job.id, 'delete')}
-                    className="text-red-600 border-red-200 hover:bg-red-50"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2" />
-                    Delete
+                  <Badge className={
+                    job.status === 'active' ? 'bg-green-100 text-green-800' :
+                    job.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-gray-100 text-gray-800'
+                  }>
+                    {job.status}
+                  </Badge>
+                  <span className="font-medium text-green-600">{job.salary}</span>
+                  <Button variant="outline" size="sm">
+                    <Edit className="h-4 w-4" />
                   </Button>
                 </div>
               </div>
@@ -620,60 +356,50 @@ const EmployerDashboard = () => {
           </Card>
         ))}
       </div>
-
-      {/* Empty State */}
-      {jobPostings.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <Briefcase className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No job postings yet</h3>
-            <p className="text-gray-600 mb-4">Create your first job posting to start attracting candidates</p>
-            <Button onClick={handlePostJob} className="bg-blue-600 hover:bg-blue-700">
-              <Plus className="h-4 w-4 mr-2" />
-              Post Your First Job
-            </Button>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 
-  const renderMessagesSection = () => (
+  const renderCandidates = () => (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">Candidates</h2>
+        <p className="text-gray-600">Review job applications</p>
+      </div>
+      
+      <Card>
+        <CardContent className="p-6">
+          <div className="text-center py-8">
+            <Users className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No applications yet</h3>
+            <p className="text-gray-600">Job applications will appear here</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderMessages = () => (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Messages</h2>
-          <p className="text-gray-600">Communicate with candidates and manage inquiries</p>
+          <h2 className="text-2xl font-bold">Messages</h2>
+          <p className="text-gray-600">Communicate with candidates</p>
         </div>
-        <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-          {dashboardStats.unreadMessages} unread
+        <Badge variant="secondary">
+          {stats.unreadMessages} unread
         </Badge>
       </div>
 
       <div className="space-y-4">
-        {messages.map((message) => (
-          <Card key={message.id} className={`hover:shadow-lg transition-shadow duration-200 ${
-            !message.isRead ? 'border-blue-200 bg-blue-50' : ''
-          }`}>
+        {messages.map(message => (
+          <Card key={message.id} className={`hover:shadow-md transition-shadow ${!message.isRead ? 'border-blue-200 bg-blue-50' : ''}`}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="font-semibold text-gray-900">{message.from}</h3>
-                    <Badge className={
-                      message.type === 'application' ? 'bg-green-100 text-green-800' :
-                      message.type === 'inquiry' ? 'bg-blue-100 text-blue-800' :
-                      'bg-gray-100 text-gray-800'
-                    }>
-                      {message.type.charAt(0).toUpperCase() + message.type.slice(1)}
-                    </Badge>
-                    {!message.isRead && (
-                      <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                    )}
-                  </div>
-                  <h4 className="font-medium text-gray-900 mb-1">{message.subject}</h4>
-                  <p className="text-gray-600 text-sm mb-2">{message.preview}</p>
-                  <p className="text-xs text-gray-500">{message.timestamp}</p>
+                <div>
+                  <h3 className="font-semibold">{message.from}</h3>
+                  <h4 className="font-medium text-gray-900">{message.subject}</h4>
+                  <p className="text-sm text-gray-600 mt-1">{message.preview}</p>
+                  <p className="text-xs text-gray-500 mt-2">{message.timestamp}</p>
                 </div>
                 <Button variant="outline" size="sm">
                   <MessageCircle className="h-4 w-4 mr-2" />
@@ -684,144 +410,29 @@ const EmployerDashboard = () => {
           </Card>
         ))}
       </div>
-
-      {messages.length === 0 && (
-        <Card>
-          <CardContent className="text-center py-12">
-            <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
-            <p className="text-gray-600">Messages from candidates will appear here</p>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 
-  const renderAnalyticsSection = () => (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Analytics</h2>
-          <p className="text-gray-600">Track your hiring performance and insights</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleExportData}>
-            <Download className="h-4 w-4 mr-2" />
-            Export Data
-          </Button>
-          <Button variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
-      </div>
-
-      {/* Analytics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-6 text-center">
-            <BarChart3 className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-blue-900">Total Applications</h3>
-            <p className="text-3xl font-bold text-blue-700">{dashboardStats.totalApplications}</p>
-            <p className="text-sm text-blue-600">+12% from last month</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="p-6 text-center">
-            <TrendingUp className="h-12 w-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-green-900">Hiring Rate</h3>
-            <p className="text-3xl font-bold text-green-700">{dashboardStats.hiringRate}%</p>
-            <p className="text-sm text-green-600">+5% from last month</p>
-          </CardContent>
-        </Card>
-        
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="p-6 text-center">
-            <Clock className="h-12 w-12 text-purple-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-purple-900">Avg Response Time</h3>
-            <p className="text-3xl font-bold text-purple-700">{dashboardStats.averageResponseTime}</p>
-            <p className="text-sm text-purple-600">To candidate inquiries</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Detailed Analytics */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-xl">Performance Metrics</CardTitle>
-          <CardDescription>Detailed insights and trends</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Application Sources</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Direct Applications</span>
-                    <span className="font-medium">65%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Search Results</span>
-                    <span className="font-medium">25%</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Referrals</span>
-                    <span className="font-medium">10%</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">Top Performing Jobs</h4>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Live-in House Help</span>
-                    <span className="font-medium">12 applications</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">House Manager</span>
-                    <span className="font-medium">15 applications</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Part-time Cleaner</span>
-                    <span className="font-medium">8 applications</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-
-  const renderSettingsSection = () => (
+  const renderSettings = () => (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold text-gray-900">Settings</h2>
-        <p className="text-gray-600">Manage your account and preferences</p>
+        <h2 className="text-2xl font-bold">Settings</h2>
+        <p className="text-gray-600">Manage your account</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
-            <CardTitle>Profile Information</CardTitle>
-            <CardDescription>Update your personal details</CardDescription>
+            <CardTitle>Profile</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium text-gray-700">Full Name</label>
+              <label className="text-sm font-medium">Name</label>
               <p className="text-gray-900">{user.first_name} {user.last_name}</p>
             </div>
             <div>
-              <label className="text-sm font-medium text-gray-700">Email</label>
+              <label className="text-sm font-medium">Email</label>
               <p className="text-gray-900">{user.email}</p>
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700">Phone</label>
-              <p className="text-gray-900">{user.phone_number || 'Not provided'}</p>
             </div>
             <Button variant="outline" className="w-full">
               <Edit className="h-4 w-4 mr-2" />
@@ -832,183 +443,192 @@ const EmployerDashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Notification Preferences</CardTitle>
-            <CardDescription>Choose what notifications you receive</CardDescription>
+            <CardTitle>Account</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">New Applications</p>
-                <p className="text-sm text-gray-600">Get notified when someone applies</p>
-              </div>
-              <Button variant="outline" size="sm">Enabled</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Message Notifications</p>
-                <p className="text-sm text-gray-600">Receive alerts for new messages</p>
-              </div>
-              <Button variant="outline" size="sm">Enabled</Button>
-            </div>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="font-medium">Job Expiry Reminders</p>
-                <p className="text-sm text-gray-600">Get notified before jobs expire</p>
-              </div>
-              <Button variant="outline" size="sm">Enabled</Button>
-            </div>
+            <Button variant="outline" className="w-full justify-start">
+              <Settings className="h-4 w-4 mr-2" />
+              Change Password
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
+              onClick={handleSignOut}
+            >
+              <LogOut className="h-4 w-4 mr-2" />
+              Sign Out
+            </Button>
           </CardContent>
         </Card>
       </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Account Actions</CardTitle>
-          <CardDescription>Manage your account settings</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Button variant="outline" className="w-full justify-start">
-            <Settings className="h-4 w-4 mr-2" />
-            Change Password
-          </Button>
-          <Button variant="outline" className="w-full justify-start">
-            <Download className="h-4 w-4 mr-2" />
-            Export My Data
-          </Button>
-          <Button 
-            variant="outline" 
-            className="w-full justify-start text-red-600 border-red-200 hover:bg-red-50"
-            onClick={handleSignOut}
-            disabled={isLoading}
-          >
-            <LogOut className="h-4 w-4 mr-2" />
-            {isLoading ? 'Signing Out...' : 'Sign Out'}
-          </Button>
-        </CardContent>
-      </Card>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <Sidebar
-        activeSection={activeSection}
-        onSectionChange={(section: string) => setActiveSection(section as 'overview' | 'jobs' | 'candidates' | 'messages' | 'analytics' | 'settings')}
-        sidebarCollapsed={sidebarCollapsed}
-        onToggleSidebar={() => setSidebarCollapsed(!sidebarCollapsed)}
-        onSignOut={handleSignOut}
-        userFirstName={user.first_name}
-      />
+      <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            {!sidebarCollapsed && (
+              <div className="flex items-center space-x-3">
+                <div className="p-2 bg-blue-500 rounded-lg">
+                  <Users className="h-6 w-6 text-white" />
+                </div>
+                <h1 className="text-lg font-bold">Domestic Connect</h1>
+              </div>
+            )}
+            <Button variant="ghost" size="sm" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}>
+              {sidebarCollapsed ? '→' : '←'}
+            </Button>
+          </div>
+        </div>
+
+        <nav className="p-4 space-y-2">
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveSection(item.id)}
+              className={`w-full flex items-center space-x-3 px-3 py-3 rounded-lg text-left transition-all ${
+                activeSection === item.id
+                  ? `bg-${item.color}-50 border border-${item.color}-200 text-${item.color}-700`
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              <item.icon className={`h-5 w-5 ${sidebarCollapsed ? 'mx-auto' : ''}`} />
+              {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+            </button>
+          ))}
+        </nav>
+
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+              <span className="text-white text-sm font-bold">{user.first_name.charAt(0)}</span>
+            </div>
+            {!sidebarCollapsed && (
+              <div className="flex-1">
+                <p className="text-sm font-medium">{user.first_name}</p>
+                <p className="text-xs text-gray-500">Employer</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Main Content */}
       <div className="flex-1 overflow-auto">
-        {/* Header */}
-        <DashboardHeader
-          activeSection={activeSection}
-          onNavigateHome={() => navigate('/home')}
-        />
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+          <div className="px-6 py-4">
+            <h2 className="text-2xl font-bold text-gray-900 capitalize">{activeSection}</h2>
+            <p className="text-gray-600">
+              {activeSection === 'overview' && 'Welcome back! Here\'s your dashboard overview'}
+              {activeSection === 'jobs' && 'Manage your job postings and applications'}
+              {activeSection === 'candidates' && 'Browse and connect with qualified housegirls'}
+              {activeSection === 'messages' && 'Communicate with candidates and applicants'}
+              {activeSection === 'settings' && 'Manage your account and preferences'}
+            </p>
+          </div>
+        </header>
 
-        {/* Content */}
         <div className="px-6 py-6">
-          {activeSection === 'overview' && renderOverviewSection()}
-          {activeSection === 'jobs' && renderJobsSection()}
-          {activeSection === 'candidates' && (
-            <CandidatesSection
-              onViewProfile={handleViewProfile}
-              onContact={(application) => {
-                toast({
-                  title: "Contact Feature",
-                  description: "Contact functionality coming soon!",
-                });
-              }}
-            />
-          )}
-          {activeSection === 'messages' && renderMessagesSection()}
-          {activeSection === 'analytics' && renderAnalyticsSection()}
-          {activeSection === 'settings' && renderSettingsSection()}
+          {activeSection === 'overview' && renderOverview()}
+          {activeSection === 'jobs' && renderJobs()}
+          {activeSection === 'candidates' && renderCandidates()}
+          {activeSection === 'messages' && renderMessages()}
+          {activeSection === 'settings' && renderSettings()}
         </div>
       </div>
 
       {/* Modals */}
-      <JobPostingModal
-        isOpen={showJobPostingModal}
-        onClose={() => setShowJobPostingModal(false)}
-        user={user}
-      />
-
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => {
-          setIsProfileModalOpen(false);
-          setSelectedHousegirl(null);
-        }}
-        housegirl={selectedHousegirl}
-      />
-
-      {/* Contact Unlock Modal */}
       <Dialog open={showUnlockModal} onOpenChange={setShowUnlockModal}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-gray-900">
-              Unlock Contact Details
-            </DialogTitle>
+            <DialogTitle>Unlock Contact Details</DialogTitle>
           </DialogHeader>
-          
           <div className="py-6">
             <div className="text-center mb-6">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Phone className="h-8 w-8 text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                Unlock {housegirlToUnlock?.name}'s Contact
-              </h3>
-              <p className="text-gray-600">
-                Get access to phone number and email address
-              </p>
+              <Phone className="h-12 w-12 text-blue-600 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold">Unlock {housegirlToUnlock?.name}'s Contact</h3>
+              <p className="text-gray-600">Get access to phone number and email</p>
             </div>
-
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
               <div className="flex items-center space-x-3">
                 <CreditCard className="h-5 w-5 text-blue-600" />
                 <div>
                   <p className="font-medium text-blue-900">Unlock Fee: KES 200</p>
-                  <p className="text-sm text-blue-700">
-                    Payment will be processed via M-Pesa
-                  </p>
+                  <p className="text-sm text-blue-700">Payment via M-Pesa</p>
                 </div>
               </div>
             </div>
-
             <div className="flex space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowUnlockModal(false)}
-                className="flex-1"
-              >
+              <Button variant="outline" onClick={() => setShowUnlockModal(false)} className="flex-1">
                 Cancel
               </Button>
-              <Button
-                onClick={confirmUnlockContact}
-                disabled={isUnlocking}
-                className="flex-1 bg-blue-600 hover:bg-blue-700"
-              >
-                {isUnlocking ? (
-                  <div className="flex items-center space-x-2">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>Processing...</span>
-                  </div>
-                ) : (
-                  <div className="flex items-center space-x-2">
-                    <CreditCard className="h-4 w-4" />
-                    <span>Pay KES 200</span>
-                  </div>
-                )}
+              <Button onClick={confirmUnlock} disabled={isUnlocking} className="flex-1">
+                {isUnlocking ? 'Processing...' : 'Pay KES 200'}
               </Button>
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Profile Modal */}
+      {selectedHousegirl && (
+        <Dialog open={!!selectedHousegirl} onOpenChange={() => setSelectedHousegirl(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{selectedHousegirl.name}'s Profile</DialogTitle>
+            </DialogHeader>
+            <div className="py-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-2">Basic Info</h3>
+                  <div className="space-y-2 text-sm">
+                    <p><span className="font-medium">Age:</span> {selectedHousegirl.age} years</p>
+                    <p><span className="font-medium">Location:</span> {selectedHousegirl.location}</p>
+                    <p><span className="font-medium">Experience:</span> {selectedHousegirl.experience}</p>
+                    <p><span className="font-medium">Salary:</span> {selectedHousegirl.salary}</p>
+                  </div>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Skills</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedHousegirl.skills?.map((skill, index) => (
+                      <Badge key={index} variant="secondary">{skill}</Badge>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {selectedHousegirl.bio && (
+                <div className="mt-6">
+                  <h3 className="font-semibold mb-2">Bio</h3>
+                  <p className="text-gray-600">{selectedHousegirl.bio}</p>
+                </div>
+              )}
+              {selectedHousegirl.contactUnlocked && (selectedHousegirl.phone || selectedHousegirl.email) && (
+                <div className="mt-6 bg-green-50 border border-green-200 rounded-lg p-4">
+                  <h3 className="font-semibold text-green-900 mb-2">Contact Details</h3>
+                  <div className="space-y-2">
+                    {selectedHousegirl.phone && (
+                      <p className="flex items-center">
+                        <Phone className="h-4 w-4 mr-2 text-green-600" />
+                        {selectedHousegirl.phone}
+                      </p>
+                    )}
+                    {selectedHousegirl.email && (
+                      <p className="flex items-center">
+                        <MessageCircle className="h-4 w-4 mr-2 text-green-600" />
+                        {selectedHousegirl.email}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
