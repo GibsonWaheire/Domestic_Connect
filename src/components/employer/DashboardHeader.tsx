@@ -16,7 +16,9 @@ const DashboardHeader = ({ activeSection, onNavigateHome }: DashboardHeaderProps
       case 'candidates':
         return 'Browse and connect with qualified housegirls';
       case 'messages':
-        return 'Communicate with candidates and applicants';
+        return 'Communicate with candidates and manage inquiries';
+      case 'analytics':
+        return 'Track your hiring performance and insights';
       case 'settings':
         return 'Manage your account and preferences';
       default:

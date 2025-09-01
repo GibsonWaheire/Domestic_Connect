@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -18,7 +18,9 @@ import {
   MessageCircle,
   CheckCircle,
   XCircle,
-  Clock as ClockIcon
+  Clock as ClockIcon,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface JobApplication {
@@ -52,7 +54,7 @@ interface JobApplication {
 }
 
 interface CandidatesSectionProps {
-  onViewProfile: (housegirl: any) => void;
+  onViewProfile: (housegirl: JobApplication['housegirl']) => void;
   onContact: (application: JobApplication) => void;
 }
 
@@ -60,6 +62,8 @@ const CandidatesSection = ({ onViewProfile, onContact }: CandidatesSectionProps)
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [jobFilter, setJobFilter] = useState('all');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 4;
 
   // Mock data - in real app this would come from API
   const [applications] = useState<JobApplication[]>([
@@ -186,6 +190,17 @@ const CandidatesSection = ({ onViewProfile, onContact }: CandidatesSectionProps)
     return matchesSearch && matchesStatus && matchesJob;
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredApplications.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedApplications = filteredApplications.slice(startIndex, endIndex);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, jobFilter]);
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -305,7 +320,7 @@ const CandidatesSection = ({ onViewProfile, onContact }: CandidatesSectionProps)
 
       {/* Applications List */}
       <div className="space-y-4">
-        {filteredApplications.map((application) => (
+        {paginatedApplications.map((application) => (
           <Card key={application.id} className="hover:shadow-lg transition-shadow duration-200">
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
@@ -484,6 +499,52 @@ const CandidatesSection = ({ onViewProfile, onContact }: CandidatesSectionProps)
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-center space-x-2 mt-8">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+          >
+            <ChevronLeft className="h-4 w-4 mr-2" />
+            Previous
+          </Button>
+          
+          <div className="flex items-center space-x-1">
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              <Button
+                key={page}
+                variant={currentPage === page ? "default" : "outline"}
+                size="sm"
+                onClick={() => setCurrentPage(page)}
+                className="w-10 h-10"
+              >
+                {page}
+              </Button>
+            ))}
+          </div>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+          >
+            Next
+            <ChevronRight className="h-4 w-4 ml-2" />
+          </Button>
+        </div>
+      )}
+
+      {/* Page Info */}
+      {filteredApplications.length > 0 && (
+        <div className="text-center text-sm text-gray-600 mt-4">
+          Showing {startIndex + 1}-{Math.min(endIndex, filteredApplications.length)} of {filteredApplications.length} applications
+        </div>
       )}
     </div>
   );
