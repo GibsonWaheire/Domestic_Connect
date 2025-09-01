@@ -248,54 +248,55 @@ const EmployerDashboard = () => {
           <CardTitle>Available Housegirls</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="space-y-3">
             {housegirls.map(housegirl => (
-              <Card key={housegirl.id} className="hover:shadow-md transition-shadow">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold">{housegirl.name}</h3>
-                      <p className="text-sm text-gray-600">{housegirl.age} years • {housegirl.location}</p>
+              <div key={housegirl.id} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                <div className="flex items-center space-x-4 min-w-0 flex-1">
+                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-blue-600 font-semibold">{housegirl.name.charAt(0)}</span>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold truncate">{housegirl.name}</h3>
+                    <p className="text-sm text-gray-600 truncate">{housegirl.age} years • {housegirl.location}</p>
+                    <div className="flex items-center space-x-4 mt-1">
+                      <span className="text-sm text-gray-500">{housegirl.experience}</span>
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-3 w-3 text-yellow-400 fill-current flex-shrink-0" />
+                        <span className="text-sm">{housegirl.rating} ({housegirl.reviews})</span>
+                      </div>
                     </div>
-                    <Badge className={housegirl.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
-                      {housegirl.status}
-                    </Badge>
                   </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2">{housegirl.bio}</p>
-                  
-                  <div className="flex items-center space-x-2 mb-3">
-                    <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                    <span className="text-sm">{housegirl.rating} ({housegirl.reviews} reviews)</span>
-                  </div>
-                  
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-green-600">{housegirl.salary}</span>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm" onClick={() => setSelectedHousegirl(housegirl)}>
-                        <Eye className="h-3 w-3" />
+                </div>
+                
+                <div className="flex items-center space-x-3 flex-shrink-0">
+                  <span className="font-medium text-green-600 hidden sm:block">{housegirl.salary}</span>
+                  <Badge className={housegirl.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
+                    {housegirl.status}
+                  </Badge>
+                  <div className="flex space-x-2">
+                    <Button variant="outline" size="sm" onClick={() => setSelectedHousegirl(housegirl)}>
+                      <Eye className="h-3 w-3" />
+                    </Button>
+                    {housegirl.contactUnlocked ? (
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700">
+                        <CheckCircle className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Unlocked</span>
                       </Button>
-                      {housegirl.contactUnlocked ? (
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Unlocked
-                        </Button>
-                      ) : (
-                        <Button size="sm" onClick={() => handleUnlockContact(housegirl)}>
-                          <Phone className="h-3 w-3 mr-1" />
-                          Unlock
-                        </Button>
-                      )}
-                    </div>
+                    ) : (
+                      <Button size="sm" onClick={() => handleUnlockContact(housegirl)}>
+                        <Phone className="h-3 w-3 mr-1" />
+                        <span className="hidden sm:inline">Unlock</span>
+                      </Button>
+                    )}
                   </div>
-                  
-                  {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
-                    <Badge className="mt-2 bg-blue-100 text-blue-800 text-xs">
-                      {housegirl.unlockCount} unlock{housegirl.unlockCount > 1 ? 's' : ''}
-                    </Badge>
-                  )}
-                </CardContent>
-              </Card>
+                </div>
+                
+                {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
+                  <Badge className="bg-blue-100 text-blue-800 text-xs flex-shrink-0">
+                    {housegirl.unlockCount} unlock{housegirl.unlockCount > 1 ? 's' : ''}
+                  </Badge>
+                )}
+              </div>
             ))}
           </div>
         </CardContent>
@@ -467,7 +468,7 @@ const EmployerDashboard = () => {
   return (
     <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
-      <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'}`}>
+      <div className={`bg-white border-r border-gray-200 transition-all duration-300 ${sidebarCollapsed ? 'w-16' : 'w-64'} flex-shrink-0 flex flex-col`}>
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed && (
@@ -484,7 +485,7 @@ const EmployerDashboard = () => {
           </div>
         </div>
 
-        <nav className="p-4 space-y-2">
+        <nav className="p-4 space-y-2 flex-1">
           {NAV_ITEMS.map(item => (
             <button
               key={item.id}
@@ -501,7 +502,7 @@ const EmployerDashboard = () => {
           ))}
         </nav>
 
-        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 bg-gray-50">
+        <div className="p-4 border-t border-gray-200 bg-gray-50">
           <div className="flex items-center space-x-3">
             <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
               <span className="text-white text-sm font-bold">{user.first_name.charAt(0)}</span>
@@ -517,8 +518,8 @@ const EmployerDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 overflow-auto">
-        <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="bg-white border-b border-gray-200 flex-shrink-0">
           <div className="px-6 py-4">
             <h2 className="text-2xl font-bold text-gray-900 capitalize">{activeSection}</h2>
             <p className="text-gray-600">
@@ -531,12 +532,14 @@ const EmployerDashboard = () => {
           </div>
         </header>
 
-        <div className="px-6 py-6">
-          {activeSection === 'overview' && renderOverview()}
-          {activeSection === 'jobs' && renderJobs()}
-          {activeSection === 'candidates' && renderCandidates()}
-          {activeSection === 'messages' && renderMessages()}
-          {activeSection === 'settings' && renderSettings()}
+        <div className="flex-1 overflow-auto">
+          <div className="px-6 py-6">
+            {activeSection === 'overview' && renderOverview()}
+            {activeSection === 'jobs' && renderJobs()}
+            {activeSection === 'candidates' && renderCandidates()}
+            {activeSection === 'messages' && renderMessages()}
+            {activeSection === 'settings' && renderSettings()}
+          </div>
         </div>
       </div>
 
