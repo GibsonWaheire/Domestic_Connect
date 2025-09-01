@@ -1,9 +1,9 @@
 import { Button } from '@/components/ui/button';
-import { Heart, Home, Briefcase, Users, BarChart3, ArrowLeft, ArrowRight, LogOut } from 'lucide-react';
+import { Heart, Home, Briefcase, Users, BarChart3, ArrowLeft, ArrowRight, LogOut, MessageCircle, Settings } from 'lucide-react';
 
 interface SidebarProps {
-  activeSection: 'overview' | 'jobs' | 'candidates' | 'analytics';
-  onSectionChange: (section: 'overview' | 'jobs' | 'candidates' | 'analytics') => void;
+  activeSection: 'overview' | 'jobs' | 'candidates' | 'messages' | 'analytics' | 'settings';
+  onSectionChange: (section: 'overview' | 'jobs' | 'candidates' | 'messages' | 'analytics' | 'settings') => void;
   sidebarCollapsed: boolean;
   onToggleSidebar: () => void;
   onSignOut: () => void;
@@ -22,7 +22,9 @@ const Sidebar = ({
     { id: 'overview', label: 'Overview', icon: Home, color: 'blue' },
     { id: 'jobs', label: 'Job Postings', icon: Briefcase, color: 'green' },
     { id: 'candidates', label: 'Candidates', icon: Users, color: 'purple' },
-    { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'indigo' }
+    { id: 'messages', label: 'Messages', icon: MessageCircle, color: 'indigo' },
+    { id: 'analytics', label: 'Analytics', icon: BarChart3, color: 'orange' },
+    { id: 'settings', label: 'Settings', icon: Settings, color: 'gray' }
   ];
 
   return (

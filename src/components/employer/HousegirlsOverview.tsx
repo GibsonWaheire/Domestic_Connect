@@ -20,7 +20,8 @@ import {
   Users,
   Briefcase,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CheckCircle
 } from 'lucide-react';
 
 interface Housegirl {
@@ -41,13 +42,19 @@ interface Housegirl {
   languages?: string[];
   rating?: number;
   reviews?: number;
+  contactUnlocked: boolean;
+  unlockCount: number;
+  unlockedBy: string[];
+  lastUnlocked?: string;
 }
 
 interface HousegirlsOverviewProps {
   onViewProfile: (housegirl: Housegirl) => void;
+  onUnlockContact: (housegirl: Housegirl) => void;
+  selectedHousegirl?: Housegirl | null;
 }
 
-const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
+const HousegirlsOverview = ({ onViewProfile, onUnlockContact, selectedHousegirl }: HousegirlsOverviewProps) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [locationFilter, setLocationFilter] = useState('all');
@@ -57,7 +64,7 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
   const itemsPerPage = 6;
 
   // Mock data - in real app this would come from API
-  const [housegirls] = useState<Housegirl[]>([
+  const [housegirls, setHousegirls] = useState<Housegirl[]>([
     {
       id: 1,
       name: "Sarah Wanjiku",
@@ -74,7 +81,11 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
       skills: ["Cooking", "Cleaning", "Childcare", "Laundry", "Ironing"],
       languages: ["English", "Swahili", "Kikuyu"],
       rating: 4.8,
-      reviews: 12
+      reviews: 12,
+      contactUnlocked: true,
+      unlockCount: 3,
+      unlockedBy: ["John Doe", "Jane Smith", "Mike Johnson"],
+      lastUnlocked: "2024-01-15"
     },
     {
       id: 2,
@@ -92,7 +103,11 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
       skills: ["House Management", "Cooking", "Cleaning", "Event Planning", "Budgeting"],
       languages: ["English", "Swahili", "Dholuo"],
       rating: 4.9,
-      reviews: 18
+      reviews: 18,
+      contactUnlocked: false,
+      unlockCount: 0,
+      unlockedBy: [],
+      lastUnlocked: undefined
     },
     {
       id: 3,
@@ -110,7 +125,11 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
       skills: ["Cleaning", "Childcare", "Pet Care", "Basic Cooking"],
       languages: ["English", "Swahili", "Kikuyu"],
       rating: 4.5,
-      reviews: 8
+      reviews: 8,
+      contactUnlocked: true,
+      unlockCount: 1,
+      unlockedBy: ["Alice Brown"],
+      lastUnlocked: "2024-01-12"
     },
     {
       id: 4,
@@ -128,11 +147,24 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
       skills: ["Traditional Cooking", "Cleaning", "Laundry", "Garden Maintenance"],
       languages: ["Swahili", "Dholuo", "Basic English"],
       rating: 4.7,
-      reviews: 25
+      reviews: 25,
+      contactUnlocked: false,
+      unlockCount: 0,
+      unlockedBy: [],
+      lastUnlocked: undefined
     }
   ]);
 
   const [favorites, setFavorites] = useState<number[]>([]);
+
+  // Update housegirls when selectedHousegirl changes (for unlock updates)
+  useEffect(() => {
+    if (selectedHousegirl) {
+      setHousegirls(prev => 
+        prev.map(h => h.id === selectedHousegirl.id ? selectedHousegirl : h)
+      );
+    }
+  }, [selectedHousegirl]);
 
   const toggleFavorite = (housegirlId: number) => {
     setFavorites(prev => 
@@ -358,15 +390,47 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
                 )}
               </div>
 
+              {/* Contact Details (if unlocked) */}
+              {housegirl.contactUnlocked && (housegirl.phone || housegirl.email) && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mt-3">
+                  <h4 className="font-medium text-green-900 mb-2 flex items-center">
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Contact Details
+                  </h4>
+                  <div className="space-y-1 text-sm">
+                    {housegirl.phone && (
+                      <div className="flex items-center space-x-2">
+                        <Phone className="h-3 w-3 text-green-600" />
+                        <span className="text-green-800">{housegirl.phone}</span>
+                      </div>
+                    )}
+                    {housegirl.email && (
+                      <div className="flex items-center space-x-2">
+                        <Mail className="h-3 w-3 text-green-600" />
+                        <span className="text-green-800">{housegirl.email}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Status and Actions */}
               <div className="flex items-center justify-between pt-2 border-t">
-                <Badge className={`${
-                  housegirl.status === 'Available' 
-                    ? 'bg-green-100 text-green-800 border-green-200' 
-                    : 'bg-gray-100 text-gray-800 border-gray-200'
-                }`}>
-                  {housegirl.status}
-                </Badge>
+                <div className="flex items-center space-x-2">
+                  <Badge className={`${
+                    housegirl.status === 'Available' 
+                      ? 'bg-green-100 text-green-800 border-green-200' 
+                      : 'bg-gray-100 text-gray-800 border-gray-200'
+                  }`}>
+                    {housegirl.status}
+                  </Badge>
+                  {housegirl.contactUnlocked && (
+                    <Badge className="bg-blue-100 text-blue-800 border-blue-200 text-xs">
+                      <Users className="h-3 w-3 mr-1" />
+                      {housegirl.unlockCount} unlock{housegirl.unlockCount > 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                </div>
                 
                 <div className="flex space-x-2">
                   <Button
@@ -378,14 +442,25 @@ const HousegirlsOverview = ({ onViewProfile }: HousegirlsOverviewProps) => {
                     <Eye className="h-3 w-3" />
                     <span>View</span>
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => handleViewProfile(housegirl)}
-                    className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-1"
-                  >
-                    <Phone className="h-3 w-3" />
-                    <span>Contact</span>
-                  </Button>
+                  {housegirl.contactUnlocked ? (
+                    <Button
+                      size="sm"
+                      onClick={() => onUnlockContact(housegirl)}
+                      className="bg-green-600 hover:bg-green-700 text-white flex items-center space-x-1"
+                    >
+                      <CheckCircle className="h-3 w-3" />
+                      <span>Contact Unlocked</span>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      onClick={() => onUnlockContact(housegirl)}
+                      className="bg-blue-600 hover:bg-blue-700 text-white flex items-center space-x-1"
+                    >
+                      <Phone className="h-3 w-3" />
+                      <span>Unlock Contact</span>
+                    </Button>
+                  )}
                 </div>
               </div>
             </CardContent>
