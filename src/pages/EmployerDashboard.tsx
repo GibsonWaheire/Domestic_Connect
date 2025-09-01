@@ -10,7 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { 
   Briefcase, Users, MessageCircle, BarChart3, Settings, 
   Search, Plus, Eye, Edit, Trash2, Phone, CreditCard,
-  CheckCircle, TrendingUp, MapPin, Clock, Star, LogOut
+  CheckCircle, TrendingUp, MapPin, Clock, Star, LogOut,
+  Filter, Bell, Calendar, Heart, Share2, MoreHorizontal,
+  ArrowUpRight, ArrowDownRight, Target, Award, Zap
 } from 'lucide-react';
 
 // Types
@@ -73,6 +75,8 @@ const EmployerDashboard = () => {
   const [selectedHousegirl, setSelectedHousegirl] = useState<Housegirl | null>(null);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showNotifications, setShowNotifications] = useState(false);
 
   // Mock data
   const [housegirls] = useState<Housegirl[]>([
@@ -115,13 +119,30 @@ const EmployerDashboard = () => {
       preview: "Thank you for considering my application...", timestamp: "1 day ago", isRead: true }
   ]);
 
+  // Enhanced mock data
+  const [notifications] = useState([
+    { id: 1, type: 'application', message: 'New application from Sarah Wanjiku', time: '2 min ago', read: false },
+    { id: 2, type: 'message', message: 'Grace Akinyi replied to your message', time: '5 min ago', read: false },
+    { id: 3, type: 'system', message: 'Job posting expires in 2 days', time: '1 hour ago', read: true }
+  ]);
+
+  // Filtered housegirls based on search
+  const filteredHousegirls = housegirls.filter(housegirl => 
+    housegirl.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    housegirl.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    housegirl.skills?.some(skill => skill.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
   // Stats
   const stats = {
     totalApplications: 24,
     activeJobs: jobs.filter(j => j.status === 'active').length,
     totalViews: jobs.reduce((sum, j) => sum + j.views, 0),
     unreadMessages: messages.filter(m => !m.isRead).length,
-    hiringRate: 85
+    hiringRate: 85,
+    monthlyGrowth: 12,
+    responseTime: '2.5h',
+    topLocation: 'Westlands'
   };
 
   // Handlers
@@ -188,56 +209,106 @@ const EmployerDashboard = () => {
   const renderOverview = () => (
     <div className="space-y-6">
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-blue-50 border-blue-200">
-          <CardContent className="p-4 text-center">
-            <Users className="h-8 w-8 text-blue-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-blue-900">{stats.totalApplications}</p>
-            <p className="text-sm text-blue-600">Applications</p>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="relative overflow-hidden bg-gradient-to-br from-blue-50 to-blue-100 border-0 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-purple-400/20"></div>
+          <CardContent className="relative p-6 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-blue-500/20 rounded-full backdrop-blur-sm">
+                <Users className="h-8 w-8 text-blue-700" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-blue-900 mb-2">{stats.totalApplications}</p>
+            <p className="text-sm text-blue-700 font-medium">Applications</p>
+            <div className="flex items-center justify-center mt-3">
+              <ArrowUpRight className="h-4 w-4 text-green-600 mr-1" />
+              <span className="text-xs text-green-600 font-medium">+{stats.monthlyGrowth}%</span>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="p-4 text-center">
-            <Briefcase className="h-8 w-8 text-green-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-green-900">{stats.activeJobs}</p>
-            <p className="text-sm text-green-600">Active Jobs</p>
+
+        <Card className="relative overflow-hidden bg-gradient-to-br from-green-50 to-green-100 border-0 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-green-400/20 to-emerald-400/20"></div>
+          <CardContent className="relative p-6 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-green-500/20 rounded-full backdrop-blur-sm">
+                <Briefcase className="h-8 w-8 text-green-700" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-green-900 mb-2">{stats.activeJobs}</p>
+            <p className="text-sm text-green-700 font-medium">Active Jobs</p>
+            <div className="flex items-center justify-center mt-3">
+              <Target className="h-4 w-4 text-green-600 mr-1" />
+              <span className="text-xs text-green-600 font-medium">Live</span>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-purple-50 border-purple-200">
-          <CardContent className="p-4 text-center">
-            <Eye className="h-8 w-8 text-purple-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-purple-900">{stats.totalViews}</p>
-            <p className="text-sm text-purple-600">Total Views</p>
+
+        <Card className="relative overflow-hidden bg-gradient-to-br from-purple-50 to-purple-100 border-0 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-purple-400/20 to-pink-400/20"></div>
+          <CardContent className="relative p-6 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-purple-500/20 rounded-full backdrop-blur-sm">
+                <TrendingUp className="h-8 w-8 text-purple-700" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-purple-900 mb-2">{stats.hiringRate}%</p>
+            <p className="text-sm text-purple-700 font-medium">Hiring Rate</p>
+            <div className="flex items-center justify-center mt-3">
+              <Award className="h-4 w-4 text-purple-600 mr-1" />
+              <span className="text-xs text-purple-600 font-medium">Excellent</span>
+            </div>
           </CardContent>
         </Card>
-        <Card className="bg-orange-50 border-orange-200">
-          <CardContent className="p-4 text-center">
-            <TrendingUp className="h-8 w-8 text-orange-600 mx-auto mb-2" />
-            <p className="text-2xl font-bold text-orange-900">{stats.hiringRate}%</p>
-            <p className="text-sm text-orange-600">Hiring Rate</p>
+
+        <Card className="relative overflow-hidden bg-gradient-to-br from-orange-50 to-orange-100 border-0 shadow-lg backdrop-blur-sm hover:shadow-xl transition-all duration-300">
+          <div className="absolute inset-0 bg-gradient-to-r from-orange-400/20 to-red-400/20"></div>
+          <CardContent className="relative p-6 text-center">
+            <div className="flex items-center justify-center mb-4">
+              <div className="p-3 bg-orange-500/20 rounded-full backdrop-blur-sm">
+                <Zap className="h-8 w-8 text-orange-700" />
+              </div>
+            </div>
+            <p className="text-3xl font-bold text-orange-900 mb-2">{stats.responseTime}</p>
+            <p className="text-sm text-orange-700 font-medium">Avg Response</p>
+            <div className="flex items-center justify-center mt-3">
+              <Clock className="h-4 w-4 text-orange-600 mr-1" />
+              <span className="text-xs text-orange-600 font-medium">Fast</span>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Button onClick={() => setShowJobModal(true)} className="h-16">
-              <Plus className="h-5 w-5 mr-2" />
-              Post Job
-            </Button>
-            <Button variant="outline" onClick={() => setActiveSection('candidates')} className="h-16">
-              <Users className="h-5 w-5 mr-2" />
-              View Candidates
-            </Button>
-            <Button variant="outline" onClick={() => setActiveSection('messages')} className="h-16">
-              <MessageCircle className="h-5 w-5 mr-2" />
-              Check Messages
-            </Button>
+            {/* Search and Quick Actions */}
+      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+        <CardContent className="p-6">
+          <div className="flex flex-col md:flex-row gap-4 items-center">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                placeholder="Search housegirls, skills, or locations..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-blue-300"
+              />
+            </div>
+            <div className="flex gap-3">
+              <Button 
+                onClick={() => setShowJobModal(true)} 
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Post Job
+              </Button>
+              <Button 
+                variant="outline" 
+                onClick={() => setActiveSection('candidates')} 
+                className="border-gray-300 hover:bg-gray-50 backdrop-blur-sm"
+              >
+                <Users className="h-4 w-4 mr-2" />
+                View All
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
