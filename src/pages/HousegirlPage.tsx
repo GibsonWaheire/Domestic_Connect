@@ -7,6 +7,7 @@ import { useState, useEffect } from 'react';
 import AuthModal from '@/components/AuthModal';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
+import AgencyRegistrationModal from '@/components/AgencyRegistrationModal';
 import { 
   Heart, 
   User, 
@@ -25,7 +26,8 @@ import {
   Phone,
   Mail,
   MessageCircle,
-  Home
+  Home,
+  Building2
 } from 'lucide-react';
 
 const HousegirlPage = () => {
@@ -33,6 +35,7 @@ const HousegirlPage = () => {
   const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
+  const [agencyModalOpen, setAgencyModalOpen] = useState(false);
 
   // Redirect logged-in housegirls to their dashboard
   useEffect(() => {
@@ -48,6 +51,14 @@ const HousegirlPage = () => {
 
   const closeAuthModal = () => {
     setAuthModalOpen(false);
+  };
+
+  const openAgencyModal = () => {
+    setAgencyModalOpen(true);
+  };
+
+  const closeAgencyModal = () => {
+    setAgencyModalOpen(false);
   };
 
   return (
@@ -166,6 +177,15 @@ const HousegirlPage = () => {
             >
               <User className="h-6 w-6 mr-3" />
               Create My Profile →
+            </Button>
+            <Button 
+              onClick={openAgencyModal}
+              size="lg" 
+              variant="outline"
+              className="border-2 border-green-500 text-green-600 hover:bg-green-50 px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
+              <Building2 className="h-6 w-6 mr-3" />
+              Register with Agency →
             </Button>
           </div>
           
@@ -389,6 +409,12 @@ const HousegirlPage = () => {
         isOpen={authModalOpen} 
         onClose={closeAuthModal} 
         defaultMode={authMode} 
+      />
+
+      {/* Agency Registration Modal */}
+      <AgencyRegistrationModal 
+        isOpen={agencyModalOpen} 
+        onClose={closeAgencyModal} 
       />
     </div>
   );

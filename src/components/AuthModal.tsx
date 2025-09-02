@@ -35,6 +35,8 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [languages, setLanguages] = useState<string[]>([]);
   const [bio, setBio] = useState('');
   const [customLocation, setCustomLocation] = useState('');
+  const [selectedAgency, setSelectedAgency] = useState('');
+  const [agencies, setAgencies] = useState<any[]>([]);
 
   // Auto-update bio when relevant fields change
   useEffect(() => {
@@ -45,6 +47,23 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
       }
     }
   }, [age, experience, education, skills, languages, accommodationType, location, community, expectedSalary, userType]);
+
+  // Fetch agencies for housegirl registration
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const response = await fetch('http://localhost:3002/agencies');
+        const data = await response.json();
+        setAgencies(data);
+      } catch (error) {
+        console.error('Error fetching agencies:', error);
+      }
+    };
+
+    if (userType === 'housegirl') {
+      fetchAgencies();
+    }
+  }, [userType]);
 
   // Auto-generate bio description based on form fields
   const generateBioDescription = () => {
