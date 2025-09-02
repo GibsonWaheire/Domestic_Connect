@@ -109,32 +109,6 @@ export const Sidebar = ({
           })}
         </nav>
 
-        {/* Day Bug Advertisement */}
-        {!sidebarCollapsed && (
-          <div className="mt-8 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-xl shadow-lg mx-4">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-3 shadow-md">
-                <Clock className="h-6 w-6 text-white" />
-              </div>
-              <h3 className="text-sm font-bold text-gray-900 mb-2">Need a Day Bug Today?</h3>
-              <p className="text-xs text-gray-600 mb-3">Find housegirls available for day jobs</p>
-              <Button 
-                size="sm"
-                onClick={() => {
-                  // TODO: Navigate to dedicated day bug page
-                  showInfoNotification(
-                    "Day Bug Page", 
-                    "Day Bug page is coming soon!"
-                  );
-                }}
-                className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white text-xs shadow-md hover:shadow-lg transition-all duration-300"
-              >
-                Find Day Bug
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* User Info */}
         <div className="p-4 border-t border-gray-200/50">
           <div className="flex items-center space-x-3">

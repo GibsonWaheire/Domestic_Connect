@@ -1,8 +1,9 @@
-import { BarChart3, Briefcase, Users, MessageCircle, Settings } from 'lucide-react';
+import { BarChart3, Briefcase, Users, MessageCircle, Settings, Building2 } from 'lucide-react';
 import { NavItem } from '@/types/employer';
 
 export const NAV_ITEMS: NavItem[] = [
   { id: 'housegirls', label: 'Housegirls', icon: Users, color: 'purple' },
+  { id: 'agency-marketplace', label: 'Agency Marketplace', icon: Building2, color: 'blue' },
   { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'green' },
   { id: 'messages', label: 'Messages', icon: MessageCircle, color: 'indigo' },
   { id: 'settings', label: 'Settings', icon: Settings, color: 'gray' }
