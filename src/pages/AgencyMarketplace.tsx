@@ -16,9 +16,9 @@ const AgencyMarketplace = () => {
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [filteredAgencies, setFilteredAgencies] = useState<Agency[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [locationFilter, setLocationFilter] = useState('');
-  const [serviceFilter, setServiceFilter] = useState('');
-  const [tierFilter, setTierFilter] = useState('');
+  const [locationFilter, setLocationFilter] = useState('all');
+  const [serviceFilter, setServiceFilter] = useState('all');
+  const [tierFilter, setTierFilter] = useState('all');
   const [showAgencyModal, setShowAgencyModal] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [selectedHousegirl, setSelectedHousegirl] = useState('');
@@ -119,17 +119,17 @@ const AgencyMarketplace = () => {
     }
 
     // Location filter
-    if (locationFilter) {
+    if (locationFilter && locationFilter !== 'all') {
       filtered = filtered.filter(agency => agency.location === locationFilter);
     }
 
     // Service filter
-    if (serviceFilter) {
+    if (serviceFilter && serviceFilter !== 'all') {
       filtered = filtered.filter(agency => agency.services.includes(serviceFilter));
     }
 
     // Tier filter
-    if (tierFilter) {
+    if (tierFilter && tierFilter !== 'all') {
       filtered = filtered.filter(agency => agency.subscription_tier === tierFilter);
     }
 
@@ -319,7 +319,7 @@ const AgencyMarketplace = () => {
                   <SelectValue placeholder="Location" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Locations</SelectItem>
+                  <SelectItem value="all">All Locations</SelectItem>
                   {locations.map(location => (
                     <SelectItem key={location} value={location}>{location}</SelectItem>
                   ))}
@@ -331,7 +331,7 @@ const AgencyMarketplace = () => {
                   <SelectValue placeholder="Service" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Services</SelectItem>
+                  <SelectItem value="all">All Services</SelectItem>
                   {services.map(service => (
                     <SelectItem key={service} value={service}>
                       {service.replace('_', ' ').charAt(0).toUpperCase() + service.replace('_', ' ').slice(1)}
@@ -345,7 +345,7 @@ const AgencyMarketplace = () => {
                   <SelectValue placeholder="Tier" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Tiers</SelectItem>
+                  <SelectItem value="all">All Tiers</SelectItem>
                   {tiers.map(tier => (
                     <SelectItem key={tier} value={tier}>
                       {tier.charAt(0).toUpperCase() + tier.slice(1)}
@@ -358,9 +358,9 @@ const AgencyMarketplace = () => {
                 variant="outline"
                 onClick={() => {
                   setSearchTerm('');
-                  setLocationFilter('');
-                  setServiceFilter('');
-                  setTierFilter('');
+                  setLocationFilter('all');
+                  setServiceFilter('all');
+                  setTierFilter('all');
                 }}
                 className="flex items-center space-x-2"
               >

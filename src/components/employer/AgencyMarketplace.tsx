@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Filter, Building2, Star, Shield, Users, MapPin, ArrowRight, CheckCircle, DollarSign } from 'lucide-react';
 import AgencyCard, { Agency } from '@/components/AgencyCard';
 import AgencyHiringModal from '@/components/AgencyHiringModal';
+import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { useNavigate } from 'react-router-dom';
 
 const AgencyMarketplace = () => {
@@ -14,12 +15,14 @@ const AgencyMarketplace = () => {
   const [agencies, setAgencies] = React.useState<Agency[]>([]);
   const [filteredAgencies, setFilteredAgencies] = React.useState<Agency[]>([]);
   const [searchTerm, setSearchTerm] = React.useState('');
-  const [locationFilter, setLocationFilter] = React.useState('');
-  const [serviceFilter, setServiceFilter] = React.useState('');
-  const [tierFilter, setTierFilter] = React.useState('');
+  const [locationFilter, setLocationFilter] = React.useState('all');
+  const [serviceFilter, setServiceFilter] = React.useState('all');
+  const [tierFilter, setTierFilter] = React.useState('all');
   const [showAgencyModal, setShowAgencyModal] = React.useState(false);
   const [selectedAgency, setSelectedAgency] = React.useState<Agency | null>(null);
   const [selectedHousegirl, setSelectedHousegirl] = React.useState('');
+  const [showPaymentModal, setShowPaymentModal] = React.useState(false);
+  const [selectedPackage, setSelectedPackage] = React.useState<PackageDetails | null>(null);
 
   React.useEffect(() => {
     // Fetch agencies from API
@@ -117,17 +120,17 @@ const AgencyMarketplace = () => {
     }
 
     // Location filter
-    if (locationFilter) {
+    if (locationFilter && locationFilter !== 'all') {
       filtered = filtered.filter(agency => agency.location === locationFilter);
     }
 
     // Service filter
-    if (serviceFilter) {
+    if (serviceFilter && serviceFilter !== 'all') {
       filtered = filtered.filter(agency => agency.services.includes(serviceFilter));
     }
 
     // Tier filter
-    if (tierFilter) {
+    if (tierFilter && tierFilter !== 'all') {
       filtered = filtered.filter(agency => agency.subscription_tier === tierFilter);
     }
 
@@ -181,6 +184,82 @@ const AgencyMarketplace = () => {
   const locations = [...new Set(agencies.map(agency => agency.location))];
   const services = [...new Set(agencies.flatMap(agency => agency.services))];
   const tiers = ['basic', 'premium', 'international'];
+
+  // Package definitions
+  const packages: PackageDetails[] = [
+    {
+      id: 'basic',
+      name: 'Basic',
+      price: 1200,
+      agencyFee: 1000,
+      platformFee: 200,
+      features: [
+        'Verified worker',
+        'Basic training',
+        '30-day replacement',
+        'Agency support'
+      ],
+      color: 'green',
+      icon: Shield
+    },
+    {
+      id: 'premium',
+      name: 'Premium',
+      price: 1500,
+      agencyFee: 1000,
+      platformFee: 500,
+      features: [
+        'Verified worker',
+        'Professional training',
+        'Background check',
+        '60-day replacement',
+        'Dispute resolution'
+      ],
+      color: 'blue',
+      icon: Shield
+    },
+    {
+      id: 'international',
+      name: 'International',
+      price: 2000,
+      agencyFee: 1000,
+      platformFee: 1000,
+      features: [
+        'Verified worker',
+        'International training',
+        'Comprehensive background check',
+        '90-day replacement',
+        'Legal compliance'
+      ],
+      color: 'purple',
+      icon: Shield
+    }
+  ];
+
+  const handlePackageSelect = (packageDetails: PackageDetails) => {
+    setSelectedPackage(packageDetails);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = (paymentData: {
+    id: string;
+    client_id: string;
+    agency_id: string;
+    package_id: string;
+    amount: number;
+    agency_fee: number;
+    platform_fee: number;
+    phone_number: string;
+    status: string;
+    payment_method: string;
+    created_at: string;
+    agency_client_id: string;
+    terms_accepted: boolean;
+  }) => {
+    setShowPaymentModal(false);
+    setSelectedPackage(null);
+    // You can add additional logic here like redirecting or showing success message
+  };
 
   return (
     <div className="space-y-4">
@@ -259,7 +338,7 @@ const AgencyMarketplace = () => {
               <SelectValue placeholder="Location" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               {locations.map(location => (
                 <SelectItem key={location} value={location}>{location}</SelectItem>
               ))}
@@ -271,7 +350,7 @@ const AgencyMarketplace = () => {
               <SelectValue placeholder="Service" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               {services.map(service => (
                 <SelectItem key={service} value={service}>
                   {service.replace('_', ' ').charAt(0).toUpperCase() + service.replace('_', ' ').slice(1)}
@@ -285,7 +364,7 @@ const AgencyMarketplace = () => {
               <SelectValue placeholder="Tier" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">All</SelectItem>
+              <SelectItem value="all">All</SelectItem>
               {tiers.map(tier => (
                 <SelectItem key={tier} value={tier}>
                   {tier.charAt(0).toUpperCase() + tier.slice(1)}
@@ -299,9 +378,9 @@ const AgencyMarketplace = () => {
             size="sm"
             onClick={() => {
               setSearchTerm('');
-              setLocationFilter('');
-              setServiceFilter('');
-              setTierFilter('');
+              setLocationFilter('all');
+              setServiceFilter('all');
+              setTierFilter('all');
             }}
             className="h-9 px-3"
           >
@@ -314,109 +393,47 @@ const AgencyMarketplace = () => {
       <div className="mb-4">
         <h3 className="text-lg font-semibold text-gray-900 mb-3">Agency Packages</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Card className="border-2 border-gray-200 hover:border-blue-300 transition-colors">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Shield className="h-5 w-5 text-green-600 mr-2" />
-                Basic Package
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">KES 1,200</p>
-                <p className="text-sm text-gray-600">One-time fee</p>
-              </div>
-              <ul className="text-sm space-y-2">
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Verified worker
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Basic training
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  30-day replacement
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-blue-300 bg-blue-50/30">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Shield className="h-5 w-5 text-blue-600 mr-2" />
-                Premium Package
-              </CardTitle>
-              <Badge className="w-fit bg-blue-600 text-white">Most Popular</Badge>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">KES 1,500</p>
-                <p className="text-sm text-gray-600">One-time fee</p>
-              </div>
-              <ul className="text-sm space-y-2">
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Verified worker
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Professional training
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Background check
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  60-day replacement
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Dispute resolution
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
-
-          <Card className="border-2 border-purple-300 hover:border-purple-400 transition-colors">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg flex items-center">
-                <Shield className="h-5 w-5 text-purple-600 mr-2" />
-                International Package
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="text-center">
-                <p className="text-3xl font-bold text-gray-900">KES 2,000</p>
-                <p className="text-sm text-gray-600">One-time fee</p>
-              </div>
-              <ul className="text-sm space-y-2">
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Verified worker
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  International training
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Comprehensive background check
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  90-day replacement
-                </li>
-                <li className="flex items-center">
-                  <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
-                  Legal compliance
-                </li>
-              </ul>
-            </CardContent>
-          </Card>
+          {packages.map((packageDetails) => (
+            <Card 
+              key={packageDetails.id}
+              className={`border-2 border-gray-200 hover:border-${packageDetails.color}-300 transition-colors cursor-pointer`}
+              onClick={() => handlePackageSelect(packageDetails)}
+            >
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center">
+                  <packageDetails.icon className={`h-5 w-5 text-${packageDetails.color}-600 mr-2`} />
+                  {packageDetails.name} Package
+                </CardTitle>
+                {packageDetails.id === 'premium' && (
+                  <Badge className="w-fit bg-blue-600 text-white">Most Popular</Badge>
+                )}
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="text-center">
+                  <p className="text-3xl font-bold text-gray-900">KES {packageDetails.price.toLocaleString()}</p>
+                  <p className="text-sm text-gray-600">One-time registration fee</p>
+                </div>
+                <ul className="text-sm space-y-2">
+                  {packageDetails.features.map((feature, index) => (
+                    <li key={index} className="flex items-center">
+                      <CheckCircle className="h-4 w-4 text-green-600 mr-2" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+                <Button 
+                  className={`w-full bg-${packageDetails.color}-600 hover:bg-${packageDetails.color}-700 text-white`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePackageSelect(packageDetails);
+                  }}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  Register Now
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
       </div>
 
@@ -461,6 +478,25 @@ const AgencyMarketplace = () => {
             setSelectedAgency(null);
           }}
           onHire={handleAgencyHire}
+        />
+      )}
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedPackage && (
+        <PaymentModal
+          package={selectedPackage}
+          agency={{
+            id: 'default_agency',
+            name: 'Professional Domestic Agency',
+            license_number: 'AGY-2024-001',
+            rating: 4.8,
+            verified_workers: 45
+          }}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedPackage(null);
+          }}
+          onSuccess={handlePaymentSuccess}
         />
       )}
     </div>
