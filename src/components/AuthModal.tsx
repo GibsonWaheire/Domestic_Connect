@@ -164,9 +164,15 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           });
         } else {
           onClose();
-          // Redirect to housegirl dashboard after successful sign in
-          // The dashboard will handle further routing based on user type
-          window.location.href = '/housegirl-dashboard';
+          // Get the signed-in user and redirect based on their type
+          const currentUser = JSON.parse(localStorage.getItem('domestic_connect_user') || '{}');
+          if (currentUser.user_type === 'agency') {
+            window.location.href = '/agency-dashboard';
+          } else if (currentUser.user_type === 'housegirl') {
+            window.location.href = '/housegirl-dashboard';
+          } else {
+            window.location.href = '/dashboard';
+          }
         }
       } else {
         // Sign up validation
