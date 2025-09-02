@@ -39,7 +39,15 @@ const LandingPage = () => {
       setAuthModalOpen(true);
       return;
     }
-    navigate(path);
+    
+    // Redirect based on user type
+    if (user.user_type === 'agency') {
+      navigate('/agency-dashboard');
+    } else if (user.user_type === 'housegirl') {
+      navigate('/housegirl-dashboard');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const openAuthModal = (mode: 'login' | 'signup') => {
