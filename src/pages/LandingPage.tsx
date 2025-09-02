@@ -66,7 +66,21 @@ const LandingPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-8">
-              <div className="flex items-center cursor-pointer" onClick={() => navigate('/home')}>
+              <div className="flex items-center cursor-pointer" onClick={() => {
+                if (user) {
+                  // If logged in, go to appropriate dashboard
+                  if (user.user_type === 'agency') {
+                    navigate('/agency-dashboard');
+                  } else if (user.user_type === 'housegirl') {
+                    navigate('/housegirl-dashboard');
+                  } else {
+                    navigate('/dashboard');
+                  }
+                } else {
+                  // If not logged in, stay on home
+                  navigate('/home');
+                }
+              }}>
                 <div className="p-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-xl shadow-lg">
                   <Heart className="h-6 w-6 text-white" />
                 </div>

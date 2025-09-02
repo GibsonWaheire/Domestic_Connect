@@ -57,7 +57,21 @@ const HousegirlPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-8">
-              <div className="flex items-center cursor-pointer" onClick={() => navigate('/home')}>
+              <div className="flex items-center cursor-pointer" onClick={() => {
+                if (user) {
+                  // If logged in, go to appropriate dashboard
+                  if (user.user_type === 'agency') {
+                    navigate('/agency-dashboard');
+                  } else if (user.user_type === 'housegirl') {
+                    navigate('/housegirl-dashboard');
+                  } else {
+                    navigate('/dashboard');
+                  }
+                } else {
+                  // If not logged in, go to home
+                  navigate('/home');
+                }
+              }}>
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl shadow-lg">
                   <Heart className="h-6 w-6 text-white" />
                 </div>
@@ -90,15 +104,20 @@ const HousegirlPage = () => {
                   <span className="text-sm text-gray-600">
                     Karibu, {user.first_name}
                   </span>
-                  {user.user_type === 'housegirl' && (
-                    <Button 
-                      variant="default" 
-                      onClick={() => navigate('/housegirl-dashboard')} 
-                      className="bg-blue-600 hover:bg-blue-700 text-white rounded-full"
-                    >
-                      My Dashboard
-                    </Button>
-                  )}
+                  <Button 
+                    onClick={() => {
+                      if (user.user_type === 'agency') {
+                        navigate('/agency-dashboard');
+                      } else if (user.user_type === 'housegirl') {
+                        navigate('/housegirl-dashboard');
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }} 
+                    className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full"
+                  >
+                    Go to Dashboard
+                  </Button>
                   <Button variant="outline" onClick={signOut} className="border-blue-300 hover:bg-blue-50 rounded-full">
                     Logout
                   </Button>
