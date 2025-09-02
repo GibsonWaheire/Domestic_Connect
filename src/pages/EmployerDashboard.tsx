@@ -65,7 +65,7 @@ interface Message {
 const NAV_ITEMS = [
   { id: 'overview', label: 'Overview', icon: BarChart3, color: 'blue' },
   { id: 'jobs', label: 'Jobs', icon: Briefcase, color: 'green' },
-  { id: 'candidates', label: 'Candidates', icon: Users, color: 'purple' },
+  { id: 'housegirls', label: 'Housegirls', icon: Users, color: 'purple' },
   { id: 'messages', label: 'Messages', icon: MessageCircle, color: 'indigo' },
   { id: 'settings', label: 'Settings', icon: Settings, color: 'gray' }
 ];
@@ -93,6 +93,9 @@ const EmployerDashboard = () => {
   const [selectedSalaryRange, setSelectedSalaryRange] = useState('');
   const [selectedEducation, setSelectedEducation] = useState('');
   const [selectedWorkType, setSelectedWorkType] = useState('');
+  const [selectedExperience, setSelectedExperience] = useState('');
+  const [selectedLivingArrangement, setSelectedLivingArrangement] = useState('');
+  const [showDayBugAd, setShowDayBugAd] = useState(false);
 
   // Mock data
   const [housegirls] = useState<Housegirl[]>([
@@ -252,8 +255,16 @@ const EmployerDashboard = () => {
     const matchesEducation = !selectedEducation || housegirl.education === selectedEducation;
     const matchesWorkType = !selectedWorkType || housegirl.workType === selectedWorkType;
     
+    const matchesExperience = !selectedExperience ||
+      (selectedExperience === '0-2' && parseInt(housegirl.experience) >= 0 && parseInt(housegirl.experience) <= 2) ||
+      (selectedExperience === '3-5' && parseInt(housegirl.experience) >= 3 && parseInt(housegirl.experience) <= 5) ||
+      (selectedExperience === '6-10' && parseInt(housegirl.experience) >= 6 && parseInt(housegirl.experience) <= 10) ||
+      (selectedExperience === '10+' && parseInt(housegirl.experience) >= 10);
+    
+    const matchesLivingArrangement = !selectedLivingArrangement || housegirl.livingArrangement === selectedLivingArrangement;
+    
     return matchesSearch && matchesCommunity && matchesAge && matchesSalary && 
-           matchesEducation && matchesWorkType;
+           matchesEducation && matchesWorkType && matchesExperience && matchesLivingArrangement;
   });
 
   // Pagination
@@ -294,9 +305,9 @@ const EmployerDashboard = () => {
   };
 
   const handleViewAllCandidates = () => {
-    setActiveSection('candidates');
+    setActiveSection('housegirls');
     toast({ 
-      title: "Candidates Section", 
+      title: "Housegirls Section", 
       description: "Browsing all available housegirls. Use filters to find your perfect match.",
       variant: "default"
     });
@@ -390,13 +401,32 @@ const EmployerDashboard = () => {
     // Render sections
     const renderOverview = () => (
     <div className="space-y-6">
+      {/* Available Housegirls Count */}
+      <Card className="bg-gradient-to-br from-pink-50 to-purple-50 border-0 shadow-lg">
+        <CardContent className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900">Available Housegirls</h2>
+              <p className="text-lg font-semibold text-pink-600">{filteredHousegirls.length} housegirls available</p>
+              <p className="text-sm text-gray-600">Find your perfect match from our qualified candidates</p>
+            </div>
+            <div className="p-4 bg-gradient-to-br from-pink-500 to-purple-600 rounded-full">
+              <Users className="h-8 w-8 text-white" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Advanced Filters */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-lg">
         <CardHeader>
-          <CardTitle className="text-xl font-bold">Advanced Filters</CardTitle>
+          <CardTitle className="text-xl font-bold flex items-center space-x-2">
+            <Filter className="h-5 w-5 text-blue-600" />
+            <span>Advanced Filters</span>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <div>
               <label className="text-sm font-medium text-gray-700 mb-2 block">Community</label>
               <select 
@@ -412,6 +442,15 @@ const EmployerDashboard = () => {
                 <option value="Kalenjin">Kalenjin</option>
                 <option value="Meru">Meru</option>
                 <option value="Kisii">Kisii</option>
+                <option value="Taita">Taita</option>
+                <option value="Mijikenda">Mijikenda</option>
+                <option value="Pokot">Pokot</option>
+                <option value="Turkana">Turkana</option>
+                <option value="Samburu">Samburu</option>
+                <option value="Maasai">Maasai</option>
+                <option value="Embu">Embu</option>
+                <option value="Tharaka">Tharaka</option>
+                <option value="Other">Other</option>
               </select>
             </div>
             <div>
@@ -468,10 +507,36 @@ const EmployerDashboard = () => {
                 <option value="25k+">KES 25k+</option>
               </select>
             </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Experience</label>
+              <select 
+                value={selectedExperience} 
+                onChange={(e) => setSelectedExperience(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md bg-white/50 backdrop-blur-sm focus:border-blue-300 focus:ring-blue-300"
+              >
+                <option value="">All Experience Levels</option>
+                <option value="0-2">0-2 years</option>
+                <option value="3-5">3-5 years</option>
+                <option value="6-10">6-10 years</option>
+                <option value="10+">10+ years</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-2 block">Living Arrangement</label>
+              <select 
+                value={selectedLivingArrangement} 
+                onChange={(e) => setSelectedLivingArrangement(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded-md bg-white/50 backdrop-blur-sm focus:border-blue-300 focus:ring-blue-300"
+              >
+                <option value="">All Arrangements</option>
+                <option value="Live-in">Live-in</option>
+                <option value="Live-out">Live-out</option>
+              </select>
+            </div>
           </div>
           <div className="flex justify-between items-center mt-4">
             <p className="text-sm text-gray-600">
-              Showing {filteredHousegirls.length} of {housegirls.length} candidates
+              Showing {filteredHousegirls.length} of {housegirls.length} housegirls
             </p>
             <Button 
               variant="outline"
@@ -481,11 +546,13 @@ const EmployerDashboard = () => {
                 setSelectedSalaryRange('');
                 setSelectedEducation('');
                 setSelectedWorkType('');
+                setSelectedExperience('');
+                setSelectedLivingArrangement('');
                 setSearchTerm('');
                 setCurrentPage(1);
                 toast({ 
                   title: "Filters Cleared", 
-                  description: "All filters have been reset to show all candidates.",
+                  description: "All filters have been reset to show all housegirls.",
                   variant: "default"
                 });
               }}
@@ -498,10 +565,13 @@ const EmployerDashboard = () => {
         </CardContent>
       </Card>
 
-      {/* All Candidates */}
-      <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
+      {/* Available Housegirls */}
+      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
         <CardHeader className="flex items-center justify-between">
-          <CardTitle className="text-xl font-bold">Available Housegirls</CardTitle>
+          <CardTitle className="text-xl font-bold flex items-center space-x-2">
+            <Users className="h-6 w-6 text-pink-500" />
+            <span>HOUSEGIRLS AVAILABLE</span>
+          </CardTitle>
           <div className="flex items-center space-x-4">
             <Input
               placeholder="Search housegirls..."
@@ -509,20 +579,6 @@ const EmployerDashboard = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-64 pl-10 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-blue-300"
             />
-            <Button 
-              variant="outline"
-              onClick={() => {
-                toast({ 
-                  title: "Advanced Filters", 
-                  description: "Advanced filtering options are coming soon!",
-                  variant: "default"
-                });
-              }}
-              className="hover:bg-gray-50 backdrop-blur-sm"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Advanced Filters
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -532,7 +588,7 @@ const EmployerDashboard = () => {
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
                   <Users className="h-8 w-8 text-white" />
                 </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">No Candidates Found</h3>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">No Housegirls Found</h3>
                 <p className="text-gray-600 mb-6">Try adjusting your search terms or filters to find more housegirls</p>
                 <Button 
                   onClick={() => {
@@ -542,6 +598,8 @@ const EmployerDashboard = () => {
                     setSelectedSalaryRange('');
                     setSelectedEducation('');
                     setSelectedWorkType('');
+                    setSelectedExperience('');
+                    setSelectedLivingArrangement('');
                     setCurrentPage(1);
                   }}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
@@ -552,13 +610,15 @@ const EmployerDashboard = () => {
             </Card>
           ) : (
             <>
-              <div className="space-y-3">
+              {/* Visual Card Grid - Like competitor's design */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {paginatedHousegirls.map(housegirl => (
-                  <div key={housegirl.id} className="group relative overflow-hidden bg-white/60 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:bg-white/80 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+                  <Card key={housegirl.id} className="group relative overflow-hidden bg-white/90 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                     <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-4">
+                    <CardContent className="relative p-6">
+                      {/* Header with photo and status */}
+                      <div className="flex items-start justify-between mb-4">
+                        <div className="flex items-center space-x-3">
                           <div className="relative">
                             {housegirl.profileImage ? (
                               <img 
@@ -579,127 +639,195 @@ const EmployerDashboard = () => {
                           </div>
                           <div>
                             <h3 className="font-bold text-gray-900 text-lg">{housegirl.name}</h3>
-                            <p className="text-sm text-gray-600">{housegirl.age} years • {housegirl.location}</p>
-                            {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
-                              <div className="mt-1">
-                                <Badge className="bg-blue-100 text-blue-800 text-xs">
-                                  🔓 Unlocked {housegirl.unlockCount} time{housegirl.unlockCount > 1 ? 's' : ''}
-                                </Badge>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-6">
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Experience</p>
-                            <p className="font-medium text-gray-900">{housegirl.experience}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Rating</p>
-                            <div className="flex items-center space-x-1">
-                              <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                              <span className="font-medium">{housegirl.rating}</span>
-                              <span className="text-xs text-gray-500">({housegirl.reviews})</span>
-                            </div>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Salary</p>
-                            <p className="font-bold text-green-600">{housegirl.salary}</p>
-                          </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Status</p>
-                            <Badge className={housegirl.status === 'Available' ? 'bg-green-100 text-green-800 text-xs' : 'bg-gray-100 text-gray-800 text-xs'}>
-                              {housegirl.status}
+                            <Badge className="bg-pink-100 text-pink-800 text-xs font-medium">
+                              AVAILABLE
                             </Badge>
                           </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Education</p>
+                        </div>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          className="opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <Heart className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                        </Button>
+                      </div>
+
+                      {/* Key Details Grid - Like competitor's layout */}
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                            <span className="text-green-600 text-sm">💰</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Salary</p>
+                            <p className="font-bold text-green-600">{housegirl.salary}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                            <span className="text-blue-600 text-sm">🏢</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Nationality</p>
+                            <p className="font-medium text-gray-900">{housegirl.nationality}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                            <span className="text-purple-600 text-sm">👥</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Community</p>
+                            <p className="font-medium text-gray-900">{housegirl.community}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                            <span className="text-orange-600 text-sm">📅</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Age</p>
+                            <p className="font-medium text-gray-900">{housegirl.age} Years Old</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                            <span className="text-indigo-600 text-sm">🛏️</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Living</p>
+                            <p className="font-medium text-gray-900">{housegirl.livingArrangement}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                            <span className="text-red-600 text-sm">📍</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Location</p>
+                            <p className="font-medium text-gray-900">{housegirl.location}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                            <span className="text-yellow-600 text-sm">☀️</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Experience</p>
+                            <p className="font-medium text-gray-900">{housegirl.experience}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                            <span className="text-teal-600 text-sm">🎓</span>
+                          </div>
+                          <div>
+                            <p className="text-xs text-gray-500">Education</p>
                             <p className="font-medium text-gray-900 text-xs">{housegirl.education}</p>
                           </div>
-                          <div className="text-center">
-                            <p className="text-sm text-gray-500">Work Type</p>
-                            <p className="font-medium text-gray-900 text-xs">{housegirl.workType}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex space-x-3">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleViewProfile(housegirl)}
-                            className="hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                          >
-                            <Eye className="h-4 w-4 mr-2" />
-                            View
-                          </Button>
-                          {housegirl.contactUnlocked ? (
-                            <Button 
-                              size="sm" 
-                              onClick={() => {
-                                toast({ 
-                                  title: "Contact Available", 
-                                  description: `You can contact ${housegirl.name} at ${housegirl.phone || 'phone number'} or ${housegirl.email || 'email'}`,
-                                  variant: "default"
-                                });
-                              }}
-                              className="bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
-                            >
-                              <CheckCircle className="h-4 w-4 mr-2" />
-                              Contact
-                            </Button>
-                          ) : (
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleUnlockContact(housegirl)}
-                              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
-                            >
-                              <Phone className="h-4 w-4 mr-2" />
-                              Unlock
-                            </Button>
-                          )}
                         </div>
                       </div>
-                    </div>
-                  </div>
+
+                      {/* Rating and Reviews */}
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex items-center space-x-1">
+                            <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                            <span className="font-medium">{housegirl.rating}</span>
+                            <span className="text-xs text-gray-500">({housegirl.reviews} reviews)</span>
+                          </div>
+                        </div>
+                        {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
+                          <Badge className="bg-blue-100 text-blue-800 text-xs">
+                            🔓 Unlocked {housegirl.unlockCount} time{housegirl.unlockCount > 1 ? 's' : ''}
+                          </Badge>
+                        )}
+                      </div>
+
+                      {/* Action Buttons - Like competitor's design */}
+                      <div className="flex space-x-2">
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          onClick={() => handleViewProfile(housegirl)}
+                          className="flex-1 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                        >
+                          <Eye className="h-4 w-4 mr-2" />
+                          View Profile
+                        </Button>
+                        {housegirl.contactUnlocked ? (
+                          <Button 
+                            size="sm" 
+                            onClick={() => {
+                              toast({ 
+                                title: "Contact Available", 
+                                description: `You can contact ${housegirl.name} at ${housegirl.phone || 'phone number'} or ${housegirl.email || 'email'}`,
+                                variant: "default"
+                              });
+                            }}
+                            className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                          >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Unlocked
+                          </Button>
+                        ) : (
+                          <Button 
+                            size="sm" 
+                            onClick={() => handleUnlockContact(housegirl)}
+                            className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                          >
+                            <Phone className="h-4 w-4 mr-2" />
+                            Unlock
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
               </div>
               
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between mt-6">
-                  <div className="text-sm text-gray-600">
-                    Page {currentPage} of {totalPages}
-                  </div>
+                <div className="flex items-center justify-between mt-8">
+                  <p className="text-sm text-gray-600">
+                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredHousegirls.length)} of {filteredHousegirls.length} housegirls
+                  </p>
                   <div className="flex items-center space-x-2">
-                    <Button
-                      variant="outline"
+                    <Button 
+                      variant="outline" 
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                       disabled={currentPage === 1}
-                      className="hover:bg-gray-50 backdrop-blur-sm"
+                      className="hover:bg-gray-50 transition-colors"
                     >
                       Previous
                     </Button>
                     <div className="flex items-center space-x-1">
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
-                        <Button
-                          key={page}
-                          variant={currentPage === page ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => setCurrentPage(page)}
-                          className={currentPage === page ? "bg-blue-600 hover:bg-blue-700" : "hover:bg-gray-50 backdrop-blur-sm"}
-                        >
-                          {page}
-                        </Button>
-                      ))}
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        const page = i + 1;
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {page}
+                          </Button>
+                        );
+                      })}
+                      {totalPages > 5 && (
+                        <span className="text-gray-500">...</span>
+                      )}
                     </div>
-                    <Button
-                      variant="outline"
+                    <Button 
+                      variant="outline" 
                       size="sm"
-                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                       disabled={currentPage === totalPages}
-                      className="hover:bg-gray-50 backdrop-blur-sm"
+                      className="hover:bg-gray-50 transition-colors"
                     >
                       Next
                     </Button>
@@ -803,18 +931,96 @@ const EmployerDashboard = () => {
     </div>
   );
 
-  const renderCandidates = () => (
+    const renderHousegirls = () => (
     <div className="space-y-6">
+      {/* Quick Filter Bar - Like competitor's design */}
+      <Card className="bg-white/90 backdrop-blur-sm border-0 shadow-lg">
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center space-x-2">
+              <span className="text-sm font-medium text-gray-700">Quick Filters:</span>
+            </div>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedCommunity('')}
+              className={`text-xs ${!selectedCommunity ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'}`}
+            >
+              All Communities
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedAgeRange('')}
+              className={`text-xs ${!selectedAgeRange ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'}`}
+            >
+              All Ages
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedSalaryRange('')}
+              className={`text-xs ${!selectedSalaryRange ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'}`}
+            >
+              All Salaries
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedEducation('')}
+              className={`text-xs ${!selectedEducation ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'}`}
+            >
+              All Education
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setSelectedWorkType('')}
+              className={`text-xs ${!selectedWorkType ? 'bg-blue-50 border-blue-300 text-blue-700' : 'hover:bg-gray-50'}`}
+            >
+              All Work Types
+            </Button>
+            <div className="flex-1"></div>
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setSelectedCommunity('');
+                setSelectedAgeRange('');
+                setSelectedSalaryRange('');
+                setSelectedEducation('');
+                setSelectedWorkType('');
+                setSearchTerm('');
+                setCurrentPage(1);
+                toast({ 
+                  title: "Filters Reset", 
+                  description: "All filters have been cleared.",
+                  variant: "default"
+                });
+              }}
+              className="text-xs hover:bg-gray-50"
+            >
+              <Filter className="h-3 w-3 mr-1" />
+              Reset
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Header with search and advanced filters */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">All Candidates</h2>
+          <h2 className="text-2xl font-bold flex items-center space-x-2">
+            <Users className="h-6 w-6 text-pink-500" />
+            <span>HOUSEGIRLS AVAILABLE</span>
+          </h2>
           <p className="text-gray-600">Browse and connect with qualified housegirls</p>
         </div>
         <div className="flex items-center space-x-3">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search candidates..."
+              placeholder="Search housegirls..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-blue-300 w-64"
@@ -837,13 +1043,18 @@ const EmployerDashboard = () => {
         </div>
       </div>
 
+      {/* Results count */}
+      <div className="text-sm text-gray-600">
+        Showing {filteredHousegirls.length} of {housegirls.length} housegirls
+      </div>
+
       {paginatedHousegirls.length === 0 ? (
         <Card className="bg-white/80 backdrop-blur-sm border-0 shadow-lg">
           <CardContent className="p-12 text-center">
             <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
               <Users className="h-8 w-8 text-white" />
             </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No Candidates Found</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No Housegirls Found</h3>
             <p className="text-gray-600 mb-6">Try adjusting your search terms or filters to find more housegirls</p>
             <Button 
               onClick={() => {
@@ -863,23 +1074,25 @@ const EmployerDashboard = () => {
         </Card>
       ) : (
         <>
-          <div className="space-y-3">
+          {/* Visual Card Grid - Like competitor's design */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedHousegirls.map(housegirl => (
-              <div key={housegirl.id} className="group relative overflow-hidden bg-white/80 backdrop-blur-sm border border-gray-200/50 rounded-xl hover:bg-white/90 hover:border-blue-300 hover:shadow-lg transition-all duration-300">
+              <Card key={housegirl.id} className="group relative overflow-hidden bg-white/90 backdrop-blur-sm border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
                 <div className="absolute inset-0 bg-gradient-to-r from-blue-50/30 to-purple-50/30 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                <div className="relative p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-4">
+                <CardContent className="relative p-6">
+                  {/* Header with photo and status */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="flex items-center space-x-3">
                       <div className="relative">
                         {housegirl.profileImage ? (
                           <img 
                             src={housegirl.profileImage} 
                             alt={housegirl.name}
-                            className="w-12 h-12 rounded-full object-cover shadow-lg border-2 border-white"
+                            className="w-16 h-16 rounded-full object-cover shadow-lg border-2 border-white"
                           />
                         ) : (
-                          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
-                            <span className="text-white font-bold text-lg">{housegirl.name.charAt(0)}</span>
+                          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg">
+                            <span className="text-white font-bold text-xl">{housegirl.name.charAt(0)}</span>
                           </div>
                         )}
                         {housegirl.contactUnlocked && (
@@ -890,97 +1103,159 @@ const EmployerDashboard = () => {
                       </div>
                       <div>
                         <h3 className="font-bold text-gray-900 text-lg">{housegirl.name}</h3>
-                        <p className="text-sm text-gray-600">{housegirl.age} years • {housegirl.location}</p>
-                        {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
-                          <div className="mt-1">
-                            <Badge className="bg-blue-100 text-blue-800 text-xs">
-                              🔓 Unlocked {housegirl.unlockCount} time{housegirl.unlockCount > 1 ? 's' : ''}
-                            </Badge>
-                          </div>
-                        )}
+                        <Badge className="bg-pink-100 text-pink-800 text-xs font-medium">
+                          AVAILABLE
+                        </Badge>
                       </div>
                     </div>
-                    
-                                         <div className="flex items-center space-x-6">
-                       <div className="text-center">
-                         <p className="text-sm text-gray-500">Experience</p>
-                         <p className="font-medium text-gray-900">{housegirl.experience}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-sm text-gray-500">Rating</p>
-                         <div className="flex items-center space-x-1">
-                           <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                           <span className="font-medium">{housegirl.rating}</span>
-                           <span className="text-xs text-gray-500">({housegirl.reviews})</span>
-                         </div>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-sm text-gray-500">Salary</p>
-                         <p className="font-bold text-green-600">{housegirl.salary}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-sm text-gray-500">Status</p>
-                         <Badge className={housegirl.status === 'Available' ? 'bg-green-100 text-green-800 text-xs' : 'bg-gray-100 text-gray-800 text-xs'}>
-                           {housegirl.status}
-                         </Badge>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-sm text-gray-500">Education</p>
-                         <p className="font-medium text-gray-900 text-xs">{housegirl.education}</p>
-                       </div>
-                       <div className="text-center">
-                         <p className="text-sm text-gray-500">Work Type</p>
-                         <p className="font-medium text-gray-900 text-xs">{housegirl.workType}</p>
-                       </div>
-                     </div>
-                    
-                    <div className="flex space-x-3">
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        onClick={() => handleViewProfile(housegirl)}
-                        className="hover:bg-blue-50 hover:border-blue-300 transition-colors"
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View
-                      </Button>
-                      {housegirl.contactUnlocked ? (
-                        <Button 
-                          size="sm" 
-                          onClick={() => {
-                            toast({ 
-                              title: "Contact Available", 
-                              description: `You can contact ${housegirl.name} at ${housegirl.phone || 'phone number'} or ${housegirl.email || 'email'}`,
-                              variant: "default"
-                            });
-                          }}
-                          className="bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
-                        >
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Contact
-                        </Button>
-                      ) : (
-                        <Button 
-                          size="sm" 
-                          onClick={() => handleUnlockContact(housegirl)}
-                          className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
-                        >
-                          <Phone className="h-4 w-4 mr-2" />
-                          Unlock
-                        </Button>
-                      )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm"
+                      className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Heart className="h-4 w-4 text-gray-400 hover:text-red-500" />
+                    </Button>
+                  </div>
+
+                  {/* Key Details Grid - Like competitor's layout */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-green-100 rounded-full flex items-center justify-center">
+                        <span className="text-green-600 text-sm">💰</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Salary</p>
+                        <p className="font-bold text-green-600">{housegirl.salary}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                        <span className="text-blue-600 text-sm">🏢</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Nationality</p>
+                        <p className="font-medium text-gray-900">{housegirl.nationality}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                        <span className="text-purple-600 text-sm">👥</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Community</p>
+                        <p className="font-medium text-gray-900">{housegirl.community}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center">
+                        <span className="text-orange-600 text-sm">📅</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Age</p>
+                        <p className="font-medium text-gray-900">{housegirl.age} Years Old</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
+                        <span className="text-indigo-600 text-sm">🛏️</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Living</p>
+                        <p className="font-medium text-gray-900">{housegirl.livingArrangement}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-red-100 rounded-full flex items-center justify-center">
+                        <span className="text-red-600 text-sm">📍</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Location</p>
+                        <p className="font-medium text-gray-900">{housegirl.location}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center">
+                        <span className="text-yellow-600 text-sm">☀️</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Experience</p>
+                        <p className="font-medium text-gray-900">{housegirl.experience}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="w-8 h-8 bg-teal-100 rounded-full flex items-center justify-center">
+                        <span className="text-teal-600 text-sm">🎓</span>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Education</p>
+                        <p className="font-medium text-gray-900 text-xs">{housegirl.education}</p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
+
+                  {/* Rating and Reviews */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-1">
+                        <Star className="h-4 w-4 text-yellow-400 fill-current" />
+                        <span className="font-medium">{housegirl.rating}</span>
+                        <span className="text-xs text-gray-500">({housegirl.reviews} reviews)</span>
+                      </div>
+                    </div>
+                    {housegirl.contactUnlocked && housegirl.unlockCount > 0 && (
+                      <Badge className="bg-blue-100 text-blue-800 text-xs">
+                        🔓 Unlocked {housegirl.unlockCount} time{housegirl.unlockCount > 1 ? 's' : ''}
+                      </Badge>
+                    )}
+                  </div>
+
+                  {/* Action Buttons - Like competitor's design */}
+                  <div className="flex space-x-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => handleViewProfile(housegirl)}
+                      className="flex-1 hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View Profile
+                    </Button>
+                    {housegirl.contactUnlocked ? (
+                      <Button 
+                        size="sm" 
+                        onClick={() => {
+                          toast({ 
+                            title: "Contact Available", 
+                            description: `You can contact ${housegirl.name} at ${housegirl.phone || 'phone number'} or ${housegirl.email || 'email'}`,
+                            variant: "default"
+                          });
+                        }}
+                        className="flex-1 bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                      >
+                        <CheckCircle className="h-4 w-4 mr-2" />
+                        Unlocked
+                      </Button>
+                    ) : (
+                      <Button 
+                        size="sm" 
+                        onClick={() => handleUnlockContact(housegirl)}
+                        className="flex-1 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
+                      >
+                        <Phone className="h-4 w-4 mr-2" />
+                        Unlock
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             ))}
           </div>
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mt-8">
               <p className="text-sm text-gray-600">
-                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredHousegirls.length)} of {filteredHousegirls.length} candidates
+                Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredHousegirls.length)} of {filteredHousegirls.length} housegirls
               </p>
               <div className="flex items-center space-x-2">
                 <Button 
@@ -1360,6 +1635,34 @@ const EmployerDashboard = () => {
               {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
             </button>
           ))}
+          
+          {/* Day Bug Advertisement */}
+          {!sidebarCollapsed && (
+            <div className="mt-6 p-4 bg-gradient-to-br from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg">
+              <div className="text-center">
+                <div className="w-12 h-12 bg-gradient-to-br from-yellow-500 to-orange-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Clock className="h-6 w-6 text-white" />
+                </div>
+                <h3 className="text-sm font-bold text-gray-900 mb-2">Need a Day Bug Today?</h3>
+                <p className="text-xs text-gray-600 mb-3">Find housegirls available for day jobs</p>
+                <Button 
+                  size="sm"
+                  onClick={() => {
+                    setSelectedWorkType('Day job');
+                    setActiveSection('overview');
+                    toast({ 
+                      title: "Day Job Filter Applied", 
+                      description: "Showing housegirls available for day jobs only.",
+                      variant: "default"
+                    });
+                  }}
+                  className="w-full bg-gradient-to-r from-yellow-500 to-orange-600 hover:from-yellow-600 hover:to-orange-700 text-white text-xs shadow-md hover:shadow-lg transition-all duration-300"
+                >
+                  Find Day Bug
+                </Button>
+              </div>
+            </div>
+          )}
         </nav>
 
         <div className="p-4 border-t border-gray-200/50 bg-gray-50/50">
@@ -1387,12 +1690,31 @@ const EmployerDashboard = () => {
                 <p className="text-gray-600">
                   {activeSection === 'overview' && 'Welcome back! Here\'s your dashboard overview'}
                   {activeSection === 'jobs' && 'Manage your job postings and applications'}
-                  {activeSection === 'candidates' && 'Browse and connect with qualified housegirls'}
+                  {activeSection === 'housegirls' && 'Browse and connect with qualified housegirls'}
                   {activeSection === 'messages' && 'Communicate with candidates and applicants'}
                   {activeSection === 'settings' && 'Manage your account and preferences'}
                 </p>
               </div>
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center space-x-4">
+                {/* Stats Icons */}
+                <div className="flex items-center space-x-3">
+                  <div className="flex items-center space-x-2 bg-blue-50 px-3 py-2 rounded-lg">
+                    <Users className="h-4 w-4 text-blue-600" />
+                    <span className="text-sm font-medium text-blue-900">{stats.totalApplications}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-green-50 px-3 py-2 rounded-lg">
+                    <Briefcase className="h-4 w-4 text-green-600" />
+                    <span className="text-sm font-medium text-green-900">{stats.activeJobs}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-purple-50 px-3 py-2 rounded-lg">
+                    <Eye className="h-4 w-4 text-purple-600" />
+                    <span className="text-sm font-medium text-purple-900">{stats.totalViews}</span>
+                  </div>
+                  <div className="flex items-center space-x-2 bg-orange-50 px-3 py-2 rounded-lg">
+                    <MessageCircle className="h-4 w-4 text-orange-600" />
+                    <span className="text-sm font-medium text-orange-900">{stats.unreadMessages}</span>
+                  </div>
+                </div>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -1415,7 +1737,7 @@ const EmployerDashboard = () => {
           <div className="px-6 py-6">
             {activeSection === 'overview' && renderOverview()}
             {activeSection === 'jobs' && renderJobs()}
-            {activeSection === 'candidates' && renderCandidates()}
+            {activeSection === 'housegirls' && renderHousegirls()}
             {activeSection === 'messages' && renderMessages()}
             {activeSection === 'settings' && renderSettings()}
           </div>
