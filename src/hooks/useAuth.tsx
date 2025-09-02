@@ -153,7 +153,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Initialize test user if no users exist
-    initializeTestUser();
+    const users = initializeTestUser();
+    console.log('Available users for login:', Object.keys(users));
     
     // Check for existing user on mount
     const storedUser = getStoredUser();
@@ -273,9 +274,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signIn = async (email: string, password: string) => {
     try {
       const users = getStoredUsers();
+      console.log('Attempting login with:', email);
+      console.log('Available users:', Object.keys(users));
+      
       const userData = users[email];
 
       if (!userData || userData.password !== password) {
+        console.log('Login failed - userData:', userData);
         return { error: { message: 'Invalid email or password' } };
       }
 
