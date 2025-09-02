@@ -89,7 +89,15 @@ const LandingPage = () => {
                   <span className="text-sm text-gray-600">
                     Karibu, {user.first_name}
                   </span>
-                  <Button onClick={() => navigate('/dashboard')} className="bg-gradient-to-r from-pink-500 to-orange-600 hover:from-pink-600 hover:to-orange-700 text-white rounded-full">
+                  <Button onClick={() => {
+                    if (user.user_type === 'agency') {
+                      navigate('/agency-dashboard');
+                    } else if (user.user_type === 'housegirl') {
+                      navigate('/housegirl-dashboard');
+                    } else {
+                      navigate('/dashboard');
+                    }
+                  }} className="bg-gradient-to-r from-pink-500 to-orange-600 hover:from-pink-600 hover:to-orange-700 text-white rounded-full">
                     Go to Dashboard
                   </Button>
                   <Button variant="outline" onClick={signOut} className="border-pink-300 hover:bg-pink-50 rounded-full">
@@ -140,7 +148,15 @@ const LandingPage = () => {
                 </p>
                 <div className="flex flex-col sm:flex-row gap-4">
                   <Button 
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => {
+                      if (user.user_type === 'agency') {
+                        navigate('/agency-dashboard');
+                      } else if (user.user_type === 'housegirl') {
+                        navigate('/housegirl-dashboard');
+                      } else {
+                        navigate('/dashboard');
+                      }
+                    }}
                     size="lg" 
                     className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
                   >
