@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
+import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -51,6 +52,18 @@ interface JobOpportunity {
   matchScore: number;
 }
 
+interface EditFormData {
+  bio: string;
+  expectedSalary: string;
+  location: string;
+  experience: string;
+  education: string;
+  accommodationType: string;
+  community: string;
+  skills: string;
+  languages: string;
+}
+
 const HousegirlDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -60,6 +73,19 @@ const HousegirlDashboard = () => {
     return localStorage.getItem('housegirl_profile_photo');
   });
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editFormData, setEditFormData] = useState<EditFormData>({
+    bio: '',
+    expectedSalary: '',
+    location: '',
+    experience: '',
+    education: '',
+    accommodationType: '',
+    community: '',
+    skills: '',
+    languages: ''
+  });
+
+  // Enhanced mock data with match scores
 
   // Enhanced mock data with match scores
   const [jobOpportunities] = useState<JobOpportunity[]>([
@@ -115,6 +141,24 @@ const HousegirlDashboard = () => {
     }
   }, [user, navigate]);
 
+  // Initialize edit form data when userData is available
+  useEffect(() => {
+    if (user && user.user_type === 'housegirl') {
+      const userData = getUserData();
+      setEditFormData({
+        bio: userData.bio,
+        expectedSalary: userData.expectedSalary,
+        location: userData.location,
+        experience: userData.experience,
+        education: userData.education,
+        accommodationType: userData.accommodationType,
+        community: userData.community,
+        skills: userData.skills.join(', '),
+        languages: userData.languages.join(', ')
+      });
+    }
+  }, [user]);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/housegirls');
@@ -124,6 +168,23 @@ const HousegirlDashboard = () => {
     setProfilePhoto(photoUrl);
     // Save to localStorage for persistence
     localStorage.setItem('housegirl_profile_photo', photoUrl);
+  };
+
+  const handleFormChange = (field: string, value: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleSaveProfile = () => {
+    // Here you would typically save to the server
+    // For now, we'll just show a success message
+    toast({
+      title: "Profile Updated!",
+      description: "Your profile has been updated successfully.",
+    });
+    setShowEditModal(false);
   };
 
   if (!user || user.user_type !== 'housegirl') {
@@ -357,8 +418,19 @@ const HousegirlDashboard = () => {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle className="text-xl">Profile Information</CardTitle>
-                <CardDescription>Manage your profile details and preferences</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="text-xl">Profile Information</CardTitle>
+                    <CardDescription>Manage your profile details and preferences</CardDescription>
+                  </div>
+                  <Button 
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setShowEditModal(true)}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Update Profile
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
@@ -508,10 +580,10 @@ const HousegirlDashboard = () => {
       {/* Edit Profile Modal */}
       {showEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Edit Profile</h3>
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-semibold text-gray-900">Edit Profile</h3>
                 <Button 
                   variant="ghost" 
                   size="sm" 
@@ -522,34 +594,138 @@ const HousegirlDashboard = () => {
                 </Button>
               </div>
               
-              <div className="space-y-4">
+              <div className="space-y-6">
+                {/* Basic Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Location</label>
+                    <input 
+                      type="text"
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="e.g., Nairobi"
+                      value={editFormData.location || ''}
+                      onChange={(e) => handleFormChange('location', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Expected Salary</label>
+                    <input 
+                      type="text"
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="e.g., KSh 15,000"
+                      value={editFormData.expectedSalary || ''}
+                      onChange={(e) => handleFormChange('expectedSalary', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Experience & Education */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Experience</label>
+                    <select 
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.experience || ''}
+                      onChange={(e) => handleFormChange('experience', e.target.value)}
+                    >
+                      <option value="">Select Experience</option>
+                      <option value="No Experience">No Experience</option>
+                      <option value="1 Year">1 Year</option>
+                      <option value="2 Years">2 Years</option>
+                      <option value="3 Years">3 Years</option>
+                      <option value="4 Years">4 Years</option>
+                      <option value="5+ Years">5+ Years</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Education</label>
+                    <select 
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.education || ''}
+                      onChange={(e) => handleFormChange('education', e.target.value)}
+                    >
+                      <option value="">Select Education</option>
+                      <option value="Primary">Primary</option>
+                      <option value="Class 8+">Class 8+</option>
+                      <option value="Form 4 and Above">Form 4 and Above</option>
+                      <option value="Certificate">Certificate</option>
+                      <option value="Diploma">Diploma</option>
+                      <option value="Degree">Degree</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Accommodation & Community */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Accommodation Type</label>
+                    <select 
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.accommodationType || ''}
+                      onChange={(e) => handleFormChange('accommodationType', e.target.value)}
+                    >
+                      <option value="">Select Accommodation</option>
+                      <option value="Live-in">Live-in</option>
+                      <option value="Live-out">Live-out</option>
+                      <option value="Both">Both</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Community</label>
+                    <select 
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.community || ''}
+                      onChange={(e) => handleFormChange('community', e.target.value)}
+                    >
+                      <option value="">Select Community</option>
+                      <option value="Kikuyu">Kikuyu</option>
+                      <option value="Luo">Luo</option>
+                      <option value="Luhya">Luhya</option>
+                      <option value="Kamba">Kamba</option>
+                      <option value="Kisii">Kisii</option>
+                      <option value="Meru">Meru</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Skills & Languages */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Skills (comma separated)</label>
+                    <input 
+                      type="text"
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="e.g., Cooking, Cleaning, Childcare"
+                      value={editFormData.skills || ''}
+                      onChange={(e) => handleFormChange('skills', e.target.value)}
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">Languages (comma separated)</label>
+                    <input 
+                      type="text"
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      placeholder="e.g., English, Swahili"
+                      value={editFormData.languages || ''}
+                      onChange={(e) => handleFormChange('languages', e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                {/* Bio */}
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Bio</label>
+                  <label className="text-sm font-medium text-gray-700">About You</label>
                   <textarea 
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                    rows={3}
+                    rows={4}
                     placeholder="Tell employers about yourself..."
-                    defaultValue={userData.bio}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Expected Salary</label>
-                  <input 
-                    type="text"
-                    className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="e.g., KSh 15,000"
-                    defaultValue={userData.expectedSalary}
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-gray-700">Location</label>
-                  <input 
-                    type="text"
-                    className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                    placeholder="e.g., Nairobi"
-                    defaultValue={userData.location}
+                    value={editFormData.bio || ''}
+                    onChange={(e) => handleFormChange('bio', e.target.value)}
                   />
                 </div>
               </div>
@@ -564,11 +740,7 @@ const HousegirlDashboard = () => {
                 </Button>
                 <Button 
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
-                  onClick={() => {
-                    // TODO: Implement save functionality
-                    alert('Profile updated successfully!');
-                    setShowEditModal(false);
-                  }}
+                  onClick={handleSaveProfile}
                 >
                   Save Changes
                 </Button>
