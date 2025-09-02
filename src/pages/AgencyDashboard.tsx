@@ -147,23 +147,32 @@ const AgencyDashboard = () => {
         // Fetch agency profile
         const agencyResponse = await fetch(`http://localhost:3002/agency_profiles?profile_id=${user?.id}`);
         const agencyProfile = await agencyResponse.json();
+        const currentAgency = agencyProfile[0] || null;
         
-        // Fetch agency workers
-        const workersResponse = await fetch('http://localhost:3002/agency_workers');
-        const workers = await workersResponse.json();
-        
-        // Fetch agency clients
-        const clientsResponse = await fetch('http://localhost:3002/agency_clients');
-        const clients = await clientsResponse.json();
-        
-        // Fetch agency payments
-        const paymentsResponse = await fetch('http://localhost:3002/agency_payments');
-        const payments = await paymentsResponse.json();
-        
-        setAgencyData(agencyProfile[0] || null);
-        setAgencyWorkers(workers);
-        setAgencyClients(clients);
-        setAgencyPayments(payments);
+        if (currentAgency) {
+          // Fetch agency workers (housegirls who signed up with this agency)
+          const workersResponse = await fetch(`http://localhost:3002/agency_workers?agency_id=${currentAgency.id}`);
+          const workers = await workersResponse.json();
+          
+          // Fetch agency clients (clients who signed up with this agency)
+          const clientsResponse = await fetch(`http://localhost:3002/agency_clients?agency_id=${currentAgency.id}`);
+          const clients = await clientsResponse.json();
+          
+          // Fetch agency payments (payments made to this agency)
+          const paymentsResponse = await fetch(`http://localhost:3002/agency_payments?agency_id=${currentAgency.id}`);
+          const payments = await paymentsResponse.json();
+          
+          setAgencyData(currentAgency);
+          setAgencyWorkers(workers);
+          setAgencyClients(clients);
+          setAgencyPayments(payments);
+        } else {
+          // If no agency profile found, set empty data
+          setAgencyData(null);
+          setAgencyWorkers([]);
+          setAgencyClients([]);
+          setAgencyPayments([]);
+        }
       } catch (error) {
         console.error('Error fetching agency data:', error);
         toast({
@@ -574,6 +583,7 @@ const AgencyDashboard = () => {
                     ) : (
                       <div className="text-center py-4">
                         <p className="text-sm text-gray-500">No recent activity</p>
+                        <p className="text-xs text-gray-400 mt-1">Start by adding housegirls and clients</p>
                       </div>
                     )}
                   </CardContent>
@@ -662,19 +672,20 @@ const AgencyDashboard = () => {
                         </div>
                       ))}
                     </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                      <p className="text-gray-500">No housegirls registered yet</p>
-                      <Button 
-                        variant="outline" 
-                        className="mt-3"
-                        onClick={() => setActiveTab('housegirls')}
-                      >
-                        Add Your First Housegirl
-                      </Button>
-                    </div>
-                  )}
+                                     ) : (
+                     <div className="text-center py-8">
+                       <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                       <p className="text-gray-500">No housegirls registered with your agency yet</p>
+                       <p className="text-xs text-gray-400 mt-1 mb-3">Housegirls need to sign up through your agency to appear here</p>
+                       <Button 
+                         variant="outline" 
+                         className="mt-3"
+                         onClick={() => setActiveTab('housegirls')}
+                       >
+                         Add Your First Housegirl
+                       </Button>
+                     </div>
+                   )}
                 </CardContent>
               </Card>
 
