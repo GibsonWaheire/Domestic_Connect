@@ -82,18 +82,34 @@ const initializeTestUser = () => {
       updated_at: new Date().toISOString(),
     };
     
-    const testUsers = {
-      'employer@example.com': {
-        email: 'employer@example.com',
-        password: 'password123',
-        user: testEmployer
-      },
-      'housegirl@example.com': {
-        email: 'housegirl@example.com',
-        password: 'password123',
-        user: testHousegirl
-      }
-    };
+                const testAgency: User = {
+              id: 'test_agency_1',
+              email: 'agency@example.com',
+              user_type: 'agency',
+              first_name: 'Domestic',
+              last_name: 'Agency',
+              phone_number: '+254700345678',
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            
+            const testUsers = {
+              'employer@example.com': {
+                email: 'employer@example.com',
+                password: 'password123',
+                user: testEmployer
+              },
+              'housegirl@example.com': {
+                email: 'housegirl@example.com',
+                password: 'password123',
+                user: testHousegirl
+              },
+              'agency@example.com': {
+                email: 'agency@example.com',
+                password: 'password123',
+                user: testAgency
+              }
+            };
     
     setStoredUsers(testUsers);
     return testUsers;
