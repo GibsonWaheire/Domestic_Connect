@@ -1,8 +1,9 @@
 import { Button } from '@/components/ui/button';
 import { 
-  Search, Plus, Users, Briefcase, Eye, MessageCircle
+  Search, Plus, Users, Briefcase, Eye, MessageCircle, Home
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown';
+import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
   activeSection: string;
@@ -24,6 +25,8 @@ export const Header = ({
   setShowJobModal,
   stats
 }: HeaderProps) => {
+  const navigate = useNavigate();
+  
   return (
     <header className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200/50 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -79,6 +82,16 @@ export const Header = ({
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/home')}
+              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
+            
             <NotificationDropdown />
             
             {activeSection === 'jobs' && (
