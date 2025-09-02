@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import AuthModal from '@/components/AuthModal';
+import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { 
   Building2, 
   User, 
@@ -24,7 +25,9 @@ import {
   Zap,
   Award,
   Clock,
-  TrendingUp
+  TrendingUp,
+  DollarSign,
+  CheckCircle2
 } from 'lucide-react';
 
 const LandingPage = () => {
@@ -32,6 +35,89 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<PackageDetails | null>(null);
+
+  // Mock agency packages for testing
+  const mockPackages: PackageDetails[] = [
+    {
+      id: 'basic',
+      name: 'Basic',
+      price: 1200,
+      agencyFee: 1000,
+      platformFee: 200,
+      features: [
+        'Verified worker',
+        'Basic training',
+        '30-day replacement',
+        'Agency support'
+      ],
+      color: 'green',
+      icon: Shield
+    },
+    {
+      id: 'premium',
+      name: 'Premium',
+      price: 1500,
+      agencyFee: 1000,
+      platformFee: 500,
+      features: [
+        'Verified worker',
+        'Professional training',
+        'Background check',
+        '60-day replacement',
+        'Dispute resolution'
+      ],
+      color: 'blue',
+      icon: Shield
+    },
+    {
+      id: 'international',
+      name: 'International',
+      price: 2000,
+      agencyFee: 1000,
+      platformFee: 1000,
+      features: [
+        'Verified worker',
+        'International training',
+        'Comprehensive background check',
+        '90-day replacement',
+        'Legal compliance'
+      ],
+      color: 'purple',
+      icon: Shield
+    }
+  ];
+
+  const handlePackageSelect = (packageDetails: PackageDetails) => {
+    if (!user) {
+      setAuthMode('login');
+      setAuthModalOpen(true);
+      return;
+    }
+    setSelectedPackage(packageDetails);
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = (paymentData: {
+    id: string;
+    client_id: string;
+    agency_id: string;
+    package_id: string;
+    amount: number;
+    agency_fee: number;
+    platform_fee: number;
+    phone_number: string;
+    status: string;
+    payment_method: string;
+    created_at: string;
+    agency_client_id: string;
+    terms_accepted: boolean;
+  }) => {
+    setShowPaymentModal(false);
+    setSelectedPackage(null);
+    // Show success message or redirect
+  };
 
   const handleNavigation = (path: string) => {
     if (!user) {
@@ -405,6 +491,93 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* Try Our Agency Service - Mock Section */}
+      <section className="py-20 bg-gradient-to-r from-blue-50 to-indigo-50">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-16">
+            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-6">
+              <Building2 className="h-8 w-8 text-white" />
+            </div>
+            <h3 className="text-4xl font-bold text-gray-900 mb-4">
+              Try Our Agency Service
+            </h3>
+            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+              Experience our premium agency service with verified workers and guaranteed satisfaction. 
+              <span className="text-blue-600 font-semibold"> Test the payment system now!</span>
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {mockPackages.map((packageDetails) => (
+              <Card 
+                key={packageDetails.id}
+                className={`border-2 border-gray-200 hover:border-${packageDetails.color}-300 transition-all duration-300 cursor-pointer hover:shadow-xl`}
+                onClick={() => handlePackageSelect(packageDetails)}
+              >
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-xl flex items-center justify-between">
+                    <div className="flex items-center">
+                      <packageDetails.icon className={`h-6 w-6 text-${packageDetails.color}-600 mr-3`} />
+                      {packageDetails.name} Package
+                    </div>
+                    {packageDetails.id === 'premium' && (
+                      <Badge className="bg-blue-600 text-white">Most Popular</Badge>
+                    )}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="text-center">
+                    <p className="text-4xl font-bold text-gray-900">KES {packageDetails.price.toLocaleString()}</p>
+                    <p className="text-sm text-gray-600">One-time registration fee</p>
+                  </div>
+                  <ul className="space-y-2">
+                    {packageDetails.features.map((feature, index) => (
+                      <li key={index} className="flex items-center text-sm">
+                        <CheckCircle2 className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                  <Button 
+                    className={`w-full bg-${packageDetails.color}-600 hover:bg-${packageDetails.color}-700 text-white`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handlePackageSelect(packageDetails);
+                    }}
+                  >
+                    <DollarSign className="h-4 w-4 mr-2" />
+                    Try This Package
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <div className="bg-white rounded-2xl p-6 shadow-lg max-w-2xl mx-auto">
+              <h4 className="text-xl font-semibold text-gray-900 mb-3">Why Try Our Agency Service?</h4>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                <div className="flex items-center">
+                  <Shield className="h-5 w-5 text-green-600 mr-2" />
+                  <span>Verified Workers</span>
+                </div>
+                <div className="flex items-center">
+                  <CheckCircle2 className="h-5 w-5 text-blue-600 mr-2" />
+                  <span>Guaranteed Replacement</span>
+                </div>
+                <div className="flex items-center">
+                  <Star className="h-5 w-5 text-yellow-600 mr-2" />
+                  <span>Professional Training</span>
+                </div>
+              </div>
+              <p className="text-gray-600 mt-4 text-sm">
+                <strong>Note:</strong> This is a demo to test our payment system. Real agencies will be available soon!
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Enhanced Footer */}
       <footer className="bg-gradient-to-r from-pink-900 to-orange-900 text-white py-16">
         <div className="max-w-6xl mx-auto px-4">
@@ -477,6 +650,25 @@ const LandingPage = () => {
         onClose={closeAuthModal} 
         defaultMode={authMode} 
       />
+
+      {/* Payment Modal */}
+      {showPaymentModal && selectedPackage && (
+        <PaymentModal
+          package={selectedPackage}
+          agency={{
+            id: 'demo_agency',
+            name: 'Demo Agency Service',
+            license_number: 'DEMO-2024-001',
+            rating: 4.9,
+            verified_workers: 50
+          }}
+          onClose={() => {
+            setShowPaymentModal(false);
+            setSelectedPackage(null);
+          }}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 };
