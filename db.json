@@ -32,6 +32,17 @@
       "user_type": "housegirl",
       "created_at": "2025-08-29T08:04:59.206Z",
       "updated_at": "2025-08-29T08:04:59.206Z"
+    },
+    {
+      "user_id": "user_1756800307600",
+      "first_name": "rahab ",
+      "last_name": "nduta",
+      "email": "john.mwangi@email.com",
+      "phone_number": "+254721574747",
+      "user_type": "housegirl",
+      "created_at": "2025-09-02T08:05:07.601Z",
+      "updated_at": "2025-09-02T08:05:07.601Z",
+      "id": "LUvexBC"
     }
   ],
   "employer_profiles": [
@@ -96,6 +107,23 @@
       "profile_photo_url": null,
       "created_at": "2025-08-29T08:04:59.236Z",
       "updated_at": "2025-08-29T08:04:59.236Z"
+    },
+    {
+      "profile_id": "LUvexBC",
+      "age": 25,
+      "bio": "I am a domestic worker with 1 year of experience. I am reliable and professional. I am located in Kisumu. I am from the Luo community. I am looking for a good family to work with and I am committed to providing excellent service.",
+      "current_location": "Kisumu",
+      "location": "Kisumu",
+      "education": "Class 8+",
+      "experience": "1 Year",
+      "expected_salary": 10000,
+      "accommodation_type": "both",
+      "tribe": "Luo",
+      "is_available": true,
+      "profile_photo_url": null,
+      "created_at": "2025-09-02T08:05:07.702Z",
+      "updated_at": "2025-09-02T08:05:07.703Z",
+      "id": "6UctL1Y"
     }
   ],
   "agency_profiles": [
@@ -131,5 +159,6 @@
     }
   ],
   "user_purchases": [],
-  "contact_access": []
+  "contact_access": [],
+  "photos": []
 }

@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/hooks/use-toast';
+import { uploadPhoto, uploadPhotoFallback } from '@/lib/photoUpload';
 import { 
   Upload, 
   Camera, 
@@ -86,30 +87,38 @@ const PhotoUpload = ({ onPhotoUploaded, currentPhoto }: PhotoUploadProps) => {
         });
       }, 100);
 
-      // Simulate API call delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-
-      // In production, this would upload to a real service like AWS S3, Cloudinary, etc.
-      const mockPhotoUrl = `https://images.unsplash.com/photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}?w=400&h=400&fit=crop&crop=face`;
+      // Try to upload to server first
+      let uploadResult;
+      try {
+        uploadResult = await uploadPhoto(selectedFile, user.id);
+      } catch (serverError) {
+        console.log('Server upload failed, using fallback:', serverError);
+        // If server upload fails, use fallback
+        uploadResult = await uploadPhotoFallback(selectedFile);
+      }
 
       setUploadProgress(100);
       
       // Simulate final processing
       await new Promise(resolve => setTimeout(resolve, 500));
 
-      toast({
-        title: "Upload Successful!",
-        description: "Your profile photo has been updated",
-      });
+      if (uploadResult.success && uploadResult.photoUrl) {
+        toast({
+          title: "Upload Successful!",
+          description: "Your profile photo has been updated",
+        });
 
-      // Call the callback with the new photo URL
-      if (onPhotoUploaded) {
-        onPhotoUploaded(mockPhotoUrl);
+        // Call the callback with the new photo URL
+        if (onPhotoUploaded) {
+          onPhotoUploaded(uploadResult.photoUrl);
+        }
+
+        // Reset state
+        setSelectedFile(null);
+        setPreviewUrl(uploadResult.photoUrl);
+      } else {
+        throw new Error(uploadResult.error || 'Upload failed');
       }
-
-      // Reset state
-      setSelectedFile(null);
-      setPreviewUrl(mockPhotoUrl);
       
     } catch (error) {
       toast({
