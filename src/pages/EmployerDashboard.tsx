@@ -9,6 +9,7 @@ import { Housegirls } from '@/components/employer/Housegirls';
 import { Jobs } from '@/components/employer/Jobs';
 import { Messages } from '@/components/employer/Messages';
 import { Settings } from '@/components/employer/Settings';
+import AgencyMarketplace from '@/components/employer/AgencyMarketplace';
 import { JobPostingModal } from '@/components/employer/JobPostingModal';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import { NotificationProvider } from '@/contexts/NotificationContext';
@@ -119,6 +120,8 @@ const EmployerDashboard = () => {
             setHousegirlToUnlock={setHousegirlToUnlock}
           />
         );
+      case 'agency-marketplace':
+        return <AgencyMarketplace />;
       case 'jobs':
         return (
           <Jobs

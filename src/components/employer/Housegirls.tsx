@@ -99,65 +99,69 @@ export const Housegirls = ({
   const totalPages = Math.ceil(filteredHousegirls.length / itemsPerPage);
 
   return (
-    <div className="space-y-6">
-      {/* Available Housegirls Count */}
+    <div className="space-y-4">
+      {/* Available Housegirls Count - Compact */}
       <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-lg">
-        <CardContent className="p-6">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
-              <Users className="h-8 w-8 text-white" />
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                <Users className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">
+                  {filteredHousegirls.length}
+                </h2>
+                <p className="text-sm text-gray-600">Available Housegirls</p>
+              </div>
             </div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">
-              {filteredHousegirls.length}
-            </h2>
-            <p className="text-lg text-gray-600 mb-4">Available Housegirls</p>
-            <div className="flex items-center justify-center space-x-4 text-sm text-gray-500">
-              <span>• {housegirls.length} Total Profiles</span>
-              <span>• {filteredHousegirls.length} Matching Your Criteria</span>
+            <div className="text-right text-sm text-gray-500">
+              <div>{housegirls.length} Total Profiles</div>
+              <div>{filteredHousegirls.length} Matching Criteria</div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Advanced Filters */}
+      {/* Advanced Filters - Compact */}
       <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 border-0 shadow-lg">
-        <CardHeader>
+        <CardHeader className="pb-3">
           <CardTitle className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <Filter className="h-5 w-5 text-blue-600" />
-              <span>Advanced Filters</span>
+              <Filter className="h-4 w-4 text-blue-600" />
+              <span className="text-lg">Filters</span>
             </div>
             <div className="flex items-center space-x-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowFilters(!showFilters)}
-                className="hover:bg-blue-100 hover:border-blue-300 transition-colors"
+                className="hover:bg-blue-100 hover:border-blue-300 transition-colors text-xs"
               >
-                {showFilters ? 'Hide' : 'Show'} Filters
+                {showFilters ? 'Hide' : 'Show'}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={resetFilters}
-                className="hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors"
+                className="hover:bg-red-50 hover:border-red-300 hover:text-red-600 transition-colors text-xs"
               >
-                Reset All
+                Reset
               </Button>
             </div>
           </CardTitle>
         </CardHeader>
         {showFilters && (
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <CardContent className="pt-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Community</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Community</label>
                 <select
                   value={selectedCommunity}
                   onChange={(e) => setSelectedCommunity(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Communities</option>
+                  <option value="">All</option>
                   {COMMUNITY_OPTIONS.map((community) => (
                     <option key={community} value={community}>{community}</option>
                   ))}
@@ -165,13 +169,13 @@ export const Housegirls = ({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Education Level</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Education</label>
                 <select
                   value={selectedEducation}
                   onChange={(e) => setSelectedEducation(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Education Levels</option>
+                  <option value="">All</option>
                   {EDUCATION_OPTIONS.map((education) => (
                     <option key={education} value={education}>{education}</option>
                   ))}
@@ -179,13 +183,13 @@ export const Housegirls = ({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Work Type</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Work Type</label>
                 <select
                   value={selectedWorkType}
                   onChange={(e) => setSelectedWorkType(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Work Types</option>
+                  <option value="">All</option>
                   {WORK_TYPE_OPTIONS.map((type) => (
                     <option key={type} value={type}>{type}</option>
                   ))}
@@ -193,13 +197,13 @@ export const Housegirls = ({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Age Range</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Age Range</label>
                 <select
                   value={selectedAgeRange}
                   onChange={(e) => setSelectedAgeRange(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Ages</option>
+                  <option value="">All</option>
                   {AGE_RANGE_OPTIONS.map((range) => (
                     <option key={range} value={range}>{range}</option>
                   ))}
@@ -207,13 +211,13 @@ export const Housegirls = ({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Salary Range</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Salary</label>
                 <select
                   value={selectedSalaryRange}
                   onChange={(e) => setSelectedSalaryRange(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Salary Ranges</option>
+                  <option value="">All</option>
                   {SALARY_RANGE_OPTIONS.map((range) => (
                     <option key={range} value={range}>{range}</option>
                   ))}
@@ -221,13 +225,13 @@ export const Housegirls = ({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Experience</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Experience</label>
                 <select
                   value={selectedExperience}
                   onChange={(e) => setSelectedExperience(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Experience Levels</option>
+                  <option value="">All</option>
                   {EXPERIENCE_OPTIONS.map((experience) => (
                     <option key={experience} value={experience}>{experience}</option>
                   ))}
@@ -235,13 +239,13 @@ export const Housegirls = ({
               </div>
 
               <div>
-                <label className="text-sm font-medium text-gray-700 mb-2 block">Living Arrangement</label>
+                <label className="text-xs font-medium text-gray-700 mb-1 block">Living</label>
                 <select
                   value={selectedLivingArrangement}
                   onChange={(e) => setSelectedLivingArrangement(e.target.value)}
-                  className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+                  className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
                 >
-                  <option value="">All Arrangements</option>
+                  <option value="">All</option>
                   {LIVING_ARRANGEMENT_OPTIONS.map((arrangement) => (
                     <option key={arrangement} value={arrangement}>{arrangement}</option>
                   ))}
