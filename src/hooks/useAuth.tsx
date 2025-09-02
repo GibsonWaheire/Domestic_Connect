@@ -46,26 +46,52 @@ export const useAuth = () => {
 const USER_STORAGE_KEY = 'domestic_connect_user';
 const USERS_STORAGE_KEY = 'domestic_connect_users';
 
-// Initialize with a test user if no users exist
+// Initialize with test users if no users exist
 const initializeTestUser = () => {
   const existingUsers = getStoredUsers();
   if (Object.keys(existingUsers).length === 0) {
-    const testUser: User = {
-      id: 'test_user_1',
-      email: 'test@example.com',
+    const testEmployer: User = {
+      id: 'test_employer_1',
+      email: 'employer@example.com',
       user_type: 'employer',
-      first_name: 'Test',
-      last_name: 'User',
-      phone_number: '+1234567890',
+      first_name: 'John',
+      last_name: 'Employer',
+      phone_number: '+254700123456',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    
+    const testHousegirl: User = {
+      id: 'test_housegirl_1',
+      email: 'housegirl@example.com',
+      user_type: 'housegirl',
+      first_name: 'Sarah',
+      last_name: 'Wanjiku',
+      phone_number: '+254700789012',
+      age: 28,
+      location: 'Westlands, Nairobi',
+      experience: '5 years',
+      education: 'Form 4 and Above',
+      expectedSalary: 'KES 18,000',
+      accommodationType: 'Live-in',
+      community: 'Kikuyu',
+      skills: ['Cooking', 'Cleaning', 'Childcare'],
+      languages: ['English', 'Swahili', 'Kikuyu'],
+      bio: 'Experienced house help with excellent cooking skills.',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
     
     const testUsers = {
-      'test@example.com': {
-        email: 'test@example.com',
+      'employer@example.com': {
+        email: 'employer@example.com',
         password: 'password123',
-        user: testUser
+        user: testEmployer
+      },
+      'housegirl@example.com': {
+        email: 'housegirl@example.com',
+        password: 'password123',
+        user: testHousegirl
       }
     };
     
@@ -142,13 +168,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         updated_at: new Date().toISOString(),
       };
 
-              // Store user credentials with extended profile data
-        users[email] = { email, password, user: newUser };
-        setStoredUsers(users);
-        
-        // Set the current user to the extended user object
-        setUser(newUser);
-        setStoredUser(newUser);
+      // Add extended profile data for housegirls
+      if (userType === 'housegirl') {
+        newUser.age = additionalData.age || 25;
+        newUser.location = additionalData.location || 'Nairobi';
+        newUser.experience = additionalData.experience || '2 Years';
+        newUser.education = additionalData.education || 'Form 4 and Above';
+        newUser.expectedSalary = additionalData.expectedSalary || 'KSh 15,000';
+        newUser.accommodationType = additionalData.accommodationType || 'Live-in';
+        newUser.community = additionalData.community || 'Kikuyu';
+        newUser.skills = additionalData.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'];
+        newUser.languages = additionalData.languages || ['English', 'Swahili'];
+        newUser.bio = additionalData.bio || 'Professional house help with experience in cooking, cleaning, and childcare.';
+      }
+
+      // Store user credentials
+      users[email] = { email, password, user: newUser };
+      setStoredUsers(users);
+      
+      // Set the current user
+      setUser(newUser);
+      setStoredUser(newUser);
 
       // Create profile in the database
       try {
@@ -183,24 +223,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             tribe: additionalData.community || '', // Use community field
             is_available: true,
             profile_photo_url: null,
-            // Note: skills and languages would need to be added to the HousegirlProfile interface
-            // For now, we'll store them in the bio or create a separate table
           });
-
-          // Update the user object with profile data for immediate access
-          newUser = {
-            ...newUser,
-            age: additionalData.age || 25,
-            location: additionalData.location || 'Nairobi',
-            experience: additionalData.experience || '2 Years',
-            education: additionalData.education || 'Form 4 and Above',
-            expectedSalary: additionalData.expectedSalary || 'KSh 15,000',
-            accommodationType: additionalData.accommodationType || 'Live-in',
-            community: additionalData.community || 'Kikuyu',
-            skills: additionalData.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
-            languages: additionalData.languages || ['English', 'Swahili'],
-            bio: additionalData.bio || 'Professional house help with experience in cooking, cleaning, and childcare.'
-          };
         } else if (userType === 'agency') {
           await agencyProfilesApi.create({
             profile_id: profile.id,
