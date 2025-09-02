@@ -44,62 +44,62 @@ const AgencyMarketplace = () => {
       // Fallback to mock data
       setAgencies([
         {
-          id: "agency_1",
-          name: "Professional Domestic Agency",
-          license_number: "AGY-2024-001",
+          id: "demo_agency_1",
+          name: "Demo Agency Service",
+          license_number: "DEMO-2024-001",
           verification_status: "verified",
           subscription_tier: "premium",
-          rating: 4.8,
-          services: ["local", "international", "training"],
+          rating: 4.9,
+          services: ["local", "international", "training", "background_checks"],
           location: "Nairobi",
           monthly_fee: 5000,
           commission_rate: 15,
-          verified_workers: 45,
-          successful_placements: 120,
-          description: "Leading domestic agency with verified workers and professional training programs",
-          contact_email: "info@professionaldomestic.ke",
-          contact_phone: "+254700123456",
-          website: "https://professionaldomestic.ke",
+          verified_workers: 50,
+          successful_placements: 150,
+          description: "Demo agency for testing our payment system. Experience our premium service with verified workers and guaranteed satisfaction.",
+          contact_email: "demo@domesticconnect.ke",
+          contact_phone: "+254700000000",
+          website: "https://domesticconnect.ke",
           created_at: "2024-01-15T00:00:00.000Z",
           updated_at: "2024-01-15T00:00:00.000Z"
         },
         {
-          id: "agency_2",
-          name: "Trusted House Help Solutions",
-          license_number: "AGY-2024-002",
+          id: "demo_agency_2",
+          name: "Test Agency Solutions",
+          license_number: "DEMO-2024-002",
           verification_status: "verified",
           subscription_tier: "basic",
-          rating: 4.6,
+          rating: 4.7,
           services: ["local", "training"],
           location: "Mombasa",
           monthly_fee: 3000,
           commission_rate: 12,
-          verified_workers: 28,
-          successful_placements: 85,
-          description: "Reliable domestic agency specializing in local placements and worker training",
-          contact_email: "info@trustedhousehelp.ke",
-          contact_phone: "+254700789012",
-          website: "https://trustedhousehelp.ke",
+          verified_workers: 35,
+          successful_placements: 95,
+          description: "Test agency for demonstrating our local placement services. Reliable and trusted for all your domestic needs.",
+          contact_email: "test@domesticconnect.ke",
+          contact_phone: "+254700000001",
+          website: "https://domesticconnect.ke",
           created_at: "2024-01-20T00:00:00.000Z",
           updated_at: "2024-01-20T00:00:00.000Z"
         },
         {
-          id: "agency_3",
-          name: "International Domestic Partners",
-          license_number: "AGY-2024-003",
+          id: "demo_agency_3",
+          name: "Sample International Agency",
+          license_number: "DEMO-2024-003",
           verification_status: "verified",
           subscription_tier: "international",
-          rating: 4.9,
+          rating: 4.8,
           services: ["international", "local", "training", "background_checks"],
           location: "Nairobi",
           monthly_fee: 8000,
           commission_rate: 20,
-          verified_workers: 65,
-          successful_placements: 200,
-          description: "Premium international agency with comprehensive background checks and overseas placements",
-          contact_email: "info@internationaldomestic.ke",
-          contact_phone: "+254700345678",
-          website: "https://internationaldomestic.ke",
+          verified_workers: 75,
+          successful_placements: 220,
+          description: "Sample international agency for testing overseas placements. Comprehensive background checks and professional training.",
+          contact_email: "sample@domesticconnect.ke",
+          contact_phone: "+254700000002",
+          website: "https://domesticconnect.ke",
           created_at: "2024-02-01T00:00:00.000Z",
           updated_at: "2024-02-01T00:00:00.000Z"
         }
@@ -243,6 +243,16 @@ const AgencyMarketplace = () => {
             Hire trusted domestic workers through verified agencies with guaranteed satisfaction, 
             dispute resolution, and professional support.
           </p>
+        </div>
+
+        {/* Demo Notice */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
+          <div className="flex items-center justify-center space-x-2">
+            <Shield className="h-5 w-5 text-blue-600" />
+            <p className="text-blue-800 font-medium">
+              🎯 <strong>Demo Mode:</strong> These are demo agencies for testing our payment system. Real agencies will be available soon!
+            </p>
+          </div>
         </div>
 
         {/* Stats */}
