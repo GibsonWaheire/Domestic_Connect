@@ -33,7 +33,8 @@ import {
   DollarSign,
   MapPin as LocationIcon,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  X
 } from 'lucide-react';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
@@ -53,8 +54,12 @@ interface JobOpportunity {
 const HousegirlDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'jobs' | 'profile' | 'messages'>('overview');
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'messages'>('overview');
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
+    // Load photo from localStorage on component mount
+    return localStorage.getItem('housegirl_profile_photo');
+  });
+  const [showEditModal, setShowEditModal] = useState(false);
 
   // Enhanced mock data with match scores
   const [jobOpportunities] = useState<JobOpportunity[]>([
@@ -104,14 +109,6 @@ const HousegirlDashboard = () => {
     }
   ]);
 
-  const [profileStats] = useState({
-    profileViews: 45,
-    jobApplications: 3,
-    messagesReceived: 8,
-    daysActive: 12,
-    profileCompletion: 85
-  });
-
   useEffect(() => {
     if (!user || user.user_type !== 'housegirl') {
       navigate('/housegirls');
@@ -121,6 +118,12 @@ const HousegirlDashboard = () => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/housegirls');
+  };
+
+  const handlePhotoUpload = (photoUrl: string) => {
+    setProfilePhoto(photoUrl);
+    // Save to localStorage for persistence
+    localStorage.setItem('housegirl_profile_photo', photoUrl);
   };
 
   if (!user || user.user_type !== 'housegirl') {
@@ -150,31 +153,31 @@ const HousegirlDashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-50">
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-blue-200 sticky top-0 z-50 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 py-4">
+        <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-8">
+            <div className="flex items-center space-x-4">
               <div className="flex items-center cursor-pointer" onClick={() => navigate('/home')}>
                 <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl shadow-lg">
-                  <Heart className="h-6 w-6 text-white" />
+                  <Heart className="h-5 w-5 text-white" />
                 </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent ml-3">
+                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent ml-2">
                   Domestic Connect
                 </h1>
               </div>
               
-              <ReturnToHome variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50" />
+              <ReturnToHome variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50 hidden sm:flex" />
             </div>
             
-            <div className="flex items-center space-x-4">
-              <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-indigo-500 text-white border-0">
+            <div className="flex items-center space-x-2">
+              <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-indigo-500 text-white border-0 text-xs">
                 {user.user_type}
               </Badge>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-gray-600 hidden sm:block">
                 Karibu, {user.first_name}
               </span>
-              <Button variant="outline" onClick={handleSignOut} className="border-blue-300 hover:bg-blue-50 rounded-full">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+              <Button variant="outline" onClick={handleSignOut} className="border-blue-300 hover:bg-blue-50 rounded-full p-2">
+                <LogOut className="h-4 w-4" />
+                <span className="hidden sm:inline ml-2">Logout</span>
               </Button>
             </div>
           </div>
@@ -184,27 +187,32 @@ const HousegirlDashboard = () => {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
                 Welcome back, {user.first_name}! 👋
               </h2>
-              <p className="text-gray-600">
+              <p className="text-gray-600 text-sm sm:text-base">
                 Here's what's happening with your job search today
               </p>
             </div>
             <div className="flex items-center space-x-4">
-              <Avatar className="h-16 w-16">
+              <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
                 <AvatarImage src={profilePhoto || undefined} />
-                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-xl font-bold">
+                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-lg sm:text-xl font-bold">
                   {user.first_name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="text-right">
-                <p className="text-sm text-gray-500">Profile Photo</p>
-                <Button variant="outline" size="sm" className="mt-1">
-                  <Edit className="h-4 w-4 mr-2" />
+                <p className="text-xs sm:text-sm text-gray-500">Profile Photo</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-1 text-xs"
+                  onClick={() => setActiveTab('profile')}
+                >
+                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
                   Update
                 </Button>
               </div>
@@ -213,20 +221,18 @@ const HousegirlDashboard = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-white rounded-lg p-1 mb-8 shadow-sm">
+        <div className="flex space-x-1 bg-white rounded-lg p-1 mb-6 shadow-sm">
           {[
             { id: 'overview', label: 'Overview', icon: Home },
-            { id: 'jobs', label: 'Job Opportunities', icon: Briefcase },
             { id: 'profile', label: 'My Profile', icon: User },
             { id: 'messages', label: 'Messages', icon: MessageCircle }
           ].map((tab) => (
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'ghost'}
-              onClick={() => setActiveTab(tab.id as any)}
-              className={`flex-1 ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'profile' | 'messages')}
+              className={`flex-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
             >
-              <tab.icon className="h-4 w-4 mr-2" />
               {tab.label}
             </Button>
           ))}
@@ -235,132 +241,77 @@ const HousegirlDashboard = () => {
         {/* Tab Content */}
         {activeTab === 'overview' && (
           <div className="space-y-6">
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-blue-600">Profile Views</p>
-                      <p className="text-2xl font-bold text-blue-900">{profileStats.profileViews}</p>
-                    </div>
-                    <Eye className="h-8 w-8 text-blue-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-green-600">Applications</p>
-                      <p className="text-2xl font-bold text-green-900">{profileStats.jobApplications}</p>
-                    </div>
-                    <Briefcase className="h-8 w-8 text-green-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-purple-600">Messages</p>
-                      <p className="text-2xl font-bold text-purple-900">{profileStats.messagesReceived}</p>
-                    </div>
-                    <MessageCircle className="h-8 w-8 text-purple-600" />
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-sm font-medium text-orange-600">Profile Completion</p>
-                      <p className="text-2xl font-bold text-orange-900">{profileStats.profileCompletion}%</p>
-                    </div>
-                    <CheckCircle2 className="h-8 w-8 text-orange-600" />
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Profile Completion Alert */}
-            {profileStats.profileCompletion < 100 && (
-              <Card className="border-orange-200 bg-orange-50">
-                <CardContent className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <AlertCircle className="h-5 w-5 text-orange-600" />
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-orange-800">
-                        Complete your profile to get more job matches!
-                      </p>
-                      <p className="text-xs text-orange-600 mt-1">
-                        You're {100 - profileStats.profileCompletion}% away from a complete profile
-                      </p>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      onClick={() => setActiveTab('profile')}
-                      className="border-orange-300 text-orange-700 hover:bg-orange-100"
-                    >
-                      Complete Profile
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {/* Recent Job Opportunities */}
+            {/* Job Opportunities */}
             <Card>
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
-                    <CardTitle className="text-xl">Top Job Matches</CardTitle>
+                    <CardTitle className="text-xl">Available Job Opportunities</CardTitle>
                     <CardDescription>Jobs that best match your skills and preferences</CardDescription>
                   </div>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setActiveTab('jobs')}
-                    className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                  >
-                    View All
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {jobOpportunities.slice(0, 2).map((job) => (
-                    <div key={job.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h4 className="font-semibold text-gray-900">{job.title}</h4>
-                          <Badge variant="secondary" className="bg-green-100 text-green-800">
-                            {job.matchScore}% Match
-                          </Badge>
+                  {jobOpportunities.map((job) => (
+                    <Card key={job.id} className="border border-gray-200 hover:border-blue-300 transition-colors">
+                      <CardContent className="p-4">
+                        <div className="flex flex-col space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                            <Badge variant="secondary" className="bg-green-100 text-green-800">
+                              {job.matchScore}% Match
+                            </Badge>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 gap-2 text-sm text-gray-600">
+                            <div className="flex items-center">
+                              <LocationIcon className="h-4 w-4 mr-2" />
+                              {job.location}
+                            </div>
+                            <div className="flex items-center">
+                              <DollarSign className="h-4 w-4 mr-2" />
+                              {job.salary}
+                            </div>
+                            <div className="flex items-center">
+                              <Clock className="h-4 w-4 mr-2" />
+                              Posted {job.postedDate}
+                            </div>
+                          </div>
+
+                          <p className="text-gray-700 text-sm">{job.description}</p>
+
+                          <div>
+                            <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {job.requirements.slice(0, 3).map((req, index) => (
+                                <Badge key={index} variant="outline" className="text-xs">
+                                  {req}
+                                </Badge>
+                              ))}
+                              {job.requirements.length > 3 && (
+                                <Badge variant="outline" className="text-xs">
+                                  +{job.requirements.length - 3} more
+                                </Badge>
+                              )}
+                            </div>
+                          </div>
+
+                          <p className="text-sm text-gray-600">
+                            <strong>Employer:</strong> {job.employer}
+                          </p>
+                          
+                          <div className="flex space-x-2">
+                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 flex-1">
+                              Apply Now
+                            </Button>
+                            <Button variant="outline" size="sm">
+                              Save
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center space-x-4 text-sm text-gray-600">
-                          <span className="flex items-center">
-                            <LocationIcon className="h-4 w-4 mr-1" />
-                            {job.location}
-                          </span>
-                          <span className="flex items-center">
-                            <DollarSign className="h-4 w-4 mr-1" />
-                            {job.salary}
-                          </span>
-                          <span className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {job.postedDate}
-                          </span>
-                        </div>
-                      </div>
-                      <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                        Apply Now
-                      </Button>
-                    </div>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               </CardContent>
@@ -373,108 +324,29 @@ const HousegirlDashboard = () => {
                 <CardDescription>Things you can do to improve your profile</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <Button 
                     variant="outline" 
-                    className="h-20 flex-col space-y-2 border-blue-200 hover:bg-blue-50"
+                    className="h-16 sm:h-20 flex-col space-y-2 border-blue-200 hover:bg-blue-50"
                     onClick={() => setActiveTab('profile')}
                   >
-                    <Edit className="h-6 w-6 text-blue-600" />
-                    <span className="text-sm">Update Profile</span>
+                    <Edit className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
+                    <span className="text-xs sm:text-sm">Update Profile</span>
                   </Button>
                   <Button 
                     variant="outline" 
-                    className="h-20 flex-col space-y-2 border-green-200 hover:bg-green-50"
-                    onClick={() => setActiveTab('jobs')}
+                    className="h-16 sm:h-20 flex-col space-y-2 border-green-200 hover:bg-green-50"
                   >
-                    <Search className="h-6 w-6 text-green-600" />
-                    <span className="text-sm">Search Jobs</span>
+                    <Search className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
+                    <span className="text-xs sm:text-sm">Search Jobs</span>
                   </Button>
                   <Button 
                     variant="outline" 
-                    className="h-20 flex-col space-y-2 border-purple-200 hover:bg-purple-50"
+                    className="h-16 sm:h-20 flex-col space-y-2 border-purple-200 hover:bg-purple-50"
                   >
-                    <Settings className="h-6 w-6 text-purple-600" />
-                    <span className="text-sm">Preferences</span>
+                    <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
+                    <span className="text-xs sm:text-sm">Preferences</span>
                   </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {activeTab === 'jobs' && (
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-xl">Available Job Opportunities</CardTitle>
-                <CardDescription>Browse and apply for jobs that match your skills</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {jobOpportunities.map((job) => (
-                    <Card key={job.id} className="border border-gray-200 hover:border-blue-300 transition-colors">
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center space-x-3 mb-3">
-                              <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                              <Badge variant="secondary" className="bg-green-100 text-green-800">
-                                {job.matchScore}% Match
-                              </Badge>
-                              <Badge variant="outline" className="bg-blue-50 text-blue-700">
-                                Active
-                              </Badge>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm text-gray-600">
-                              <div className="flex items-center">
-                                <LocationIcon className="h-4 w-4 mr-2" />
-                                {job.location}
-                              </div>
-                              <div className="flex items-center">
-                                <DollarSign className="h-4 w-4 mr-2" />
-                                {job.salary}
-                              </div>
-                              <div className="flex items-center">
-                                <Clock className="h-4 w-4 mr-2" />
-                                Posted {job.postedDate}
-                              </div>
-                            </div>
-
-                            <p className="text-gray-700 mb-4">{job.description}</p>
-
-                            <div className="mb-4">
-                              <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
-                              <div className="flex flex-wrap gap-2">
-                                {job.requirements.map((req, index) => (
-                                  <Badge key={index} variant="outline" className="text-xs">
-                                    {req}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-
-                            <p className="text-sm text-gray-600">
-                              <strong>Employer:</strong> {job.employer}
-                            </p>
-                          </div>
-                          
-                          <div className="ml-6 flex flex-col space-y-2">
-                            <Button className="bg-blue-600 hover:bg-blue-700">
-                              Apply Now
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              Save Job
-                            </Button>
-                            <Button variant="ghost" size="sm">
-                              View Details
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
                 </div>
               </CardContent>
             </Card>
@@ -494,17 +366,14 @@ const HousegirlDashboard = () => {
                   <div className="text-center">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
                     <PhotoUpload 
-                      onPhotoUploaded={(photoUrl) => {
-                        setProfilePhoto(photoUrl);
-                        console.log('Photo uploaded:', photoUrl);
-                      }}
+                      onPhotoUploaded={handlePhotoUpload}
                     />
                   </div>
 
                   <Separator />
 
                   {/* Basic Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                     <div>
                       <h4 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h4>
                       <div className="space-y-4">
@@ -573,7 +442,7 @@ const HousegirlDashboard = () => {
                   {/* Skills & Languages */}
                   <div>
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Skills & Languages</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       <div>
                         <label className="text-sm font-medium text-gray-700 mb-2 block">Skills</label>
                         <div className="flex flex-wrap gap-2">
@@ -598,7 +467,10 @@ const HousegirlDashboard = () => {
                   </div>
 
                   <div className="flex justify-center">
-                    <Button className="bg-blue-600 hover:bg-blue-700">
+                    <Button 
+                      className="bg-blue-600 hover:bg-blue-700"
+                      onClick={() => setShowEditModal(true)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit Profile
                     </Button>
@@ -623,7 +495,7 @@ const HousegirlDashboard = () => {
                   <p className="text-gray-600 mb-4">
                     When employers contact you about job opportunities, you'll see their messages here.
                   </p>
-                  <Button variant="outline" onClick={() => setActiveTab('jobs')}>
+                  <Button variant="outline">
                     Browse Jobs
                   </Button>
                 </div>
@@ -632,6 +504,79 @@ const HousegirlDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Edit Profile Modal */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Edit Profile</h3>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setShowEditModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Bio</label>
+                  <textarea 
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                    rows={3}
+                    placeholder="Tell employers about yourself..."
+                    defaultValue={userData.bio}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Expected Salary</label>
+                  <input 
+                    type="text"
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                    placeholder="e.g., KSh 15,000"
+                    defaultValue={userData.expectedSalary}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Location</label>
+                  <input 
+                    type="text"
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                    placeholder="e.g., Nairobi"
+                    defaultValue={userData.location}
+                  />
+                </div>
+              </div>
+              
+              <div className="flex space-x-3 mt-6">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  className="flex-1 bg-blue-600 hover:bg-blue-700"
+                  onClick={() => {
+                    // TODO: Implement save functionality
+                    alert('Profile updated successfully!');
+                    setShowEditModal(false);
+                  }}
+                >
+                  Save Changes
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
