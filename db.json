@@ -161,6 +161,27 @@
   ],
   "agencies": [
     {
+      "id": "mock_agency_1",
+      "name": "Test Domestic Agency",
+      "license_number": "TEST-2024-001",
+      "verification_status": "verified",
+      "subscription_tier": "premium",
+      "rating": 4.7,
+      "services": ["local", "international", "training", "background_checks"],
+      "location": "Nairobi",
+      "monthly_fee": 5000,
+      "commission_rate": 15,
+      "verified_workers": 38,
+      "successful_placements": 95,
+      "description": "Test agency for demonstration purposes - verified workers and professional services",
+      "contact_email": "test@domesticconnect.ke",
+      "contact_phone": "+254700000000",
+      "website": "https://domesticconnect.ke",
+      "created_at": "2024-01-15T00:00:00.000Z",
+      "updated_at": "2024-01-15T00:00:00.000Z",
+      "is_mock": true
+    },
+    {
       "id": "agency_1",
       "name": "Professional Domestic Agency",
       "license_number": "AGY-2024-001",
