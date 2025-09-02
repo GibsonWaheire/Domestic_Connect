@@ -99,6 +99,9 @@ const LandingPage = () => {
                 <Button variant="ghost" className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full" onClick={() => navigate('/agencies')}>
                   For Agencies
                 </Button>
+                <Button variant="ghost" className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full" onClick={() => navigate('/agency-marketplace')}>
+                  Agency Marketplace
+                </Button>
               </nav>
             </div>
             
