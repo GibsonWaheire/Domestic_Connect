@@ -111,3 +111,30 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  /* Verification Badges */
+  .verification-badge {
+    @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+  }
+
+  .verification-badge.verified {
+    @apply bg-green-100 text-green-800;
+  }
+
+  .verification-badge.premium {
+    @apply bg-blue-100 text-blue-800;
+  }
+
+  .verification-badge.international {
+    @apply bg-purple-100 text-purple-800;
+  }
+
+  .verification-badge.pending {
+    @apply bg-yellow-100 text-yellow-800;
+  }
+
+  .verification-badge.unverified {
+    @apply bg-red-100 text-red-800;
+  }
+}

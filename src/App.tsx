@@ -7,6 +7,7 @@ import { AuthProvider } from "@/hooks/useAuth";
 import LandingPage from "./pages/LandingPage";
 import HousegirlPage from "./pages/HousegirlPage";
 import AgencyPage from "./pages/AgencyPage";
+import AgencyMarketplace from "./pages/AgencyMarketplace";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import HousegirlDashboard from "./pages/HousegirlDashboard";
 import AgencyDashboard from "./pages/AgencyDashboard";
@@ -32,6 +33,7 @@ const App = () => (
             <Route path="/housegirls" element={<HousegirlPage />} />
             <Route path="/housegirl-dashboard" element={<HousegirlDashboard />} />
             <Route path="/agencies" element={<AgencyPage />} />
+            <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
             <Route path="/agency-dashboard" element={<AgencyDashboard />} />
             <Route path="/dashboard" element={<EmployerDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
