@@ -24,14 +24,45 @@ export interface PackageDetails {
   platformFee: number;
   features: string[];
   color: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
 interface PaymentModalProps {
   package: PackageDetails;
-  agency: any;
+  agency: {
+    id: string;
+    name: string;
+    location: string;
+    verification_status: string;
+    subscription_tier: string;
+    rating: number;
+    license_number: string;
+    verified_workers: number;
+    successful_placements: number;
+    description?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    website?: string;
+  };
   onClose: () => void;
-  onSuccess: (paymentData: any) => void;
+  onSuccess: (paymentData: {
+    id: string;
+    client_id: string;
+    agency_id: string;
+    package_id: string;
+    amount: number;
+    agency_fee: number;
+    platform_fee: number;
+    phone_number: string;
+    status: string;
+    payment_method: string;
+    created_at: string;
+    agency_client_id: string;
+    terms_accepted: boolean;
+    mpesa_checkout_request_id?: string;
+    mpesa_merchant_request_id?: string;
+    transaction_id?: string;
+  }) => void;
 }
 
 const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: PaymentModalProps) => {
@@ -51,8 +82,45 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
     setPaymentStep('processing');
 
     try {
-      // Simulate M-Pesa STK Push
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Real M-Pesa STK Push
+      const stkPushResponse = await fetch('http://localhost:3001/api/mpesa/stkpush', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: phoneNumber,
+          amount: packageDetails.price,
+          reference: `DC_${user?.id}_${Date.now()}`,
+          description: `${packageDetails.name} Package - ${agency.name}`
+        }),
+      });
+
+      const stkPushResult = await stkPushResponse.json();
+
+      if (!stkPushResult.success) {
+        throw new Error(stkPushResult.message || 'STK Push failed');
+      }
+
+      // Wait for user to complete payment (in real implementation, you'd poll for status)
+      await new Promise(resolve => setTimeout(resolve, 5000));
+
+      // Check transaction status
+      const statusResponse = await fetch('http://localhost:3001/api/mpesa/transaction-status', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          checkoutRequestId: stkPushResult.data.CheckoutRequestID
+        }),
+      });
+
+      const statusResult = await statusResponse.json();
+
+      if (!statusResult.success || statusResult.data.ResultCode !== '0') {
+        throw new Error('Payment was not completed successfully');
+      }
 
       // Create payment record
       const paymentData = {
@@ -68,7 +136,10 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
         payment_method: 'mpesa',
         created_at: new Date().toISOString(),
         agency_client_id: `ac_${Date.now()}`,
-        terms_accepted: true
+        terms_accepted: true,
+        mpesa_checkout_request_id: stkPushResult.data.CheckoutRequestID,
+        mpesa_merchant_request_id: stkPushResult.data.MerchantRequestID,
+        transaction_id: statusResult.data.TransactionID || `TXN_${Date.now()}`
       };
 
       // Save to database
