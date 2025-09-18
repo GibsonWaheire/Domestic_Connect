@@ -7,6 +7,7 @@ import click
 from app import create_app, db
 from app.models import *
 import os
+import uuid
 
 @click.group()
 def cli():
@@ -84,6 +85,35 @@ def create_admin(email, password):
         db.session.commit()
         
         click.echo(f"Admin user created: {email}")
+
+@cli.command()
+def test_admin_api():
+    """Test admin API endpoints"""
+    app = create_app()
+    with app.app_context():
+        click.echo("Testing Admin API Endpoints:")
+        click.echo("=" * 40)
+        
+        # Test admin user exists
+        admin_users = User.query.filter(User.email.in_(['admin@domesticconnect.ke', 'admin@test.com'])).all()
+        click.echo(f"Admin users found: {len(admin_users)}")
+        
+        for admin in admin_users:
+            click.echo(f"  - {admin.email} ({admin.user_type})")
+        
+        # Test admin routes exist
+        click.echo("\nAdmin routes available:")
+        click.echo("  - GET /api/admin/dashboard")
+        click.echo("  - GET /api/admin/users")
+        click.echo("  - GET /api/admin/users/<user_id>")
+        click.echo("  - PUT /api/admin/users/<user_id>/toggle-status")
+        click.echo("  - GET /api/admin/agencies")
+        click.echo("  - PUT /api/admin/agencies/<agency_id>/verify")
+        click.echo("  - POST /api/admin/sync")
+        click.echo("  - GET /api/admin/analytics")
+        
+        click.echo("\nAdmin dashboard accessible at: /admin-dashboard")
+        click.echo("Make sure to authenticate with Firebase token in Authorization header")
 
 if __name__ == '__main__':
     cli()

@@ -42,6 +42,7 @@ def create_app(config_name=None):
     from app.routes.agencies import agencies_bp
     from app.routes.payments import payments_bp
     from app.routes.photos import photos_bp
+    from app.routes.admin import admin_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(profiles_bp, url_prefix='/api/profiles')
@@ -50,6 +51,7 @@ def create_app(config_name=None):
     app.register_blueprint(agencies_bp, url_prefix='/api/agencies')
     app.register_blueprint(payments_bp, url_prefix='/api/payments')
     app.register_blueprint(photos_bp, url_prefix='/api/photos')
+    app.register_blueprint(admin_bp, url_prefix='/api/admin')
     
     # Error handlers
     @app.errorhandler(404)

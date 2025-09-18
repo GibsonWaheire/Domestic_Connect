@@ -24,6 +24,134 @@ class User(db.Model):
     
     def __repr__(self):
         return f'<User {self.email}>'
+    
+    def to_dict(self):
+        """Convert user to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'email': self.email,
+            'user_type': self.user_type,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'phone_number': self.phone_number,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+    
+    def update_profile(self, **kwargs):
+        """Update user profile fields using SQLAlchemy ORM"""
+        from app import db
+        
+        for field, value in kwargs.items():
+            if hasattr(self, field) and value is not None:
+                setattr(self, field, value)
+        
+        try:
+            db.session.commit()
+            return True
+        except Exception as e:
+            db.session.rollback()
+            raise e
+    
+    def get_full_profile_data(self):
+        """Get complete profile data including type-specific information"""
+        profile_data = self.to_dict()
+        
+        if self.profile:
+            profile_data['profile'] = {
+                'id': self.profile.id,
+                'created_at': self.profile.created_at.isoformat(),
+                'updated_at': self.profile.updated_at.isoformat()
+            }
+            
+            # Add type-specific profile data using SQLAlchemy relationships
+            if self.user_type == 'employer' and self.profile.employer_profile:
+                profile_data['profile']['employer'] = {
+                    'company_name': self.profile.employer_profile.company_name,
+                    'location': self.profile.employer_profile.location,
+                    'description': self.profile.employer_profile.description
+                }
+            elif self.user_type == 'housegirl' and self.profile.housegirl_profile:
+                profile_data['profile']['housegirl'] = {
+                    'age': self.profile.housegirl_profile.age,
+                    'bio': self.profile.housegirl_profile.bio,
+                    'current_location': self.profile.housegirl_profile.current_location,
+                    'location': self.profile.housegirl_profile.location,
+                    'education': self.profile.housegirl_profile.education,
+                    'experience': self.profile.housegirl_profile.experience,
+                    'expected_salary': self.profile.housegirl_profile.expected_salary,
+                    'accommodation_type': self.profile.housegirl_profile.accommodation_type,
+                    'tribe': self.profile.housegirl_profile.tribe,
+                    'is_available': self.profile.housegirl_profile.is_available,
+                    'profile_photo_url': self.profile.housegirl_profile.profile_photo_url
+                }
+            elif self.user_type == 'agency' and self.profile.agency_profile:
+                profile_data['profile']['agency'] = {
+                    'agency_name': self.profile.agency_profile.agency_name,
+                    'location': self.profile.agency_profile.location,
+                    'description': self.profile.agency_profile.description,
+                    'license_number': self.profile.agency_profile.license_number
+                }
+        
+        return profile_data
+    
+    @classmethod
+    def find_by_firebase_uid(cls, firebase_uid):
+        """Class method to find user by Firebase UID using SQLAlchemy ORM"""
+        return cls.query.filter_by(firebase_uid=firebase_uid).first()
+    
+    @classmethod
+    def find_by_email(cls, email):
+        """Class method to find user by email using SQLAlchemy ORM"""
+        return cls.query.filter_by(email=email).first()
+    
+    @classmethod
+    def create_user(cls, firebase_uid, email, user_type='employer', **kwargs):
+        """Class method to create a new user using SQLAlchemy ORM"""
+        from app import db
+        
+        user = cls(
+            id=f"user_{firebase_uid}",
+            firebase_uid=firebase_uid,
+            email=email,
+            user_type=user_type,
+            first_name=kwargs.get('first_name', ''),
+            last_name=kwargs.get('last_name', ''),
+            phone_number=kwargs.get('phone_number')
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+        return user
+    
+    @classmethod
+    def get_user_with_profile(cls, user_id):
+        """Get user with profile data using SQLAlchemy joinedload for optimization"""
+        from sqlalchemy.orm import joinedload
+        
+        return cls.query.options(
+            joinedload(cls.profile).joinedload(Profile.employer_profile),
+            joinedload(cls.profile).joinedload(Profile.housegirl_profile),
+            joinedload(cls.profile).joinedload(Profile.agency_profile)
+        ).filter_by(id=user_id).first()
+    
+    @classmethod
+    def get_users_by_type(cls, user_type):
+        """Get users by type with optimized relationship loading"""
+        from sqlalchemy.orm import joinedload
+        
+        return cls.query.options(
+            joinedload(cls.profile)
+        ).filter_by(user_type=user_type).all()
+    
+    @classmethod
+    def search_users(cls, search_term):
+        """Search users by name or email using SQLAlchemy ORM with case-insensitive search"""
+        return cls.query.filter(
+            cls.first_name.ilike(f'%{search_term}%') |
+            cls.last_name.ilike(f'%{search_term}%') |
+            cls.email.ilike(f'%{search_term}%')
+        ).all()
 
 class Profile(db.Model):
     """Extended profile information"""
@@ -42,6 +170,72 @@ class Profile(db.Model):
     
     def __repr__(self):
         return f'<Profile {self.id}>'
+    
+    def create_employer_profile(self, **kwargs):
+        """Create employer profile using SQLAlchemy ORM"""
+        from app import db
+        
+        if self.employer_profile:
+            raise ValueError("Employer profile already exists")
+        
+        employer_profile = EmployerProfile(
+            id=f"emp_{self.id}",
+            profile_id=self.id,
+            company_name=kwargs.get('company_name'),
+            location=kwargs.get('location'),
+            description=kwargs.get('description')
+        )
+        
+        db.session.add(employer_profile)
+        db.session.commit()
+        return employer_profile
+    
+    def create_housegirl_profile(self, **kwargs):
+        """Create housegirl profile using SQLAlchemy ORM"""
+        from app import db
+        
+        if self.housegirl_profile:
+            raise ValueError("Housegirl profile already exists")
+        
+        housegirl_profile = HousegirlProfile(
+            id=f"hg_{self.id}",
+            profile_id=self.id,
+            age=kwargs.get('age'),
+            bio=kwargs.get('bio'),
+            current_location=kwargs.get('current_location'),
+            location=kwargs.get('location'),
+            education=kwargs.get('education'),
+            experience=kwargs.get('experience'),
+            expected_salary=kwargs.get('expected_salary'),
+            accommodation_type=kwargs.get('accommodation_type'),
+            tribe=kwargs.get('tribe'),
+            is_available=kwargs.get('is_available', True),
+            profile_photo_url=kwargs.get('profile_photo_url')
+        )
+        
+        db.session.add(housegirl_profile)
+        db.session.commit()
+        return housegirl_profile
+    
+    def create_agency_profile(self, **kwargs):
+        """Create agency profile using SQLAlchemy ORM"""
+        from app import db
+        
+        if self.agency_profile:
+            raise ValueError("Agency profile already exists")
+        
+        agency_profile = AgencyProfile(
+            id=f"ag_{self.id}",
+            profile_id=self.id,
+            agency_name=kwargs.get('agency_name'),
+            location=kwargs.get('location'),
+            description=kwargs.get('description'),
+            license_number=kwargs.get('license_number')
+        )
+        
+        db.session.add(agency_profile)
+        db.session.commit()
+        return agency_profile
 
 class EmployerProfile(db.Model):
     """Employer-specific profile data"""
@@ -87,6 +281,75 @@ class HousegirlProfile(db.Model):
     
     def __repr__(self):
         return f'<HousegirlProfile {self.id}>'
+    
+    def to_dict(self):
+        """Convert housegirl profile to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'age': self.age,
+            'bio': self.bio,
+            'current_location': self.current_location,
+            'location': self.location,
+            'education': self.education,
+            'experience': self.experience,
+            'expected_salary': self.expected_salary,
+            'accommodation_type': self.accommodation_type,
+            'tribe': self.tribe,
+            'is_available': self.is_available,
+            'profile_photo_url': self.profile_photo_url,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+    
+    @classmethod
+    def find_available_workers(cls):
+        """Find all available housegirls using SQLAlchemy ORM"""
+        return cls.query.filter_by(is_available=True).all()
+    
+    @classmethod
+    def find_by_location(cls, location):
+        """Find housegirls by location using SQLAlchemy ORM with case-insensitive search"""
+        return cls.query.filter(
+            cls.location.ilike(f'%{location}%') |
+            cls.current_location.ilike(f'%{location}%')
+        ).all()
+    
+    @classmethod
+    def find_by_salary_range(cls, min_salary, max_salary):
+        """Find housegirls within salary range using SQLAlchemy ORM"""
+        return cls.query.filter(
+            cls.expected_salary >= min_salary,
+            cls.expected_salary <= max_salary
+        ).all()
+    
+    @classmethod
+    def find_by_experience(cls, experience_level):
+        """Find housegirls by experience level using SQLAlchemy ORM"""
+        return cls.query.filter(cls.experience.ilike(f'%{experience_level}%')).all()
+    
+    @classmethod
+    def find_by_education(cls, education_level):
+        """Find housegirls by education level using SQLAlchemy ORM"""
+        return cls.query.filter(cls.education.ilike(f'%{education_level}%')).all()
+    
+    @classmethod
+    def search_workers(cls, search_term):
+        """Search housegirls by bio, location, or experience using SQLAlchemy ORM"""
+        return cls.query.filter(
+            cls.bio.ilike(f'%{search_term}%') |
+            cls.location.ilike(f'%{search_term}%') |
+            cls.experience.ilike(f'%{search_term}%') |
+            cls.education.ilike(f'%{search_term}%')
+        ).all()
+    
+    @classmethod
+    def get_workers_with_profile(cls):
+        """Get housegirls with their user profile using SQLAlchemy joinedload"""
+        from sqlalchemy.orm import joinedload
+        
+        return cls.query.options(
+            joinedload(cls.profile).joinedload(Profile.user)
+        ).all()
 
 class AgencyProfile(db.Model):
     """Agency-specific profile data"""
@@ -135,6 +398,57 @@ class Agency(db.Model):
     
     def __repr__(self):
         return f'<Agency {self.name}>'
+    
+    def to_dict(self):
+        """Convert agency to dictionary for JSON serialization"""
+        return {
+            'id': self.id,
+            'name': self.name,
+            'license_number': self.license_number,
+            'verification_status': self.verification_status,
+            'subscription_tier': self.subscription_tier,
+            'rating': self.rating,
+            'services': self.services,
+            'location': self.location,
+            'monthly_fee': self.monthly_fee,
+            'commission_rate': self.commission_rate,
+            'verified_workers': self.verified_workers,
+            'successful_placements': self.successful_placements,
+            'description': self.description,
+            'contact_email': self.contact_email,
+            'contact_phone': self.contact_phone,
+            'website': self.website,
+            'created_at': self.created_at.isoformat(),
+            'updated_at': self.updated_at.isoformat()
+        }
+    
+    @classmethod
+    def find_verified_agencies(cls):
+        """Find all verified agencies using SQLAlchemy ORM"""
+        return cls.query.filter_by(verification_status='verified').all()
+    
+    @classmethod
+    def find_by_location(cls, location):
+        """Find agencies by location using SQLAlchemy ORM"""
+        return cls.query.filter(cls.location.ilike(f'%{location}%')).all()
+    
+    @classmethod
+    def find_by_rating(cls, min_rating=4.0):
+        """Find agencies with minimum rating using SQLAlchemy ORM"""
+        return cls.query.filter(cls.rating >= min_rating).order_by(cls.rating.desc()).all()
+    
+    @classmethod
+    def find_by_subscription_tier(cls, tier):
+        """Find agencies by subscription tier using SQLAlchemy ORM"""
+        return cls.query.filter_by(subscription_tier=tier).all()
+    
+    @classmethod
+    def search_agencies(cls, search_term):
+        """Search agencies by name or description using SQLAlchemy ORM"""
+        return cls.query.filter(
+            cls.name.ilike(f'%{search_term}%') | 
+            cls.description.ilike(f'%{search_term}%')
+        ).all()
 
 class AgencyWorker(db.Model):
     """Agency-worker relationships"""
