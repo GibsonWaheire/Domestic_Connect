@@ -1,14 +1,16 @@
 from app import db
 from datetime import datetime
 from sqlalchemy import Index
+import bcrypt
 
 class User(db.Model):
     """Base user model for authentication"""
     __tablename__ = 'users'
     
     id = db.Column(db.String(50), primary_key=True)
-    firebase_uid = db.Column(db.String(128), unique=True, nullable=False, index=True)
+    firebase_uid = db.Column(db.String(128), unique=True, nullable=True, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
+    password_hash = db.Column(db.String(128), nullable=True)  # For local auth
     user_type = db.Column(db.Enum('employer', 'housegirl', 'agency', name='user_type'), nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
@@ -24,6 +26,34 @@ class User(db.Model):
     
     def __repr__(self):
         return f'<User {self.email}>'
+    
+    def set_password(self, password):
+        """Hash and set password using bcrypt"""
+        if not password:
+            raise ValueError("Password cannot be empty")
+        
+        # Validate password strength
+        if len(password) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        
+        # Hash password with bcrypt
+        salt = bcrypt.gensalt()
+        self.password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+    
+    def check_password(self, password):
+        """Check if provided password matches the hash"""
+        if not self.password_hash or not password:
+            return False
+        
+        try:
+            return bcrypt.checkpw(password.encode('utf-8'), self.password_hash.encode('utf-8'))
+        except Exception:
+            return False
+    
+    @property
+    def password(self):
+        """Prevent password from being read directly"""
+        raise AttributeError('password is not a readable attribute')
     
     def to_dict(self):
         """Convert user to dictionary for JSON serialization"""
