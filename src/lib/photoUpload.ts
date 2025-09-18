@@ -13,8 +13,8 @@ export const uploadPhoto = async (file: File, userId: string): Promise<PhotoUplo
     formData.append('photo', file);
     formData.append('userId', userId);
 
-    // Upload to our JSON server endpoint
-    const response = await fetch('http://localhost:3002/upload-photo', {
+    // Upload to our Flask backend endpoint
+    const response = await fetch('http://localhost:5000/api/photos/upload', {
       method: 'POST',
       body: formData,
     });

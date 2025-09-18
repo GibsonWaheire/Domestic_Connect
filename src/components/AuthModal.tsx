@@ -52,7 +52,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   useEffect(() => {
     const fetchAgencies = async () => {
       try {
-        const response = await fetch('http://localhost:3002/agencies');
+        const response = await fetch('http://localhost:5000/api/agencies');
         const data = await response.json();
         setAgencies(data);
       } catch (error) {

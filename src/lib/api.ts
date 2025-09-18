@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:3002';
+const API_BASE_URL = 'http://localhost:5000';
 
 export interface User {
   id: string;
@@ -248,5 +248,150 @@ export const contactAccessApi = {
         ...access,
         accessed_at: new Date().toISOString(),
       }),
+    }),
+};
+
+// Admin API interfaces
+export interface AdminDashboardStats {
+  overview: {
+    total_users: number;
+    total_employers: number;
+    total_housegirls: number;
+    total_agencies: number;
+    active_users: number;
+    monthly_users: number;
+  };
+  agencies: {
+    total_agencies: number;
+    verified_agencies: number;
+    pending_verification: number;
+  };
+  payments: {
+    total_packages: number;
+    total_purchases: number;
+    total_revenue: number;
+  };
+  recent_activity: {
+    users: Array<{
+      id: string;
+      email: string;
+      user_type: string;
+      first_name: string;
+      last_name: string;
+      created_at: string;
+    }>;
+    purchases: Array<{
+      id: string;
+      user_id: string;
+      amount: number;
+      status: string;
+      purchase_date: string;
+    }>;
+  };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  user_type: string;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+  has_profile: boolean;
+}
+
+export interface AdminAgency {
+  id: string;
+  name: string;
+  license_number: string;
+  verification_status: string;
+  subscription_tier: string;
+  rating: number;
+  location: string;
+  monthly_fee: number;
+  commission_rate: number;
+  verified_workers: number;
+  successful_placements: number;
+  contact_email: string;
+  contact_phone: string;
+  website?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminAnalytics {
+  user_growth: Array<{ date: string; count: number }>;
+  user_types: Array<{ type: string; count: number }>;
+  revenue_growth: Array<{ date: string; total: number }>;
+  top_agencies: Array<{
+    name: string;
+    rating: number;
+    successful_placements: number;
+    verified_workers: number;
+  }>;
+}
+
+// Admin API functions
+export const adminApi = {
+  getDashboardStats: (token: string) =>
+    apiRequest<AdminDashboardStats>('/admin/dashboard', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  
+  getUsers: (token: string, params?: { page?: number; per_page?: number; user_type?: string; search?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+    if (params?.user_type) searchParams.append('user_type', params.user_type);
+    if (params?.search) searchParams.append('search', params.search);
+    
+    return apiRequest<{ users: AdminUser[]; pagination: any }>(`/admin/users?${searchParams}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+  
+  getUserDetails: (token: string, userId: string) =>
+    apiRequest<any>(`/admin/users/${userId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  
+  toggleUserStatus: (token: string, userId: string) =>
+    apiRequest<any>(`/admin/users/${userId}/toggle-status`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+  
+  getAgencies: (token: string, params?: { page?: number; per_page?: number; status?: string; search?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
+    
+    return apiRequest<{ agencies: AdminAgency[]; pagination: any }>(`/admin/agencies?${searchParams}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+  
+  verifyAgency: (token: string, agencyId: string, status: string) =>
+    apiRequest<any>(`/admin/agencies/${agencyId}/verify`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status }),
+    }),
+  
+  syncData: (token: string, syncType: string = 'all') =>
+    apiRequest<any>('/admin/sync', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ type: syncType }),
+    }),
+  
+  getAnalytics: (token: string) =>
+    apiRequest<AdminAnalytics>('/admin/analytics', {
+      headers: { Authorization: `Bearer ${token}` },
     }),
 };

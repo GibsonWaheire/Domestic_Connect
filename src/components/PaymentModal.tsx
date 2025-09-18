@@ -143,7 +143,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
       };
 
       // Save to database
-      const response = await fetch('http://localhost:3002/agency_payments', {
+      const response = await fetch('http://localhost:5000/api/payments/purchase', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +167,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
           terms_accepted: true
         };
 
-        await fetch('http://localhost:3002/agency_clients', {
+        await fetch('http://localhost:5000/api/agencies/clients', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

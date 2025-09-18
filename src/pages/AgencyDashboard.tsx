@@ -145,21 +145,21 @@ const AgencyDashboard = () => {
         setIsLoading(true);
         
         // Fetch agency profile
-        const agencyResponse = await fetch(`http://localhost:3002/agency_profiles?profile_id=${user?.id}`);
+        const agencyResponse = await fetch(`http://localhost:5000/agency_profiles?profile_id=${user?.id}`);
         const agencyProfile = await agencyResponse.json();
         const currentAgency = agencyProfile[0] || null;
         
         if (currentAgency) {
           // Fetch agency workers (housegirls who signed up with this agency)
-          const workersResponse = await fetch(`http://localhost:3002/agency_workers?agency_id=${currentAgency.id}`);
+          const workersResponse = await fetch(`http://localhost:5000/agency_workers?agency_id=${currentAgency.id}`);
           const workers = await workersResponse.json();
           
           // Fetch agency clients (clients who signed up with this agency)
-          const clientsResponse = await fetch(`http://localhost:3002/agency_clients?agency_id=${currentAgency.id}`);
+          const clientsResponse = await fetch(`http://localhost:5000/agency_clients?agency_id=${currentAgency.id}`);
           const clients = await clientsResponse.json();
           
           // Fetch agency payments (payments made to this agency)
-          const paymentsResponse = await fetch(`http://localhost:3002/agency_payments?agency_id=${currentAgency.id}`);
+          const paymentsResponse = await fetch(`http://localhost:5000/agency_payments?agency_id=${currentAgency.id}`);
           const payments = await paymentsResponse.json();
           
           setAgencyData(currentAgency);

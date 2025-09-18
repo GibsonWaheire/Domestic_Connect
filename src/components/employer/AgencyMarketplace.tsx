@@ -35,7 +35,7 @@ const AgencyMarketplace = () => {
 
   const fetchAgencies = async () => {
     try {
-      const response = await fetch('http://localhost:3002/agencies');
+      const response = await fetch('http://localhost:5000/agencies');
       if (response.ok) {
         const data = await response.json();
         setAgencies(data);
@@ -162,7 +162,7 @@ const AgencyMarketplace = () => {
         dispute_resolution: null
       };
 
-      const response = await fetch('http://localhost:3002/agency_clients', {
+      const response = await fetch('http://localhost:5000/api/agencies/clients', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

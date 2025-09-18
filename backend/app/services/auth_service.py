@@ -14,22 +14,21 @@ def verify_firebase_token(token):
         return None
 
 def get_or_create_user(firebase_uid, email, user_type=None):
-    """Get existing user or create new one from Firebase data"""
-    user = User.query.filter_by(firebase_uid=firebase_uid).first()
+    """Get existing user or create new one from Firebase data using SQLAlchemy ORM"""
+    # Use SQLAlchemy's class method for cleaner code
+    user = User.find_by_firebase_uid(firebase_uid)
     
     if not user:
-        # Create new user
-        user = User(
-            id=f"user_{firebase_uid}",
-            firebase_uid=firebase_uid,
-            email=email,
-            user_type=user_type or 'employer',  # Default to employer
-            first_name='',
-            last_name=''
-        )
-        from app import db
-        db.session.add(user)
-        db.session.commit()
+        # Create new user using SQLAlchemy class method
+        try:
+            user = User.create_user(
+                firebase_uid=firebase_uid,
+                email=email,
+                user_type=user_type or 'employer'
+            )
+        except Exception as e:
+            current_app.logger.error(f"Failed to create user: {e}")
+            raise
     
     return user
 
@@ -75,7 +74,8 @@ def admin_required(f):
         
         # For now, we'll implement a simple admin check
         # In production, you might want to add an admin field to User model
-        if request.current_user.email not in ['admin@domesticconnect.ke']:
+        admin_emails = ['admin@domesticconnect.ke', 'admin@test.com']
+        if request.current_user.email not in admin_emails:
             return jsonify({'error': 'Admin privileges required'}), 403
         
         return f(*args, **kwargs)

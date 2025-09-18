@@ -11,6 +11,7 @@ import AgencyMarketplace from "./pages/AgencyMarketplace";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import HousegirlDashboard from "./pages/HousegirlDashboard";
 import AgencyDashboard from "./pages/AgencyDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
             <Route path="/agency-dashboard" element={<AgencyDashboard />} />
             <Route path="/dashboard" element={<EmployerDashboard />} />
+            <Route path="/admin-dashboard" element={<AdminDashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
