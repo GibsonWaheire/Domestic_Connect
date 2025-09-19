@@ -31,18 +31,12 @@ export default defineConfig(({ mode }) => {
       },
     },
     define: {
-      __API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:5000'),
+      __API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || ''),
     },
     build: {
       // Bundle optimization
       target: 'esnext',
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: mode === 'production',
-          drop_debugger: mode === 'production',
-        },
-      },
+      minify: 'esbuild', // Use esbuild instead of terser
       rollupOptions: {
         output: {
           manualChunks: {
