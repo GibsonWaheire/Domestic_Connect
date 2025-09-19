@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { API_BASE_URL } from '@/lib/apiConfig';
 import { 
   CreditCard, 
   Shield, 
@@ -83,7 +84,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
 
     try {
       // Real M-Pesa STK Push
-      const stkPushResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/mpesa/stkpush`, {
+      const stkPushResponse = await fetch(`${API_BASE_URL}/api/mpesa/stkpush`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +107,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
       await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Check transaction status
-      const statusResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/mpesa/transaction-status`, {
+      const statusResponse = await fetch(`${API_BASE_URL}/api/mpesa/transaction-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +144,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
       };
 
       // Save to database
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/payments/purchase`, {
+      const response = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +168,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
           terms_accepted: true
         };
 
-        await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies/clients`, {
+        await fetch(`${API_BASE_URL}/api/agencies/clients`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

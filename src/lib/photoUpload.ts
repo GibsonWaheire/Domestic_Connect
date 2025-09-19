@@ -1,4 +1,5 @@
 import { useAuth } from '@/hooks/useAuthEnhanced';
+import { API_BASE_URL } from './apiConfig';
 
 export interface PhotoUploadResponse {
   success: boolean;
@@ -14,7 +15,7 @@ export const uploadPhoto = async (file: File, userId: string): Promise<PhotoUplo
     formData.append('userId', userId);
 
     // Upload to our Flask backend endpoint
-    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/photos/upload`, {
+    const response = await fetch(`${API_BASE_URL}/api/photos/upload`, {
       method: 'POST',
       body: formData,
     });
