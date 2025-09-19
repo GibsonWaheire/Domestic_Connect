@@ -17,6 +17,7 @@ class User(db.Model):
     phone_number = db.Column(db.String(20))
     is_active = db.Column(db.Boolean, default=True)
     is_admin = db.Column(db.Boolean, default=False)
+    is_firebase_user = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -60,11 +61,15 @@ class User(db.Model):
         """Convert user to dictionary for JSON serialization"""
         return {
             'id': self.id,
+            'firebase_uid': self.firebase_uid,
             'email': self.email,
             'user_type': self.user_type,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'phone_number': self.phone_number,
+            'is_active': self.is_active,
+            'is_admin': self.is_admin,
+            'is_firebase_user': self.is_firebase_user,
             'created_at': self.created_at.isoformat(),
             'updated_at': self.updated_at.isoformat()
         }

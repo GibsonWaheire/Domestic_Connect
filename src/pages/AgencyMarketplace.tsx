@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Filter, Building2, Star, Shield, Users, MapPin } from 'lucide-react';
 import AgencyCard, { Agency } from '@/components/AgencyCard';
 import AgencyHiringModal from '@/components/AgencyHiringModal';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNavigate } from 'react-router-dom';
 
 const AgencyMarketplace = () => {

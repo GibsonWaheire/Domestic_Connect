@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { 
   Users, Shield, LogOut
 } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 
 interface SettingsProps {
