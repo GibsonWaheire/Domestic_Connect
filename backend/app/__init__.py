@@ -25,12 +25,13 @@ def create_app(config_name=None):
     db.init_app(app)
     migrate.init_app(app, db)
     
-    # Configure CORS with explicit origins
-    CORS(app, 
-         origins=['http://localhost:5173', 'http://127.0.0.1:5173', 'http://localhost:3000'],
-         supports_credentials=True,
-         allow_headers=['Content-Type', 'Authorization'],
-         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'])
+    # Configure CORS (simplified for proxy setup)
+    CORS(app, resources={
+        r"/api/*": {
+            "origins": ["http://localhost:5173", "http://127.0.0.1:5173"],
+            "supports_credentials": True
+        }
+    })
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)

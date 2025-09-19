@@ -50,7 +50,8 @@ export const useAuth = () => {
 };
 
 // API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
+// Use relative URLs for development (proxy handles forwarding)
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -59,7 +60,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
       'Content-Type': 'application/json',
       ...options.headers,
     },
-    credentials: 'include', // Include cookies for session management
+    // Remove credentials for proxy compatibility
     ...options,
   });
 
