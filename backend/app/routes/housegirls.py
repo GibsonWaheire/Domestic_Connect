@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
 from app.models import HousegirlProfile, Profile, User
 from app import db
+from datetime import datetime
 
 housegirls_bp = Blueprint('housegirls', __name__)
 
@@ -114,4 +115,127 @@ def get_housegirl(housegirl_id):
         }), 200
         
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@housegirls_bp.route('/', methods=['POST'])
+def create_housegirl():
+    """Create new housegirl profile"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['profile_id', 'age', 'location', 'education', 'experience', 'expected_salary']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'error': f'{field} is required'}), 400
+        
+        # Create housegirl profile
+        housegirl = HousegirlProfile(
+            profile_id=data['profile_id'],
+            age=data['age'],
+            bio=data.get('bio', ''),
+            current_location=data.get('current_location', data['location']),
+            location=data['location'],
+            education=data['education'],
+            experience=data['experience'],
+            expected_salary=data['expected_salary'],
+            accommodation_type=data.get('accommodation_type', 'live_in'),
+            tribe=data.get('tribe', ''),
+            is_available=data.get('is_available', True),
+            profile_photo_url=data.get('profile_photo_url')
+        )
+        
+        db.session.add(housegirl)
+        db.session.commit()
+        
+        return jsonify({
+            'id': housegirl.id,
+            'profile_id': housegirl.profile_id,
+            'age': housegirl.age,
+            'bio': housegirl.bio,
+            'current_location': housegirl.current_location,
+            'location': housegirl.location,
+            'education': housegirl.education,
+            'experience': housegirl.experience,
+            'expected_salary': housegirl.expected_salary,
+            'accommodation_type': housegirl.accommodation_type,
+            'tribe': housegirl.tribe,
+            'is_available': housegirl.is_available,
+            'profile_photo_url': housegirl.profile_photo_url,
+            'created_at': housegirl.created_at.isoformat(),
+            'updated_at': housegirl.updated_at.isoformat()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@housegirls_bp.route('/<housegirl_id>', methods=['PUT'])
+def update_housegirl(housegirl_id):
+    """Update housegirl profile"""
+    try:
+        housegirl = HousegirlProfile.query.get_or_404(housegirl_id)
+        data = request.get_json()
+        
+        # Update fields
+        if 'age' in data:
+            housegirl.age = data['age']
+        if 'bio' in data:
+            housegirl.bio = data['bio']
+        if 'current_location' in data:
+            housegirl.current_location = data['current_location']
+        if 'location' in data:
+            housegirl.location = data['location']
+        if 'education' in data:
+            housegirl.education = data['education']
+        if 'experience' in data:
+            housegirl.experience = data['experience']
+        if 'expected_salary' in data:
+            housegirl.expected_salary = data['expected_salary']
+        if 'accommodation_type' in data:
+            housegirl.accommodation_type = data['accommodation_type']
+        if 'tribe' in data:
+            housegirl.tribe = data['tribe']
+        if 'is_available' in data:
+            housegirl.is_available = data['is_available']
+        if 'profile_photo_url' in data:
+            housegirl.profile_photo_url = data['profile_photo_url']
+        
+        housegirl.updated_at = datetime.utcnow()
+        db.session.commit()
+        
+        return jsonify({
+            'id': housegirl.id,
+            'profile_id': housegirl.profile_id,
+            'age': housegirl.age,
+            'bio': housegirl.bio,
+            'current_location': housegirl.current_location,
+            'location': housegirl.location,
+            'education': housegirl.education,
+            'experience': housegirl.experience,
+            'expected_salary': housegirl.expected_salary,
+            'accommodation_type': housegirl.accommodation_type,
+            'tribe': housegirl.tribe,
+            'is_available': housegirl.is_available,
+            'profile_photo_url': housegirl.profile_photo_url,
+            'created_at': housegirl.created_at.isoformat(),
+            'updated_at': housegirl.updated_at.isoformat()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@housegirls_bp.route('/<housegirl_id>', methods=['DELETE'])
+def delete_housegirl(housegirl_id):
+    """Delete housegirl profile"""
+    try:
+        housegirl = HousegirlProfile.query.get_or_404(housegirl_id)
+        db.session.delete(housegirl)
+        db.session.commit()
+        
+        return jsonify({'message': 'Housegirl profile deleted successfully'}), 200
+        
+    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500

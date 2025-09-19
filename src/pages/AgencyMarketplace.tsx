@@ -34,7 +34,7 @@ const AgencyMarketplace = () => {
 
   const fetchAgencies = async () => {
     try {
-      const response = await fetch('http://localhost:5000/agencies');
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agencies`);
       if (response.ok) {
         const data = await response.json();
         setAgencies(data);
@@ -161,7 +161,7 @@ const AgencyMarketplace = () => {
         dispute_resolution: null
       };
 
-      const response = await fetch('http://localhost:5000/api/agencies/clients', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

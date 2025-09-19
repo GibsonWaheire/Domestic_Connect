@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 export interface User {
   id: string;
@@ -110,10 +110,10 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 
 // Profile API functions
 export const profilesApi = {
-  getAll: () => apiRequest<Profile[]>('/profiles'),
-  getById: (id: string) => apiRequest<Profile>(`/profiles/${id}`),
+  getAll: () => apiRequest<Profile[]>('/api/profiles'),
+  getById: (id: string) => apiRequest<Profile>(`/api/profiles/${id}`),
   create: (profile: Omit<Profile, 'id' | 'created_at' | 'updated_at'>) => 
-    apiRequest<Profile>('/profiles', {
+    apiRequest<Profile>('/api/profiles', {
       method: 'POST',
       body: JSON.stringify({
         ...profile,
@@ -122,24 +122,24 @@ export const profilesApi = {
       }),
     }),
   update: (id: string, updates: Partial<Profile>) =>
-    apiRequest<Profile>(`/profiles/${id}`, {
+    apiRequest<Profile>(`/api/profiles/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
       }),
     }),
-  delete: (id: string) => apiRequest(`/profiles/${id}`, { method: 'DELETE' }),
+  delete: (id: string) => apiRequest(`/api/profiles/${id}`, { method: 'DELETE' }),
 };
 
 // Employer Profile API functions
 export const employerProfilesApi = {
-  getAll: () => apiRequest<EmployerProfile[]>('/employer_profiles'),
-  getById: (id: string) => apiRequest<EmployerProfile>(`/employer_profiles/${id}`),
+  getAll: () => apiRequest<EmployerProfile[]>('/api/employers'),
+  getById: (id: string) => apiRequest<EmployerProfile>(`/api/employers/${id}`),
   getByProfileId: (profileId: string) => 
-    apiRequest<EmployerProfile[]>(`/employer_profiles?profile_id=${profileId}`),
+    apiRequest<EmployerProfile[]>(`/api/employers?profile_id=${profileId}`),
   create: (profile: Omit<EmployerProfile, 'id' | 'created_at' | 'updated_at'>) =>
-    apiRequest<EmployerProfile>('/employer_profiles', {
+    apiRequest<EmployerProfile>('/api/employers', {
       method: 'POST',
       body: JSON.stringify({
         ...profile,
@@ -148,24 +148,24 @@ export const employerProfilesApi = {
       }),
     }),
   update: (id: string, updates: Partial<EmployerProfile>) =>
-    apiRequest<EmployerProfile>(`/employer_profiles/${id}`, {
+    apiRequest<EmployerProfile>(`/api/employers/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
       }),
     }),
-  delete: (id: string) => apiRequest(`/employer_profiles/${id}`, { method: 'DELETE' }),
+  delete: (id: string) => apiRequest(`/api/employers/${id}`, { method: 'DELETE' }),
 };
 
 // Housegirl Profile API functions
 export const housegirlProfilesApi = {
-  getAll: () => apiRequest<HousegirlProfile[]>('/housegirl_profiles'),
-  getById: (id: string) => apiRequest<HousegirlProfile>(`/housegirl_profiles/${id}`),
+  getAll: () => apiRequest<HousegirlProfile[]>('/api/housegirls'),
+  getById: (id: string) => apiRequest<HousegirlProfile>(`/api/housegirls/${id}`),
   getByProfileId: (profileId: string) =>
-    apiRequest<HousegirlProfile[]>(`/housegirl_profiles?profile_id=${profileId}`),
+    apiRequest<HousegirlProfile[]>(`/api/housegirls?profile_id=${profileId}`),
   create: (profile: Omit<HousegirlProfile, 'id' | 'created_at' | 'updated_at'>) =>
-    apiRequest<HousegirlProfile>('/housegirl_profiles', {
+    apiRequest<HousegirlProfile>('/api/housegirls', {
       method: 'POST',
       body: JSON.stringify({
         ...profile,
@@ -174,24 +174,24 @@ export const housegirlProfilesApi = {
       }),
     }),
   update: (id: string, updates: Partial<HousegirlProfile>) =>
-    apiRequest<HousegirlProfile>(`/housegirl_profiles/${id}`, {
+    apiRequest<HousegirlProfile>(`/api/housegirls/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
       }),
     }),
-  delete: (id: string) => apiRequest(`/housegirl_profiles/${id}`, { method: 'DELETE' }),
+  delete: (id: string) => apiRequest(`/api/housegirls/${id}`, { method: 'DELETE' }),
 };
 
 // Agency Profile API functions
 export const agencyProfilesApi = {
-  getAll: () => apiRequest<AgencyProfile[]>('/agency_profiles'),
-  getById: (id: string) => apiRequest<AgencyProfile>(`/agency_profiles/${id}`),
+  getAll: () => apiRequest<AgencyProfile[]>('/api/agencies'),
+  getById: (id: string) => apiRequest<AgencyProfile>(`/api/agencies/${id}`),
   getByProfileId: (profileId: string) =>
-    apiRequest<AgencyProfile[]>(`/agency_profiles?profile_id=${profileId}`),
+    apiRequest<AgencyProfile[]>(`/api/agencies?profile_id=${profileId}`),
   create: (profile: Omit<AgencyProfile, 'id' | 'created_at' | 'updated_at'>) =>
-    apiRequest<AgencyProfile>('/agency_profiles', {
+    apiRequest<AgencyProfile>('/api/agencies', {
       method: 'POST',
       body: JSON.stringify({
         ...profile,
@@ -200,36 +200,36 @@ export const agencyProfilesApi = {
       }),
     }),
   update: (id: string, updates: Partial<AgencyProfile>) =>
-    apiRequest<AgencyProfile>(`/agency_profiles/${id}`, {
+    apiRequest<AgencyProfile>(`/api/agencies/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
       }),
     }),
-  delete: (id: string) => apiRequest(`/agency_profiles/${id}`, { method: 'DELETE' }),
+  delete: (id: string) => apiRequest(`/api/agencies/${id}`, { method: 'DELETE' }),
 };
 
 // Payment Packages API functions
 export const paymentPackagesApi = {
-  getAll: () => apiRequest<PaymentPackage[]>('/payment_packages'),
-  getById: (id: string) => apiRequest<PaymentPackage>(`/payment_packages/${id}`),
-  getActive: () => apiRequest<PaymentPackage[]>('/payment_packages?is_active=true'),
+  getAll: () => apiRequest<PaymentPackage[]>('/api/payments/packages'),
+  getById: (id: string) => apiRequest<PaymentPackage>(`/api/payments/packages/${id}`),
+  getActive: () => apiRequest<PaymentPackage[]>('/api/payments/packages?is_active=true'),
 };
 
 // User Purchases API functions
 export const userPurchasesApi = {
-  getAll: () => apiRequest<UserPurchase[]>('/user_purchases'),
-  getById: (id: string) => apiRequest<UserPurchase>(`/user_purchases/${id}`),
+  getAll: () => apiRequest<UserPurchase[]>('/api/payments/purchases'),
+  getById: (id: string) => apiRequest<UserPurchase>(`/api/payments/purchases/${id}`),
   getByUserId: (userId: string) =>
-    apiRequest<UserPurchase[]>(`/user_purchases?user_id=${userId}`),
+    apiRequest<UserPurchase[]>(`/api/payments/purchases?user_id=${userId}`),
   create: (purchase: Omit<UserPurchase, 'id'>) =>
-    apiRequest<UserPurchase>('/user_purchases', {
+    apiRequest<UserPurchase>('/api/payments/purchases', {
       method: 'POST',
       body: JSON.stringify(purchase),
     }),
   update: (id: string, updates: Partial<UserPurchase>) =>
-    apiRequest<UserPurchase>(`/user_purchases/${id}`, {
+    apiRequest<UserPurchase>(`/api/payments/purchases/${id}`, {
       method: 'PATCH',
       body: JSON.stringify(updates),
     }),
@@ -237,12 +237,12 @@ export const userPurchasesApi = {
 
 // Contact Access API functions
 export const contactAccessApi = {
-  getAll: () => apiRequest<ContactAccess[]>('/contact_access'),
-  getById: (id: string) => apiRequest<ContactAccess>(`/contact_access/${id}`),
+  getAll: () => apiRequest<ContactAccess[]>('/api/payments/contact-access'),
+  getById: (id: string) => apiRequest<ContactAccess>(`/api/payments/contact-access/${id}`),
   getByPurchaserId: (purchaserId: string) =>
-    apiRequest<ContactAccess[]>(`/contact_access?purchaser_id=${purchaserId}`),
+    apiRequest<ContactAccess[]>(`/api/payments/contact-access?purchaser_id=${purchaserId}`),
   create: (access: Omit<ContactAccess, 'id'>) =>
-    apiRequest<ContactAccess>('/contact_access', {
+    apiRequest<ContactAccess>('/api/payments/contact-access', {
       method: 'POST',
       body: JSON.stringify({
         ...access,
@@ -337,7 +337,7 @@ export interface AdminAnalytics {
 // Admin API functions
 export const adminApi = {
   getDashboardStats: (token: string) =>
-    apiRequest<AdminDashboardStats>('/admin/dashboard', {
+    apiRequest<AdminDashboardStats>('/api/admin/dashboard', {
       headers: { Authorization: `Bearer ${token}` },
     }),
   
@@ -348,18 +348,18 @@ export const adminApi = {
     if (params?.user_type) searchParams.append('user_type', params.user_type);
     if (params?.search) searchParams.append('search', params.search);
     
-    return apiRequest<{ users: AdminUser[]; pagination: any }>(`/admin/users?${searchParams}`, {
+    return apiRequest<{ users: AdminUser[]; pagination: any }>(`/api/admin/users?${searchParams}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
   
   getUserDetails: (token: string, userId: string) =>
-    apiRequest<any>(`/admin/users/${userId}`, {
+    apiRequest<AdminUser>(`/api/admin/users/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     }),
   
   toggleUserStatus: (token: string, userId: string) =>
-    apiRequest<any>(`/admin/users/${userId}/toggle-status`, {
+    apiRequest<{ success: boolean; message: string }>(`/api/admin/users/${userId}/toggle-status`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
     }),
@@ -371,27 +371,27 @@ export const adminApi = {
     if (params?.status) searchParams.append('status', params.status);
     if (params?.search) searchParams.append('search', params.search);
     
-    return apiRequest<{ agencies: AdminAgency[]; pagination: any }>(`/admin/agencies?${searchParams}`, {
+    return apiRequest<{ agencies: AdminAgency[]; pagination: any }>(`/api/admin/agencies?${searchParams}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
   
   verifyAgency: (token: string, agencyId: string, status: string) =>
-    apiRequest<any>(`/admin/agencies/${agencyId}/verify`, {
+    apiRequest<{ success: boolean; message: string }>(`/api/admin/agencies/${agencyId}/verify`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ status }),
     }),
   
   syncData: (token: string, syncType: string = 'all') =>
-    apiRequest<any>('/admin/sync', {
+    apiRequest<{ success: boolean; message: string }>('/api/admin/sync', {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
       body: JSON.stringify({ type: syncType }),
     }),
   
   getAnalytics: (token: string) =>
-    apiRequest<AdminAnalytics>('/admin/analytics', {
+    apiRequest<AdminAnalytics>('/api/admin/analytics', {
       headers: { Authorization: `Bearer ${token}` },
     }),
 };

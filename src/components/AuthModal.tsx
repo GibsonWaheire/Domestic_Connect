@@ -52,7 +52,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   useEffect(() => {
     const fetchAgencies = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/agencies');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies`);
         const data = await response.json();
         setAgencies(data);
       } catch (error) {
@@ -174,21 +174,25 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
 
     try {
       if (isLogin) {
-        const { error } = await signIn(email, password);
-        if (error) {
+        const result = await signIn(email, password);
+        if (result.error) {
           toast({
             title: "Sign In Error",
-            description: error.message || "Failed to sign in. Please try again.",
+            description: result.error || "Failed to sign in. Please try again.",
             variant: "destructive"
           });
         } else {
           onClose();
-          // Get the signed-in user and redirect based on their type
-          const currentUser = JSON.parse(localStorage.getItem('domestic_connect_user') || '{}');
-          if (currentUser.user_type === 'agency') {
+          // Use the user data returned from signIn
+          const currentUser = result.user;
+          if (currentUser?.user_type === 'agency') {
             window.location.href = '/agency-dashboard';
-          } else if (currentUser.user_type === 'housegirl') {
+          } else if (currentUser?.user_type === 'housegirl') {
             window.location.href = '/housegirl-dashboard';
+          } else if (currentUser?.user_type === 'employer') {
+            window.location.href = '/dashboard';
+          } else if (currentUser?.is_admin) {
+            window.location.href = '/admin-dashboard';
           } else {
             window.location.href = '/dashboard';
           }

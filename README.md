@@ -157,3 +157,135 @@ Domestic Connect is Kenya's premier platform for connecting families with reliab
 ---
 
 **Building a better future for domestic work in Kenya** 🇰🇪
+
+## 🛠️ **Development Setup**
+
+### **Prerequisites**
+- Node.js 18+ and npm
+- Python 3.9+ and pip
+- Git
+
+### **Quick Start**
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd Domestic_Connect
+   ```
+
+2. **Backend Setup**
+   ```bash
+   cd backend
+   pip install -r requirements.txt
+   python cli.py init
+   python run.py
+   ```
+
+3. **Frontend Setup**
+   ```bash
+   npm install
+   npm run dev
+   ```
+
+4. **Access the application**
+   - Frontend: http://localhost:5173
+   - Backend API: http://localhost:5000
+
+### **Environment Configuration**
+
+Create `.env` files in both `backend/` and root directories:
+
+**Backend (.env)**
+```env
+FLASK_ENV=development
+SECRET_KEY=your-secret-key
+DATABASE_URL=sqlite:///domestic_connect_dev.db
+UPLOAD_FOLDER=uploads
+CORS_ORIGINS=http://localhost:5173
+```
+
+**Frontend (.env)**
+```env
+VITE_API_BASE_URL=http://localhost:5000
+VITE_APP_NAME=Domestic Connect
+```
+
+### **Project Structure**
+
+```
+Domestic_Connect/
+├── backend/                 # Flask API backend
+│   ├── app/                # Application code
+│   │   ├── models/         # Database models
+│   │   ├── routes/         # API endpoints
+│   │   ├── services/       # Business logic
+│   │   └── utils/          # Utilities
+│   ├── migrations/         # Database migrations
+│   ├── tests/              # Backend tests
+│   ├── uploads/            # File uploads
+│   ├── requirements.txt    # Python dependencies
+│   ├── config.py          # Configuration
+│   ├── cli.py             # CLI commands
+│   └── run.py             # Application entry point
+├── src/                    # React frontend
+│   ├── components/         # React components
+│   ├── pages/             # Page components
+│   ├── hooks/             # Custom hooks
+│   ├── lib/               # Utilities and API
+│   ├── types/             # TypeScript types
+│   └── utils/             # Helper functions
+├── public/                 # Static assets
+├── docs/                  # Documentation
+├── scripts/               # Build and deployment scripts
+├── package.json           # Frontend dependencies
+├── vite.config.ts         # Vite configuration
+└── tailwind.config.ts     # Tailwind CSS configuration
+```
+
+### **Technology Stack**
+
+**Backend**
+- Flask (Python web framework)
+- SQLAlchemy (ORM)
+- Firebase Authentication
+- SQLite/PostgreSQL (Database)
+- Marshmallow (Serialization)
+
+**Frontend**
+- React 18 (UI framework)
+- TypeScript (Type safety)
+- Vite (Build tool)
+- Tailwind CSS (Styling)
+- React Router (Routing)
+- TanStack Query (Data fetching)
+
+**DevOps**
+- Git (Version control)
+- ESLint (Code linting)
+- Prettier (Code formatting)
+- Jest (Testing)
+
+### **API Documentation**
+
+The backend provides a RESTful API with the following endpoints:
+
+- **Authentication**: `/api/auth/*`
+- **Profiles**: `/api/profiles/*`
+- **Employers**: `/api/employers/*`
+- **Workers**: `/api/housegirls/*`
+- **Agencies**: `/api/agencies/*`
+- **Payments**: `/api/payments/*`
+- **Photos**: `/api/photos/*`
+- **Admin**: `/api/admin/*`
+
+### **Contributing**
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+### **License**
+
+This project is licensed under the MIT License.

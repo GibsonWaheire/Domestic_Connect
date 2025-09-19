@@ -131,6 +131,10 @@ const LandingPage = () => {
       navigate('/agency-dashboard');
     } else if (user.user_type === 'housegirl') {
       navigate('/housegirl-dashboard');
+    } else if (user.user_type === 'employer') {
+      navigate('/dashboard');
+    } else if (user.is_admin) {
+      navigate('/admin-dashboard');
     } else {
       navigate('/dashboard');
     }

@@ -45,7 +45,7 @@ const AgencyRegistrationModal = ({ isOpen, onClose }: AgencyRegistrationModalPro
   useEffect(() => {
     const fetchAgencies = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/agencies');
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies`);
         const data = await response.json();
         setAgencies(data);
       } catch (error) {

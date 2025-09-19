@@ -83,7 +83,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
 
     try {
       // Real M-Pesa STK Push
-      const stkPushResponse = await fetch('http://localhost:3001/api/mpesa/stkpush', {
+      const stkPushResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/mpesa/stkpush`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -106,7 +106,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
       await new Promise(resolve => setTimeout(resolve, 5000));
 
       // Check transaction status
-      const statusResponse = await fetch('http://localhost:3001/api/mpesa/transaction-status', {
+      const statusResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/mpesa/transaction-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +143,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
       };
 
       // Save to database
-      const response = await fetch('http://localhost:5000/api/payments/purchase', {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/payments/purchase`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -167,7 +167,7 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
           terms_accepted: true
         };
 
-        await fetch('http://localhost:5000/api/agencies/clients', {
+        await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies/clients`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

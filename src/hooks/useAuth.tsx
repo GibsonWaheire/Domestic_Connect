@@ -26,8 +26,8 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: any) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
@@ -43,7 +43,7 @@ export const useAuth = () => {
 };
 
 // API base URL
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -95,14 +95,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     email: string, 
     password: string, 
     userType: 'employer' | 'housegirl' | 'agency', 
-    additionalData: Record<string, any>
+    additionalData: Record<string, unknown>
   ) => {
     try {
       setLoading(true);
 
       // Validate password strength
       if (password.length < 8) {
-        return { error: { message: 'Password must be at least 8 characters long' } };
+        return { error: 'Password must be at least 8 characters long' };
       }
 
       // Prepare signup data
@@ -130,16 +130,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       return { error: null };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Signup error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create account. Please try again.';
       
       toast({
         title: "Signup Failed",
-        description: error.message || "Failed to create account. Please try again.",
+        description: errorMessage,
         variant: "destructive"
       });
 
-      return { error };
+      return { error: errorMessage };
     } finally {
       setLoading(false);
     }
@@ -163,17 +165,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Welcome back!",
       });
 
-      return { error: null };
-    } catch (error: any) {
+      return { error: null, user: response.user };
+    } catch (error: unknown) {
       console.error('Signin error:', error);
+      
+      const errorMessage = error instanceof Error ? error.message : 'Invalid email or password.';
       
       toast({
         title: "Sign In Failed",
-        description: error.message || "Invalid email or password.",
+        description: errorMessage,
         variant: "destructive"
       });
 
-      return { error };
+      return { error: errorMessage };
     } finally {
       setLoading(false);
     }

@@ -1,62 +1,65 @@
 from functools import wraps
-from flask import request, jsonify, current_app
-import firebase_admin
-from firebase_admin import auth as firebase_auth
-from app.models import User
+from flask import request, jsonify, current_app, session
+import bcrypt
+from app.models import User, db
 
-def verify_firebase_token(token):
-    """Verify Firebase ID token and return user info"""
-    try:
-        decoded_token = firebase_auth.verify_id_token(token)
-        return decoded_token
-    except Exception as e:
-        current_app.logger.error(f"Token verification failed: {e}")
-        return None
+def hash_password(password):
+    """Hash a password using bcrypt"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
-def get_or_create_user(firebase_uid, email, user_type=None):
-    """Get existing user or create new one from Firebase data using SQLAlchemy ORM"""
-    # Use SQLAlchemy's class method for cleaner code
-    user = User.find_by_firebase_uid(firebase_uid)
+def verify_password(password, hashed):
+    """Verify a password against its hash"""
+    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+
+def get_or_create_user(email, password=None, user_type='employer', **kwargs):
+    """Get existing user or create new one"""
+    user = User.query.filter_by(email=email).first()
     
-    if not user:
-        # Create new user using SQLAlchemy class method
+    if not user and password:
+        # Create new user
         try:
-            user = User.create_user(
-                firebase_uid=firebase_uid,
+            hashed_password = hash_password(password)
+            user = User(
                 email=email,
-                user_type=user_type or 'employer'
+                password_hash=hashed_password,
+                user_type=user_type,
+                first_name=kwargs.get('first_name', ''),
+                last_name=kwargs.get('last_name', ''),
+                phone_number=kwargs.get('phone_number', ''),
+                is_active=True
             )
+            db.session.add(user)
+            db.session.commit()
         except Exception as e:
             current_app.logger.error(f"Failed to create user: {e}")
+            db.session.rollback()
             raise
     
     return user
 
-def firebase_auth_required(f):
-    """Decorator to require Firebase authentication"""
+def authenticate_user(email, password):
+    """Authenticate user with email and password"""
+    user = User.query.filter_by(email=email).first()
+    
+    if user and user.password_hash and verify_password(password, user.password_hash):
+        return user
+    
+    return None
+
+def auth_required(f):
+    """Decorator to require authentication using Flask sessions"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        auth_header = request.headers.get('Authorization')
+        user_id = session.get('user_id')
         
-        if not auth_header:
-            return jsonify({'error': 'No authorization header'}), 401
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
         
-        try:
-            # Extract token from "Bearer <token>"
-            token = auth_header.split(' ')[1]
-        except IndexError:
-            return jsonify({'error': 'Invalid authorization header format'}), 401
-        
-        # Verify Firebase token
-        decoded_token = verify_firebase_token(token)
-        if not decoded_token:
-            return jsonify({'error': 'Invalid token'}), 401
-        
-        # Get or create user
-        firebase_uid = decoded_token['uid']
-        email = decoded_token.get('email', '')
-        
-        user = get_or_create_user(firebase_uid, email)
+        # Get user
+        user = User.query.get(user_id)
+        if not user or not user.is_active:
+            session.pop('user_id', None)
+            return jsonify({'error': 'User not found or inactive'}), 401
         
         # Add user to request context
         request.current_user = user
@@ -72,12 +75,19 @@ def admin_required(f):
         if not hasattr(request, 'current_user'):
             return jsonify({'error': 'Authentication required'}), 401
         
-        # For now, we'll implement a simple admin check
-        # In production, you might want to add an admin field to User model
-        admin_emails = ['admin@domesticconnect.ke', 'admin@test.com']
-        if request.current_user.email not in admin_emails:
+        # Check if user is admin
+        if not request.current_user.is_admin:
             return jsonify({'error': 'Admin privileges required'}), 403
         
         return f(*args, **kwargs)
     
     return decorated_function
+
+# Legacy Firebase compatibility (for gradual migration)
+def firebase_auth_required(f):
+    """Legacy decorator - redirects to local auth"""
+    return auth_required(f)
+
+def verify_firebase_token(token):
+    """Legacy function - returns None for now"""
+    return None
