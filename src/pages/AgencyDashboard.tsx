@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { agenciesApi, housegirlProfilesApi, employerProfilesApi, crossEntityApi, DashboardData } from '@/lib/api';
+import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { 
   Building2, 
   Users, 
@@ -138,57 +140,50 @@ const AgencyDashboard = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
-  // Fetch agency data
-  useEffect(() => {
-    const fetchAgencyData = async () => {
-      try {
-        setIsLoading(true);
-        
-        // Fetch agency profile
-        const agencyResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agency_profiles?profile_id=${user?.id}`);
-        const agencyProfile = await agencyResponse.json();
-        const currentAgency = agencyProfile[0] || null;
-        
-        if (currentAgency) {
-          // Fetch agency workers (housegirls who signed up with this agency)
-          const workersResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agency_workers?agency_id=${currentAgency.id}`);
-          const workers = await workersResponse.json();
-          
-          // Fetch agency clients (clients who signed up with this agency)
-          const clientsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agency_clients?agency_id=${currentAgency.id}`);
-          const clients = await clientsResponse.json();
-          
-          // Fetch agency payments (payments made to this agency)
-          const paymentsResponse = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agency_payments?agency_id=${currentAgency.id}`);
-          const payments = await paymentsResponse.json();
-          
-          setAgencyData(currentAgency);
-          setAgencyWorkers(workers);
-          setAgencyClients(clients);
-          setAgencyPayments(payments);
-        } else {
-          // If no agency profile found, set empty data
-          setAgencyData(null);
-          setAgencyWorkers([]);
-          setAgencyClients([]);
-          setAgencyPayments([]);
-        }
-      } catch (error) {
-        console.error('Error fetching agency data:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load agency data. Please refresh the page.",
-          variant: "destructive",
-        });
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  // Use real-time data hook
+  const { 
+    dashboardData, 
+    loading: dataLoading, 
+    error: dataError, 
+    lastUpdated, 
+    refreshData 
+  } = useRealTimeData({ 
+    refreshInterval: 30000, // 30 seconds
+    enabled: !!user 
+  });
 
-    if (user) {
-      fetchAgencyData();
+  // Transform dashboard data when it changes
+  useEffect(() => {
+    if (dashboardData) {
+      // Set agency-specific data
+      if (dashboardData.available_data.clients) {
+        setAgencyClients(dashboardData.available_data.clients);
+      }
+      if (dashboardData.available_data.workers) {
+        setAgencyWorkers(dashboardData.available_data.workers);
+      }
+      
+      // Set agency data from user profile
+      setAgencyData({
+        name: `${dashboardData.user.first_name} ${dashboardData.user.last_name}`,
+        email: dashboardData.user.email,
+        stats: dashboardData.stats
+      });
+      
+      setIsLoading(false);
     }
-  }, [user]);
+  }, [dashboardData]);
+
+  // Show error if data fetching fails
+  useEffect(() => {
+    if (dataError) {
+      toast({
+        title: "Data Sync Error",
+        description: "Failed to sync latest data. Some information may be outdated.",
+        variant: "destructive",
+      });
+    }
+  }, [dataError]);
   const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   useEffect(() => {
@@ -446,7 +441,7 @@ const AgencyDashboard = () => {
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              {isLoading ? (
+              {dataLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                   <span className="ml-2 text-gray-600">Loading agency data...</span>

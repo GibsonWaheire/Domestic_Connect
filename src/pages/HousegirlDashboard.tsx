@@ -39,6 +39,8 @@ import {
 } from 'lucide-react';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
+import { jobsApi, JobPosting, crossEntityApi, DashboardData } from '@/lib/api';
+import { useRealTimeData } from '@/hooks/useRealTimeData';
 
 interface JobOpportunity {
   id: string;
@@ -85,55 +87,49 @@ const HousegirlDashboard = () => {
     languages: ''
   });
 
-  // Enhanced mock data with match scores
+  // State for real dashboard data
+  const [jobOpportunities, setJobOpportunities] = useState<JobOpportunity[]>([]);
 
-  // Enhanced mock data with match scores
-  const [jobOpportunities] = useState<JobOpportunity[]>([
-    {
-      id: '1',
-      title: 'Live-in House Help Needed',
-      location: 'Westlands, Nairobi',
-      salary: 'KSh 15,000 - 20,000',
-      postedDate: '2 hours ago',
-      employer: 'Family of 4',
-      description: 'Looking for a reliable house help for cooking, cleaning, and basic childcare.',
-      requirements: ['Cooking skills', 'Cleaning experience', 'Basic English', 'Live-in preferred'],
-      matchScore: 95
-    },
-    {
-      id: '2',
-      title: 'Part-time Housekeeper',
-      location: 'Kilimani, Nairobi',
-      salary: 'KSh 8,000 - 12,000',
-      postedDate: '1 day ago',
-      employer: 'Single Professional',
-      description: 'Need help with cleaning and laundry 3 times a week.',
-      requirements: ['Cleaning experience', 'Reliable', 'Live-out', 'Flexible schedule'],
-      matchScore: 87
-    },
-    {
-      id: '3',
-      title: 'Full-time Nanny & House Help',
-      location: 'Lavington, Nairobi',
-      salary: 'KSh 18,000 - 25,000',
-      postedDate: '3 days ago',
-      employer: 'Family with 2 children',
-      description: 'Experienced nanny needed for childcare and light housekeeping.',
-      requirements: ['Childcare experience', 'First aid knowledge', 'Patient with children', 'Live-in available'],
-      matchScore: 92
-    },
-    {
-      id: '4',
-      title: 'Weekend House Help',
-      location: 'Karen, Nairobi',
-      salary: 'KSh 6,000 - 8,000',
-      postedDate: '5 days ago',
-      employer: 'Busy Family',
-      description: 'Weekend assistance with cleaning and meal preparation.',
-      requirements: ['Cooking skills', 'Cleaning experience', 'Weekend availability'],
-      matchScore: 78
+  // Use real-time data hook
+  const { 
+    dashboardData, 
+    loading: dataLoading, 
+    error: dataError, 
+    lastUpdated, 
+    refreshData 
+  } = useRealTimeData({ 
+    refreshInterval: 30000, // 30 seconds
+    enabled: !!user 
+  });
+
+  // Transform dashboard data when it changes
+  useEffect(() => {
+    if (dashboardData?.available_data.job_opportunities) {
+      const transformedJobs: JobOpportunity[] = dashboardData.available_data.job_opportunities.map(job => ({
+        id: job.id,
+        title: job.title,
+        location: job.location,
+        salary: `KSh ${job.salary_min?.toLocaleString() || '0'} - ${job.salary_max?.toLocaleString() || '0'}`,
+        postedDate: new Date(job.created_at).toLocaleDateString(),
+        employer: job.employer?.name || 'Unknown Employer',
+        description: job.description,
+        requirements: job.skills_required || [],
+        matchScore: Math.floor(Math.random() * 40) + 60 // Random match score for now
+      }));
+      setJobOpportunities(transformedJobs);
     }
-  ]);
+  }, [dashboardData]);
+
+  // Show error if data fetching fails
+  useEffect(() => {
+    if (dataError) {
+      toast({
+        title: "Data Sync Error",
+        description: "Failed to sync latest data. Some information may be outdated.",
+        variant: "destructive",
+      });
+    }
+  }, [dataError]);
 
   useEffect(() => {
     if (!user || user.user_type !== 'housegirl') {
@@ -313,8 +309,23 @@ const HousegirlDashboard = () => {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {jobOpportunities.map((job) => (
+                {dataLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="text-center">
+                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <p className="text-gray-600">Loading job opportunities...</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {jobOpportunities.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Briefcase className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                        <p className="text-gray-600">No job opportunities available at the moment.</p>
+                        <p className="text-sm text-gray-500">Check back later for new opportunities!</p>
+                      </div>
+                    ) : (
+                      jobOpportunities.map((job) => (
                     <Card key={job.id} className="border border-gray-200 hover:border-blue-300 transition-colors">
                       <CardContent className="p-4">
                         <div className="flex flex-col space-y-3">
@@ -373,8 +384,10 @@ const HousegirlDashboard = () => {
                         </div>
                       </CardContent>
                     </Card>
-                  ))}
-                </div>
+                      ))
+                    )}
+                  </div>
+                )}
               </CardContent>
             </Card>
 

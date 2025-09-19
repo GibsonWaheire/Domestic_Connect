@@ -620,3 +620,49 @@ class AgencyPayment(db.Model):
     
     def __repr__(self):
         return f'<AgencyPayment {self.agency_id}-{self.payment_type}>'
+
+class JobPosting(db.Model):
+    """Job postings by employers"""
+    __tablename__ = 'job_postings'
+    
+    id = db.Column(db.String(50), primary_key=True)
+    employer_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    location = db.Column(db.String(100), nullable=False)
+    salary_min = db.Column(db.Integer, nullable=False)
+    salary_max = db.Column(db.Integer, nullable=False)
+    accommodation_type = db.Column(db.Enum('live_in', 'live_out', 'both', name='accommodation_type'), nullable=False)
+    required_experience = db.Column(db.Enum('no_experience', '1_year', '2_years', '3_years', '4_years', '5_plus_years', name='required_experience'), nullable=False)
+    required_education = db.Column(db.Enum('primary', 'form_2', 'form_4', 'certificate', 'diploma', 'degree', name='required_education'), nullable=False)
+    skills_required = db.Column(db.JSON, nullable=True)  # List of required skills
+    languages_required = db.Column(db.JSON, nullable=True)  # List of required languages
+    status = db.Column(db.String(20), default='active')  # active, closed, filled
+    application_deadline = db.Column(db.DateTime, nullable=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    # Relationships
+    employer = db.relationship('User', backref='job_postings')
+    applications = db.relationship('JobApplication', backref='job_posting', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<JobPosting {self.title} by {self.employer_id}>'
+
+class JobApplication(db.Model):
+    """Job applications by housegirls"""
+    __tablename__ = 'job_applications'
+    
+    id = db.Column(db.String(50), primary_key=True)
+    job_id = db.Column(db.String(50), db.ForeignKey('job_postings.id'), nullable=False)
+    housegirl_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
+    cover_letter = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
+    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    housegirl = db.relationship('User', backref='job_applications')
+    
+    def __repr__(self):
+        return f'<JobApplication {self.housegirl_id} for {self.job_id}>'

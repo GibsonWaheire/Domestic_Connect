@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import firebase_auth_required
+from app.services.auth_service import login_required, get_current_user
 from app.models import HousegirlProfile, Profile, User
 from app import db
 from datetime import datetime

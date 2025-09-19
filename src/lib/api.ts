@@ -91,6 +91,44 @@ export interface ContactAccess {
   accessed_at: string;
 }
 
+export interface JobApplication {
+  id: string;
+  job_id: string;
+  housegirl_id: string;
+  cover_letter: string | null;
+  status: 'pending' | 'accepted' | 'rejected';
+  applied_at: string;
+  reviewed_at: string | null;
+}
+
+export interface JobPosting {
+  id: string;
+  employer_id: string;
+  title: string;
+  description: string;
+  location: string;
+  salary_min: number;
+  salary_max: number;
+  accommodation_type: 'live_in' | 'live_out' | 'both';
+  required_experience: 'no_experience' | '1_year' | '2_years' | '3_years' | '4_years' | '5_plus_years';
+  required_education: 'primary' | 'form_2' | 'form_4' | 'certificate' | 'diploma' | 'degree';
+  skills_required: string[];
+  languages_required: string[];
+  status: 'active' | 'closed' | 'filled';
+  application_deadline: string | null;
+  created_at: string;
+  updated_at: string;
+  employer: {
+    id: string;
+    name: string;
+    email: string;
+    phone_number: string | null;
+    company_name: string | null;
+    company_location: string | null;
+  };
+  applications_count: number;
+}
+
 // Generic API functions
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -98,6 +136,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
       'Content-Type': 'application/json',
       ...options.headers,
     },
+    credentials: 'include', // Include cookies for session-based authentication
     ...options,
   });
 
@@ -209,6 +248,9 @@ export const agencyProfilesApi = {
     }),
   delete: (id: string) => apiRequest(`/api/agencies/${id}`, { method: 'DELETE' }),
 };
+
+// Alias for backward compatibility
+export const agenciesApi = agencyProfilesApi;
 
 // Payment Packages API functions
 export const paymentPackagesApi = {
@@ -394,4 +436,91 @@ export const adminApi = {
     apiRequest<AdminAnalytics>('/api/admin/analytics', {
       headers: { Authorization: `Bearer ${token}` },
     }),
+};
+
+// Job Posting API functions
+export const jobsApi = {
+  getAll: (params?: { 
+    location?: string; 
+    salary_min?: number; 
+    salary_max?: number; 
+    accommodation_type?: string; 
+    experience?: string; 
+    education?: string; 
+    status?: string; 
+    page?: number; 
+    per_page?: number 
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.location) searchParams.append('location', params.location);
+    if (params?.salary_min) searchParams.append('salary_min', params.salary_min.toString());
+    if (params?.salary_max) searchParams.append('salary_max', params.salary_max.toString());
+    if (params?.accommodation_type) searchParams.append('accommodation_type', params.accommodation_type);
+    if (params?.experience) searchParams.append('experience', params.experience);
+    if (params?.education) searchParams.append('education', params.education);
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.page) searchParams.append('page', params.page.toString());
+    if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
+    
+    return apiRequest<{ jobs: JobPosting[]; pagination: any }>(`/api/jobs/?${searchParams}`);
+  },
+  
+  getById: (id: string) => apiRequest<JobPosting>(`/api/jobs/${id}`),
+  
+  create: (job: Omit<JobPosting, 'id' | 'created_at' | 'updated_at' | 'employer' | 'applications_count'>) =>
+    apiRequest<JobPosting>('/api/jobs/', {
+      method: 'POST',
+      body: JSON.stringify(job),
+    }),
+  
+  update: (id: string, updates: Partial<JobPosting>) =>
+    apiRequest<JobPosting>(`/api/jobs/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    }),
+  
+  delete: (id: string) => apiRequest(`/api/jobs/${id}`, { method: 'DELETE' }),
+  
+  apply: (jobId: string, coverLetter?: string) =>
+    apiRequest<JobApplication>(`/api/jobs/${jobId}/apply`, {
+      method: 'POST',
+      body: JSON.stringify({ cover_letter: coverLetter }),
+    }),
+  
+  getApplications: (jobId: string) =>
+    apiRequest<{ applications: JobApplication[] }>(`/api/jobs/${jobId}/applications`),
+};
+
+// Cross-entity dashboard data interface
+export interface DashboardData {
+  user: {
+    id: string;
+    email: string;
+    user_type: 'employer' | 'housegirl' | 'agency';
+    first_name: string;
+    last_name: string;
+    is_admin: boolean;
+  };
+  stats: {
+    [key: string]: number;
+  };
+  recent_activity: any[];
+  available_data: {
+    housegirls?: HousegirlProfile[];
+    job_postings?: JobPosting[];
+    agencies?: any[];
+    job_opportunities?: JobPosting[];
+    employers?: EmployerProfile[];
+    clients?: any[];
+    workers?: any[];
+    all_employers?: EmployerProfile[];
+    all_housegirls?: HousegirlProfile[];
+    all_users?: User[];
+    all_job_postings?: JobPosting[];
+    all_applications?: JobApplication[];
+  };
+}
+
+export const crossEntityApi = {
+  getDashboardData: () => apiRequest<DashboardData>('/api/cross-entity/dashboard-data')
 };

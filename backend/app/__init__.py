@@ -39,6 +39,8 @@ def create_app(config_name=None):
     from app.routes.photos import photos_bp
     from app.routes.admin import admin_bp
     from app.routes.mpesa import mpesa_bp
+    from app.routes.jobs import jobs_bp
+    from app.routes.cross_entity import cross_entity_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(profiles_bp, url_prefix='/api/profiles')
@@ -49,6 +51,8 @@ def create_app(config_name=None):
     app.register_blueprint(photos_bp, url_prefix='/api/photos')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
     app.register_blueprint(mpesa_bp, url_prefix='/api/mpesa')
+    app.register_blueprint(jobs_bp, url_prefix='/api/jobs')
+    app.register_blueprint(cross_entity_bp, url_prefix='/api/cross-entity')
     
     # Error handlers
     @app.errorhandler(404)
