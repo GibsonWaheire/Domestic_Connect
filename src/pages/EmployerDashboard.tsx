@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
@@ -13,9 +13,10 @@ import AgencyMarketplace from '@/components/employer/AgencyMarketplace';
 import { JobPostingModal } from '@/components/employer/JobPostingModal';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import { NotificationProvider } from '@/contexts/NotificationContext';
-import { mockHousegirls, mockJobPostings, mockMessages } from '@/data/mockData';
+import { mockJobPostings, mockMessages } from '@/data/mockData';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
+import { housegirlProfilesApi } from '@/lib/api';
 
 const EmployerDashboard = () => {
   const { user, loading } = useAuth();
@@ -42,13 +43,63 @@ const EmployerDashboard = () => {
   const [selectedExperience, setSelectedExperience] = useState('');
   const [selectedLivingArrangement, setSelectedLivingArrangement] = useState('');
 
-  // Mock data
-  const [housegirls] = useState(mockHousegirls);
+  // State for real data
+  const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
+  const [housegirlsLoading, setHousegirlsLoading] = useState(true);
   const [jobPostings] = useState(mockJobPostings);
   const [messages] = useState(mockMessages);
+
+  // Fetch housegirls data on component mount
+  useEffect(() => {
+    const fetchHousegirls = async () => {
+      try {
+        setHousegirlsLoading(true);
+        const data = await housegirlProfilesApi.getAll();
+        
+        // Transform API data to match Housegirl interface
+        const transformedHousegirls: Housegirl[] = data.map((hg: any) => ({
+          id: hg.id,
+          name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
+          age: hg.age,
+          location: hg.location,
+          experience: hg.experience,
+          education: hg.education,
+          expectedSalary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
+          accommodationType: hg.accommodation_type,
+          community: hg.tribe,
+          bio: hg.bio,
+          profilePhoto: hg.profile_photo_url,
+          isAvailable: hg.is_available,
+          rating: 4.5, // Default rating since it's not in API yet
+          reviews: 12, // Default reviews
+          skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
+          languages: ['English', 'Swahili'], // Default languages
+          phoneNumber: hg.phone_number,
+          email: hg.email
+        }));
+        
+        setHousegirls(transformedHousegirls);
+      } catch (error) {
+        console.error('Error fetching housegirls:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load housegirls data",
+          variant: "destructive",
+        });
+        // Fallback to empty array
+        setHousegirls([]);
+      } finally {
+        setHousegirlsLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchHousegirls();
+    }
+  }, [user]);
   
-  // Show loading state while auth is initializing
-  if (loading) {
+  // Show loading state while auth is initializing or data is loading
+  if (loading || housegirlsLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="text-center">
@@ -56,7 +107,7 @@ const EmployerDashboard = () => {
             <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard</h2>
-          <p className="text-gray-600">Please wait while we load your account...</p>
+          <p className="text-gray-600">Please wait while we load your account and data...</p>
         </div>
       </div>
     );
