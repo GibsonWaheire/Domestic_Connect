@@ -163,13 +163,16 @@ def require_https():
 
 def add_security_headers(response):
     """
-    Add security headers to response
+    Add security headers to response (development-friendly)
     """
     response.headers['X-Content-Type-Options'] = 'nosniff'
-    response.headers['X-Frame-Options'] = 'DENY'
+    # More permissive for development
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
     response.headers['X-XSS-Protection'] = '1; mode=block'
-    response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-    response.headers['Content-Security-Policy'] = "default-src 'self'"
+    # Remove HSTS for development
+    # response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    # More permissive CSP for development
+    response.headers['Content-Security-Policy'] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:* 127.0.0.1:*"
     return response
 
 # Common validation schemas
