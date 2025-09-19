@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
+import { errorService } from '@/lib/errorService';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { User, Heart, Building2, Eye, EyeOff, X, Shield, CheckCircle, Clock, Mail } from 'lucide-react';
 
 interface AuthModalProps {
@@ -36,37 +38,24 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [bio, setBio] = useState('');
   const [customLocation, setCustomLocation] = useState('');
   const [selectedAgency, setSelectedAgency] = useState('');
-  const [agencies, setAgencies] = useState<any[]>([]);
-
-  // Auto-update bio when relevant fields change
-  useEffect(() => {
-    if (userType === 'housegirl' && (age || experience || education || skills.length || languages.length || accommodationType || location || community || expectedSalary)) {
-      const generatedBio = generateBioDescription();
-      if (generatedBio && !bio) {
-        setBio(generatedBio);
-      }
-    }
-  }, [age, experience, education, skills, languages, accommodationType, location, community, expectedSalary, userType]);
-
-  // Fetch agencies for housegirl registration
-  useEffect(() => {
-    const fetchAgencies = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies`);
-        const data = await response.json();
-        setAgencies(data);
-      } catch (error) {
-        console.error('Error fetching agencies:', error);
-      }
-    };
-
-    if (userType === 'housegirl') {
-      fetchAgencies();
-    }
-  }, [userType]);
+  const [agencies, setAgencies] = useState<Array<{
+    id: string;
+    name: string;
+    location: string;
+    verification_status: string;
+    subscription_tier: string;
+    rating: number;
+    license_number: string;
+    verified_workers: number;
+    successful_placements: number;
+    description?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    website?: string;
+  }>>([]);
 
   // Auto-generate bio description based on form fields
-  const generateBioDescription = () => {
+  const generateBioDescription = useCallback(() => {
     if (!age && !experience && !education && !skills.length && !languages.length) {
       return '';
     }
@@ -140,13 +129,42 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
     description += ' I am looking for a good family to work with and I am committed to providing excellent service.';
 
     return description;
-  };
+  }, [age, experience, education, skills, languages, accommodationType, location, community, expectedSalary, customLocation]);
 
+  // Auto-update bio when relevant fields change
+  useEffect(() => {
+    if (userType === 'housegirl' && (age || experience || education || skills.length || languages.length || accommodationType || location || community || expectedSalary)) {
+      const generatedBio = generateBioDescription();
+      if (generatedBio && !bio) {
+        setBio(generatedBio);
+      }
+    }
+  }, [age, experience, education, skills, languages, accommodationType, location, community, expectedSalary, userType, bio, generateBioDescription]);
+
+  // Fetch agencies for housegirl registration
+  useEffect(() => {
+    const fetchAgencies = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies`);
+        const data = await response.json();
+        setAgencies(data);
+      } catch (error) {
+        const errorObj = error instanceof Error ? error : new Error(String(error));
+        errorService.logError(errorObj, 'Fetching agencies', 'low');
+        // Don't show error to user for agency fetching as it's not critical
+      }
+    };
+
+    if (userType === 'housegirl') {
+      fetchAgencies();
+    }
+  }, [userType]);
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const { signUp, signIn, signInWithGoogle, resetPassword, user, isFirebaseUser } = useAuth();
   const navigate = useNavigate();
@@ -195,12 +213,17 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           window.location.href = '/dashboard';
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const userFriendlyError = errorService.getUserFriendlyError(errorObj, 'Google Sign In');
+      
       toast({
-        title: "Google Sign In Error",
-        description: error.message || "An unexpected error occurred.",
+        title: userFriendlyError.title,
+        description: userFriendlyError.message,
         variant: "destructive"
       });
+      
+      setError(userFriendlyError.message);
     } finally {
       setLoading(false);
     }
@@ -232,12 +255,17 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           description: "Check your email for instructions to reset your password.",
         });
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const userFriendlyError = errorService.getUserFriendlyError(errorObj, 'Password Reset');
+      
       toast({
-        title: "Password Reset Failed",
-        description: error.message || "An unexpected error occurred.",
+        title: userFriendlyError.title,
+        description: userFriendlyError.message,
         variant: "destructive"
       });
+      
+      setError(userFriendlyError.message);
     } finally {
       setLoading(false);
     }
@@ -350,7 +378,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
         if (error) {
           toast({
             title: "Sign Up Error",
-            description: error.message || "Failed to create account. Please try again.",
+            description: error || "Failed to create account. Please try again.",
             variant: "destructive"
           });
         } else {
@@ -365,12 +393,17 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           }
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      const userFriendlyError = errorService.getUserFriendlyError(errorObj, isLogin ? 'Sign In' : 'Sign Up');
+      
       toast({
-        title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        title: userFriendlyError.title,
+        description: userFriendlyError.message,
         variant: "destructive"
       });
+      
+      setError(userFriendlyError.message);
     } finally {
       setLoading(false);
     }
@@ -443,7 +476,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="absolute -top-12 right-0 bg-white/90 hover:bg-white text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-full p-3 shadow-lg border border-gray-200 hover:border-red-300 transition-all duration-200 z-10"
+          className="absolute -top-12 right-0 bg-white/90 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-full p-3 shadow-lg border border-gray-200 hover:border-red-300 transition-all duration-200 z-10"
         >
           <X className="h-6 w-6 font-bold" />
         </Button>
@@ -471,6 +504,29 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             </CardDescription>
           </CardHeader>
           <CardContent className="px-6 py-6 overflow-y-auto">
+            {/* Error Display */}
+            {error && (
+              <div className="mb-4">
+                <div className="flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="w-5 h-5 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <X className="h-3 w-3 text-red-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm text-red-800 font-medium">Something went wrong</p>
+                    <p className="text-xs text-red-600 mt-1">{error}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setError(null)}
+                    className="text-red-600 hover:bg-red-100"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+
             {/* Top Section with Info */}
             <div className="text-center mb-8 max-w-2xl mx-auto">
               <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-full mb-4">

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
@@ -90,6 +90,23 @@ const HousegirlDashboard = () => {
   // State for real dashboard data
   const [jobOpportunities, setJobOpportunities] = useState<JobOpportunity[]>([]);
 
+  // Get user's actual data from registration
+  const getUserData = useCallback(() => {
+    // Use actual user data from registration, with fallbacks
+    return {
+      age: user?.age || '25',
+      location: user?.location || 'Nairobi',
+      experience: user?.experience || '2 Years',
+      education: user?.education || 'Form 4 and Above',
+      expectedSalary: user?.expectedSalary || 'KSh 15,000',
+      accommodationType: user?.accommodationType || 'Live-in',
+      community: user?.community || 'Kikuyu',
+      skills: user?.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
+      languages: user?.languages || ['English', 'Swahili'],
+      bio: user?.bio || 'Professional house help with experience in cooking, cleaning, and childcare.'
+    };
+  }, [user]);
+
   // Use real-time data hook
   const { 
     dashboardData, 
@@ -137,24 +154,6 @@ const HousegirlDashboard = () => {
     }
   }, [user, navigate]);
 
-  // Initialize edit form data when userData is available
-  useEffect(() => {
-    if (user && user.user_type === 'housegirl') {
-      const userData = getUserData();
-      setEditFormData({
-        bio: userData.bio,
-        expectedSalary: userData.expectedSalary,
-        location: userData.location,
-        experience: userData.experience,
-        education: userData.education,
-        accommodationType: userData.accommodationType,
-        community: userData.community,
-        skills: userData.skills.join(', '),
-        languages: userData.languages.join(', ')
-      });
-    }
-  }, [user]);
-
   const handleSignOut = async () => {
     await signOut();
     navigate('/housegirls');
@@ -183,26 +182,27 @@ const HousegirlDashboard = () => {
     setShowEditModal(false);
   };
 
+  // Initialize edit form data when userData is available
+  useEffect(() => {
+    if (user && user.user_type === 'housegirl') {
+      const userData = getUserData();
+      setEditFormData({
+        bio: userData.bio,
+        expectedSalary: userData.expectedSalary,
+        location: userData.location,
+        experience: userData.experience,
+        education: userData.education,
+        accommodationType: userData.accommodationType,
+        community: userData.community,
+        skills: userData.skills.join(', '),
+        languages: userData.languages.join(', ')
+      });
+    }
+  }, [user, getUserData]);
+
   if (!user || user.user_type !== 'housegirl') {
     return null;
   }
-
-  // Get user's actual data from registration
-  const getUserData = () => {
-    // Use actual user data from registration, with fallbacks
-    return {
-      age: user.age || '25',
-      location: user.location || 'Nairobi',
-      experience: user.experience || '2 Years',
-      education: user.education || 'Form 4 and Above',
-      expectedSalary: user.expectedSalary || 'KSh 15,000',
-      accommodationType: user.accommodationType || 'Live-in',
-      community: user.community || 'Kikuyu',
-      skills: user.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
-      languages: user.languages || ['English', 'Swahili'],
-      bio: user.bio || 'Professional house help with experience in cooking, cleaning, and childcare.'
-    };
-  };
 
   const userData = getUserData();
 
