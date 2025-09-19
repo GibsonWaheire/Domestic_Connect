@@ -29,6 +29,16 @@ def create_app(config_name=None):
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     
+    # Register middleware
+    from app.middleware.security import add_security_headers
+    from app.middleware.performance import add_performance_headers
+    
+    @app.after_request
+    def after_request(response):
+        response = add_security_headers(response)
+        response = add_performance_headers(response)
+        return response
+    
     # Register blueprints
     from app.routes.auth import auth_bp
     from app.routes.profiles import profiles_bp
@@ -41,6 +51,7 @@ def create_app(config_name=None):
     from app.routes.mpesa import mpesa_bp
     from app.routes.jobs import jobs_bp
     from app.routes.cross_entity import cross_entity_bp
+    from app.routes.health import health_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(profiles_bp, url_prefix='/api/profiles')
@@ -53,6 +64,7 @@ def create_app(config_name=None):
     app.register_blueprint(mpesa_bp, url_prefix='/api/mpesa')
     app.register_blueprint(jobs_bp, url_prefix='/api/jobs')
     app.register_blueprint(cross_entity_bp, url_prefix='/api/cross-entity')
+    app.register_blueprint(health_bp, url_prefix='/api')
     
     # Error handlers
     @app.errorhandler(404)

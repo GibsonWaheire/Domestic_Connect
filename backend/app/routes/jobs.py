@@ -1,13 +1,19 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import login_required
+from app.services.auth_service import login_required, get_current_user
 from app.models import JobPosting, JobApplication, User, EmployerProfile, Profile
 from app import db
+from app.middleware.security import rate_limit, validate_json_input, JOB_POSTING_SCHEMA
+from app.middleware.performance import cache_response, compress_response
+from app.middleware.logging import log_request, log_error, log_user_action
 from datetime import datetime
 import uuid
 
 jobs_bp = Blueprint('jobs', __name__)
 
 @jobs_bp.route('/', methods=['GET'])
+@cache_response(timeout=300)  # Cache for 5 minutes
+@compress_response()
+@log_request()
 def get_jobs():
     """Get all job postings with filtering"""
     try:
@@ -21,6 +27,10 @@ def get_jobs():
         status = request.args.get('status', 'active')
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
+        
+        # Validate pagination parameters
+        if page < 1 or per_page < 1 or per_page > 100:
+            return jsonify({'error': 'Invalid pagination parameters'}), 400
         
         # Build query
         query = JobPosting.query.join(User).filter(JobPosting.status == status)
@@ -133,25 +143,29 @@ def get_job(job_id):
 
 @jobs_bp.route('/', methods=['POST'])
 @login_required
+@rate_limit(max_requests=10, window_seconds=3600)  # 10 job postings per hour
+@validate_json_input(JOB_POSTING_SCHEMA)
+@log_request()
+@log_error()
 def create_job():
     """Create new job posting (employers only)"""
     try:
-        data = request.get_json()
+        user = get_current_user()
         
         # Check if user is employer
-        if request.current_user.user_type != 'employer':
+        if user.user_type != 'employer':
             return jsonify({'error': 'Only employers can create job postings'}), 403
         
-        # Validate required fields
-        required_fields = ['title', 'description', 'location', 'salary_min', 'salary_max', 'accommodation_type', 'required_experience', 'required_education']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'error': f'{field} is required'}), 400
+        data = request.get_json()
+        
+        # Validate salary range
+        if data['salary_min'] > data['salary_max']:
+            return jsonify({'error': 'Minimum salary cannot be greater than maximum salary'}), 400
         
         # Create job posting
         job = JobPosting(
             id=f'job_{uuid.uuid4().hex[:12]}',
-            employer_id=request.current_user.id,
+            employer_id=user.id,
             title=data['title'],
             description=data['description'],
             location=data['location'],
@@ -166,8 +180,8 @@ def create_job():
             application_deadline=datetime.fromisoformat(data['application_deadline']) if data.get('application_deadline') else None
         )
         
-        db.session.add(job)
-        db.session.commit()
+        # Log user action
+        log_user_action(user.id, 'create_job', {'job_id': job.id, 'title': job.title})
         
         return jsonify({
             'id': job.id,

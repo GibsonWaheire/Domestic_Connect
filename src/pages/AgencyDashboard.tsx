@@ -133,10 +133,34 @@ const AgencyDashboard = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [agencyData, setAgencyData] = useState<any>(null);
-  const [agencyWorkers, setAgencyWorkers] = useState<any[]>([]);
-  const [agencyClients, setAgencyClients] = useState<any[]>([]);
-  const [agencyPayments, setAgencyPayments] = useState<any[]>([]);
+  const [agencyData, setAgencyData] = useState<{
+    name: string;
+    email: string;
+    stats: Record<string, number>;
+  } | null>(null);
+  const [agencyWorkers, setAgencyWorkers] = useState<Array<{
+    id: string;
+    name: string;
+    verification_status: string;
+    training_certificates: string[];
+    hire_date: string;
+  }>>([]);
+  const [agencyClients, setAgencyClients] = useState<Array<{
+    id: string;
+    name: string;
+    email: string;
+    phone_number: string;
+    company_name: string;
+    location: string;
+    placement_status: string;
+    hire_date: string;
+  }>>([]);
+  const [agencyPayments, setAgencyPayments] = useState<Array<{
+    id: string;
+    amount: number;
+    agency_fee: number;
+    created_at: string;
+  }>>([]);
   const [showNotification, setShowNotification] = useState(false);
   const [showChat, setShowChat] = useState(false);
 
@@ -425,7 +449,7 @@ const AgencyDashboard = () => {
                 <Button
                   key={tab.id}
                   variant={activeTab === tab.id ? 'default' : 'ghost'}
-                  onClick={() => setActiveTab(tab.id as any)}
+                  onClick={() => setActiveTab(tab.id as 'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings')}
                   className={`w-full justify-start ${activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'}`}
                 >
                   <tab.icon className="h-4 w-4 mr-3" />

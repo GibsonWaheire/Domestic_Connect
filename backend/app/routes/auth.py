@@ -1,50 +1,133 @@
 from flask import Blueprint, request, jsonify, session
-from app.services.auth_service import firebase_auth_required, verify_firebase_token, get_or_create_user
+from app.services.auth_service import login_required, get_current_user
 from app.models import User, Profile
 from app import db
+from app.middleware.security import rate_limit, validate_json_input, USER_SCHEMA
+from app.middleware.performance import cache_response, compress_response
+from app.middleware.logging import log_request, log_error, log_user_action
 import uuid
+import bcrypt
 
 auth_bp = Blueprint('auth', __name__)
 
-@auth_bp.route('/verify', methods=['POST'])
-def verify_token():
-    """Verify Firebase token and return user info"""
+@auth_bp.route('/signup', methods=['POST'])
+@rate_limit(max_requests=5, window_seconds=300)  # 5 requests per 5 minutes
+@validate_json_input(USER_SCHEMA)
+@log_request()
+@log_error()
+def signup():
+    """Register a new user"""
     try:
         data = request.get_json()
-        token = data.get('token')
         
-        if not token:
-            return jsonify({'error': 'Token required'}), 400
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({'error': 'User already exists'}), 400
         
-        # Verify Firebase token
-        decoded_token = verify_firebase_token(token)
-        if not decoded_token:
-            return jsonify({'error': 'Invalid token'}), 401
+        # Hash password
+        password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
         
-        # Get or create user
-        firebase_uid = decoded_token['uid']
-        email = decoded_token.get('email', '')
+        # Create user
+        user = User(
+            id=str(uuid.uuid4()),
+            email=data['email'],
+            password_hash=password_hash.decode('utf-8'),
+            first_name=data['first_name'],
+            last_name=data['last_name'],
+            phone_number=data.get('phone_number'),
+            user_type=data['user_type']
+        )
         
-        user = get_or_create_user(firebase_uid, email)
+        db.session.add(user)
+        db.session.commit()
+        
+        # Log user action
+        log_user_action(user.id, 'signup', {'user_type': data['user_type']})
         
         return jsonify({
+            'message': 'User created successfully',
+            'user': user.to_dict()
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+@auth_bp.route('/login', methods=['POST'])
+@rate_limit(max_requests=10, window_seconds=300)  # 10 requests per 5 minutes
+@validate_json_input({'email': {'required': True, 'type': str}, 'password': {'required': True, 'type': str}})
+@log_request()
+@log_error()
+def login():
+    """Login user"""
+    try:
+        data = request.get_json()
+        
+        # Find user
+        user = User.query.filter_by(email=data['email']).first()
+        if not user:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # Verify password
+        if not bcrypt.checkpw(data['password'].encode('utf-8'), user.password_hash.encode('utf-8')):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        # Create session
+        session['user_id'] = user.id
+        session['user_type'] = user.user_type
+        
+        # Log user action
+        log_user_action(user.id, 'login')
+        
+        return jsonify({
+            'message': 'Login successful',
             'user': user.to_dict()
         }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@auth_bp.route('/profile', methods=['GET'])
-@firebase_auth_required
-def get_user_profile():
-    """Get current user's profile using SQLAlchemy ORM methods"""
+@auth_bp.route('/logout', methods=['POST'])
+@login_required
+@log_request()
+def logout():
+    """Logout user"""
     try:
-        user = request.current_user
+        user_id = session.get('user_id')
         
-        # Use SQLAlchemy method to get complete profile data
-        profile_data = user.get_full_profile_data()
+        # Clear session
+        session.clear()
         
-        return jsonify(profile_data), 200
+        # Log user action
+        if user_id:
+            log_user_action(user_id, 'logout')
+        
+        return jsonify({'message': 'Logout successful'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@auth_bp.route('/check_session', methods=['GET'])
+@cache_response(timeout=60)  # Cache for 1 minute
+@compress_response()
+@log_request()
+def check_session():
+    """Check if user is logged in"""
+    try:
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'authenticated': False}), 200
+        
+        user = User.query.get(user_id)
+        if not user:
+            session.clear()
+            return jsonify({'authenticated': False}), 200
+        
+        return jsonify({
+            'authenticated': True,
+            'user': user.to_dict()
+        }), 200
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500

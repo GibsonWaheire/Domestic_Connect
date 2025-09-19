@@ -47,6 +47,10 @@ export interface HousegirlProfile {
   tribe: string;
   is_available: boolean | null;
   profile_photo_url: string | null;
+  first_name: string;
+  last_name: string;
+  phone_number: string | null;
+  email: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -390,7 +394,7 @@ export const adminApi = {
     if (params?.user_type) searchParams.append('user_type', params.user_type);
     if (params?.search) searchParams.append('search', params.search);
     
-    return apiRequest<{ users: AdminUser[]; pagination: any }>(`/api/admin/users?${searchParams}`, {
+    return apiRequest<{ users: AdminUser[]; pagination: { page: number; per_page: number; total: number; pages: number } }>(`/api/admin/users?${searchParams}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
@@ -413,7 +417,7 @@ export const adminApi = {
     if (params?.status) searchParams.append('status', params.status);
     if (params?.search) searchParams.append('search', params.search);
     
-    return apiRequest<{ agencies: AdminAgency[]; pagination: any }>(`/api/admin/agencies?${searchParams}`, {
+    return apiRequest<{ agencies: AdminAgency[]; pagination: { page: number; per_page: number; total: number; pages: number } }>(`/api/admin/agencies?${searchParams}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
@@ -462,7 +466,7 @@ export const jobsApi = {
     if (params?.page) searchParams.append('page', params.page.toString());
     if (params?.per_page) searchParams.append('per_page', params.per_page.toString());
     
-    return apiRequest<{ jobs: JobPosting[]; pagination: any }>(`/api/jobs/?${searchParams}`);
+    return apiRequest<{ jobs: JobPosting[]; pagination: { page: number; per_page: number; total: number; pages: number } }>(`/api/jobs/?${searchParams}`);
   },
   
   getById: (id: string) => apiRequest<JobPosting>(`/api/jobs/${id}`),
@@ -504,15 +508,36 @@ export interface DashboardData {
   stats: {
     [key: string]: number;
   };
-  recent_activity: any[];
+  recent_activity: Array<{
+    id: string;
+    type: string;
+    description: string;
+    timestamp: string;
+    user_id?: string;
+  }>;
   available_data: {
     housegirls?: HousegirlProfile[];
     job_postings?: JobPosting[];
-    agencies?: any[];
+    agencies?: AgencyProfile[];
     job_opportunities?: JobPosting[];
     employers?: EmployerProfile[];
-    clients?: any[];
-    workers?: any[];
+    clients?: Array<{
+      id: string;
+      name: string;
+      email: string;
+      phone_number: string;
+      company_name: string;
+      location: string;
+      placement_status: string;
+      hire_date: string;
+    }>;
+    workers?: Array<{
+      id: string;
+      name: string;
+      verification_status: string;
+      training_certificates: string[];
+      hire_date: string;
+    }>;
     all_employers?: EmployerProfile[];
     all_housegirls?: HousegirlProfile[];
     all_users?: User[];

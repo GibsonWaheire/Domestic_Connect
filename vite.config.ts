@@ -25,5 +25,66 @@ export default defineConfig(({ mode }) => {
     define: {
       __API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || 'http://localhost:5000'),
     },
+    build: {
+      // Bundle optimization
+      target: 'esnext',
+      minify: 'terser',
+      terserOptions: {
+        compress: {
+          drop_console: mode === 'production',
+          drop_debugger: mode === 'production',
+        },
+      },
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            // Vendor chunks
+            vendor: ['react', 'react-dom'],
+            router: ['react-router-dom'],
+            ui: ['@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', '@radix-ui/react-toast'],
+            icons: ['lucide-react'],
+            utils: ['date-fns', 'clsx', 'tailwind-merge'],
+          },
+          // Optimize chunk names
+          chunkFileNames: (chunkInfo) => {
+            const facadeModuleId = chunkInfo.facadeModuleId
+              ? chunkInfo.facadeModuleId.split('/').pop().replace('.tsx', '').replace('.ts', '')
+              : 'chunk';
+            return `js/${facadeModuleId}-[hash].js`;
+          },
+          entryFileNames: 'js/[name]-[hash].js',
+          assetFileNames: (assetInfo) => {
+            const info = assetInfo.name.split('.');
+            const ext = info[info.length - 1];
+            if (/\.(css)$/.test(assetInfo.name)) {
+              return `css/[name]-[hash].${ext}`;
+            }
+            return `assets/[name]-[hash].${ext}`;
+          },
+        },
+      },
+      // Enable source maps for production debugging
+      sourcemap: mode === 'production',
+      // Optimize CSS
+      cssCodeSplit: true,
+      // Increase chunk size warning limit
+      chunkSizeWarningLimit: 1000,
+    },
+    // Performance optimizations
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+        'lucide-react',
+        '@radix-ui/react-dialog',
+        '@radix-ui/react-dropdown-menu',
+        '@radix-ui/react-toast',
+      ],
+    },
+    // Enable compression
+    preview: {
+      port: 4173,
+    },
   };
 });
