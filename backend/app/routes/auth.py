@@ -235,8 +235,6 @@ def logout():
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/check_session', methods=['GET'])
-@cache_response(timeout=60)  # Cache for 1 minute
-@compress_response()
 @log_request()
 def check_session():
     """Check if user is logged in"""
@@ -253,6 +251,7 @@ def check_session():
         return jsonify({'user': user.to_dict()}), 200
         
     except Exception as e:
+        print(f"Check session error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/update-profile', methods=['PUT'])
