@@ -6,7 +6,7 @@ import {
   Home, Menu, X, Clock, LogOut, Users
 } from 'lucide-react';
 import { NAV_ITEMS } from '@/constants/employer';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 
 interface SidebarProps {

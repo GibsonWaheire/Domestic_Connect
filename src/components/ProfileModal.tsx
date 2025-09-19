@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 import { initiateMpesaPayment, initiateCardPayment, PaymentResponse } from '@/lib/payment';
 import { toast } from '@/hooks/use-toast';
 import ReturnToHome from '@/components/ReturnToHome';
