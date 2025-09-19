@@ -65,24 +65,27 @@ const EmployerDashboard = () => {
   useEffect(() => {
     if (dashboardData?.available_data.housegirls) {
       const transformedHousegirls: Housegirl[] = dashboardData.available_data.housegirls.map(hg => ({
-        id: hg.id,
+        id: parseInt(hg.id),
         name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
         age: hg.age,
         location: hg.location,
         experience: hg.experience,
         education: hg.education,
-        expectedSalary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
-        accommodationType: hg.accommodation_type,
-        community: hg.tribe,
+        salary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
+        status: hg.is_available ? 'available' : 'unavailable',
         bio: hg.bio,
-        profilePhoto: hg.profile_photo_url,
-        isAvailable: hg.is_available,
+        skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
         rating: 4.5, // Default rating since it's not in API yet
         reviews: 12, // Default reviews
-        skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
-        languages: ['English', 'Swahili'], // Default languages
-        phoneNumber: hg.phone_number,
-        email: hg.email
+        contactUnlocked: false, // Default to locked
+        unlockCount: 0, // Default unlock count
+        phone: hg.phone_number,
+        email: hg.email,
+        nationality: 'Kenyan', // Default nationality
+        community: hg.tribe,
+        workType: hg.accommodation_type,
+        livingArrangement: hg.accommodation_type,
+        profileImage: hg.profile_photo_url
       }));
       setHousegirls(transformedHousegirls);
     }
