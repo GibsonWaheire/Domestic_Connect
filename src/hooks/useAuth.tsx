@@ -1,5 +1,6 @@
 import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface User {
   id: string;
@@ -41,9 +42,6 @@ export const useAuth = () => {
   }
   return context;
 };
-
-// API base URL
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

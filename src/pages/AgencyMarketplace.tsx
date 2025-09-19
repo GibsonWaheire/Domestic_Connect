@@ -8,6 +8,7 @@ import { Search, Filter, Building2, Star, Shield, Users, MapPin } from 'lucide-r
 import AgencyCard, { Agency } from '@/components/AgencyCard';
 import AgencyHiringModal from '@/components/AgencyHiringModal';
 import { useAuth } from '@/hooks/useAuthEnhanced';
+import { API_BASE_URL } from '@/lib/apiConfig';
 import { useNavigate } from 'react-router-dom';
 
 const AgencyMarketplace = () => {
@@ -34,7 +35,7 @@ const AgencyMarketplace = () => {
 
   const fetchAgencies = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agencies`);
+      const response = await fetch(`${API_BASE_URL}/agencies`);
       if (response.ok) {
         const data = await response.json();
         setAgencies(data);
@@ -161,7 +162,7 @@ const AgencyMarketplace = () => {
         dispute_resolution: null
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies/clients`, {
+      const response = await fetch(`${API_BASE_URL}/api/agencies/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
