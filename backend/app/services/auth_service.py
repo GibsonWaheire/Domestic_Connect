@@ -91,3 +91,35 @@ def firebase_auth_required(f):
 def verify_firebase_token(token):
     """Legacy function - returns None for now"""
     return None
+
+def get_current_user():
+    """Get the current authenticated user from session"""
+    user_id = session.get('user_id')
+    if not user_id:
+        return None
+    
+    user = User.query.get(user_id)
+    if not user or not user.is_active:
+        session.pop('user_id', None)
+        return None
+    
+    return user
+
+def login_required(f):
+    """Decorator to require login for routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        user = User.query.get(user_id)
+        if not user or not user.is_active:
+            session.pop('user_id', None)
+            return jsonify({'error': 'Authentication required'}), 401
+        
+        # Add current user to request object
+        request.current_user = user
+        return f(*args, **kwargs)
+    
+    return decorated_function

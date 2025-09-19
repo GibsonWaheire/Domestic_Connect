@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { 
-  Search, Plus, Users, Briefcase, Eye, MessageCircle, Home
+  Search, Plus, Users, Briefcase, Eye, MessageCircle, Home, RefreshCw
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown';
 import { useNavigate } from 'react-router-dom';
@@ -16,6 +16,8 @@ interface HeaderProps {
     totalViews: number;
     unreadMessages: number;
   };
+  lastUpdated?: Date | null;
+  onRefresh?: () => void;
 }
 
 export const Header = ({
@@ -23,7 +25,9 @@ export const Header = ({
   searchTerm,
   setSearchTerm,
   setShowJobModal,
-  stats
+  stats,
+  lastUpdated,
+  onRefresh
 }: HeaderProps) => {
   const navigate = useNavigate();
   
@@ -79,6 +83,24 @@ export const Header = ({
               className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
             />
           </div>
+
+          {/* Refresh Indicator */}
+          {lastUpdated && (
+            <div className="flex items-center space-x-2 text-sm text-gray-500">
+              <RefreshCw className="h-4 w-4" />
+              <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
+              {onRefresh && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={onRefresh}
+                  className="text-gray-500 hover:text-blue-600"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+              )}
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="flex items-center space-x-2">

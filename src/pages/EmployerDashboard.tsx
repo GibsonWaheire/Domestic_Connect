@@ -16,7 +16,8 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { mockJobPostings, mockMessages } from '@/data/mockData';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
-import { housegirlProfilesApi } from '@/lib/api';
+import { crossEntityApi, DashboardData } from '@/lib/api';
+import { useRealTimeData } from '@/hooks/useRealTimeData';
 
 const EmployerDashboard = () => {
   const { user, loading } = useAuth();
@@ -45,61 +46,61 @@ const EmployerDashboard = () => {
 
   // State for real data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
-  const [housegirlsLoading, setHousegirlsLoading] = useState(true);
   const [jobPostings] = useState(mockJobPostings);
   const [messages] = useState(mockMessages);
 
-  // Fetch housegirls data on component mount
-  useEffect(() => {
-    const fetchHousegirls = async () => {
-      try {
-        setHousegirlsLoading(true);
-        const data = await housegirlProfilesApi.getAll();
-        
-        // Transform API data to match Housegirl interface
-        const transformedHousegirls: Housegirl[] = data.map((hg: any) => ({
-          id: hg.id,
-          name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
-          age: hg.age,
-          location: hg.location,
-          experience: hg.experience,
-          education: hg.education,
-          expectedSalary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
-          accommodationType: hg.accommodation_type,
-          community: hg.tribe,
-          bio: hg.bio,
-          profilePhoto: hg.profile_photo_url,
-          isAvailable: hg.is_available,
-          rating: 4.5, // Default rating since it's not in API yet
-          reviews: 12, // Default reviews
-          skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
-          languages: ['English', 'Swahili'], // Default languages
-          phoneNumber: hg.phone_number,
-          email: hg.email
-        }));
-        
-        setHousegirls(transformedHousegirls);
-      } catch (error) {
-        console.error('Error fetching housegirls:', error);
-        toast({
-          title: "Error",
-          description: "Failed to load housegirls data",
-          variant: "destructive",
-        });
-        // Fallback to empty array
-        setHousegirls([]);
-      } finally {
-        setHousegirlsLoading(false);
-      }
-    };
+  // Use real-time data hook
+  const { 
+    dashboardData, 
+    loading: dataLoading, 
+    error: dataError, 
+    lastUpdated, 
+    refreshData 
+  } = useRealTimeData({ 
+    refreshInterval: 30000, // 30 seconds
+    enabled: !!user 
+  });
 
-    if (user) {
-      fetchHousegirls();
+  // Transform dashboard data when it changes
+  useEffect(() => {
+    if (dashboardData?.available_data.housegirls) {
+      const transformedHousegirls: Housegirl[] = dashboardData.available_data.housegirls.map(hg => ({
+        id: hg.id,
+        name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
+        age: hg.age,
+        location: hg.location,
+        experience: hg.experience,
+        education: hg.education,
+        expectedSalary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
+        accommodationType: hg.accommodation_type,
+        community: hg.tribe,
+        bio: hg.bio,
+        profilePhoto: hg.profile_photo_url,
+        isAvailable: hg.is_available,
+        rating: 4.5, // Default rating since it's not in API yet
+        reviews: 12, // Default reviews
+        skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
+        languages: ['English', 'Swahili'], // Default languages
+        phoneNumber: hg.phone_number,
+        email: hg.email
+      }));
+      setHousegirls(transformedHousegirls);
     }
-  }, [user]);
+  }, [dashboardData]);
+
+  // Show error if data fetching fails
+  useEffect(() => {
+    if (dataError) {
+      toast({
+        title: "Data Sync Error",
+        description: "Failed to sync latest data. Some information may be outdated.",
+        variant: "destructive",
+      });
+    }
+  }, [dataError]);
   
   // Show loading state while auth is initializing or data is loading
-  if (loading || housegirlsLoading) {
+  if (loading || dataLoading) {
     return (
       <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
         <div className="text-center">
@@ -245,6 +246,8 @@ const EmployerDashboard = () => {
             setSearchTerm={setSearchTerm}
             setShowJobModal={setShowJobModal}
             stats={stats}
+            lastUpdated={lastUpdated}
+            onRefresh={refreshData}
           />
 
           {/* Main Content Area */}
