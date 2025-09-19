@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminApi, AdminDashboardStats, AdminUser, AdminAgency } from '@/lib/api';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 import { Users, Building2, DollarSign, TrendingUp, RefreshCw, Shield, Eye } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
