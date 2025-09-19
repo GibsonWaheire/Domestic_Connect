@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
 import { errorService } from '@/lib/errorService';
+import { API_BASE_URL } from '@/lib/apiConfig';
 import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { User, Heart, Building2, Eye, EyeOff, X, Shield, CheckCircle, Clock, Mail } from 'lucide-react';
 
@@ -145,7 +146,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   useEffect(() => {
     const fetchAgencies = async () => {
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies`);
+        const response = await fetch(`${API_BASE_URL}/api/agencies`);
         const data = await response.json();
         setAgencies(data);
       } catch (error) {

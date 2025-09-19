@@ -9,6 +9,7 @@ import AgencyCard, { Agency } from '@/components/AgencyCard';
 import AgencyHiringModal from '@/components/AgencyHiringModal';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { useNavigate } from 'react-router-dom';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 const AgencyMarketplace = () => {
   const navigate = useNavigate();
@@ -35,7 +36,7 @@ const AgencyMarketplace = () => {
 
   const fetchAgencies = async () => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/agencies`);
+      const response = await fetch(`${API_BASE_URL}/agencies`);
       if (response.ok) {
         const data = await response.json();
         setAgencies(data);
@@ -162,7 +163,7 @@ const AgencyMarketplace = () => {
         dispute_resolution: null
       };
 
-      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}/api/agencies/clients`, {
+      const response = await fetch(`${API_BASE_URL}/api/agencies/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

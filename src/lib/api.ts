@@ -1,5 +1,5 @@
-// Use relative URLs for development (proxy handles forwarding)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+// Import centralized API configuration
+import { API_BASE_URL } from './apiConfig';
 
 // Import error handling utilities
 import { errorService, UserFriendlyError } from './errorService';
