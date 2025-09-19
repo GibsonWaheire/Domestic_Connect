@@ -6,6 +6,29 @@ from datetime import datetime
 
 agencies_bp = Blueprint('agencies', __name__)
 
+@agencies_bp.route('/health', methods=['GET'])
+def agencies_health():
+    """Health check for agencies endpoint"""
+    try:
+        # Test database connection
+        db.session.execute('SELECT 1')
+        
+        # Test Agency model
+        agency_count = Agency.query.count()
+        
+        return jsonify({
+            'status': 'healthy',
+            'message': 'Agencies endpoint is working',
+            'agency_count': agency_count,
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'status': 'unhealthy',
+            'message': f'Agencies endpoint error: {str(e)}',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
+
 @agencies_bp.route('/', methods=['GET'])
 def get_agencies():
     """Get all agencies"""
@@ -55,7 +78,13 @@ def get_agencies():
         }), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        # Log the error for debugging
+        print(f"Agencies endpoint error: {str(e)}")
+        return jsonify({
+            'error': 'Failed to fetch agencies',
+            'message': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        }), 500
 
 @agencies_bp.route('/<agency_id>', methods=['GET'])
 def get_agency(agency_id):
