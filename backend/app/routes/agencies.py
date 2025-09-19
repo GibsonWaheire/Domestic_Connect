@@ -3,6 +3,7 @@ from app.services.auth_service import firebase_auth_required
 from app.models import Agency, AgencyProfile, Profile, User
 from app import db
 from datetime import datetime
+from sqlalchemy import text
 
 agencies_bp = Blueprint('agencies', __name__)
 
@@ -11,7 +12,7 @@ def agencies_health():
     """Health check for agencies endpoint"""
     try:
         # Test database connection
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Test Agency model
         agency_count = Agency.query.count()

@@ -6,6 +6,7 @@ from app import db
 from app.models import User, JobPosting, JobApplication
 from app.middleware.performance import get_cache_stats
 from app.middleware.logging import logger
+from sqlalchemy import text
 import time
 import psutil
 import os
@@ -17,7 +18,7 @@ def health_check():
     """Basic health check endpoint"""
     try:
         # Check database connection
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         return jsonify({
             'status': 'healthy',
@@ -37,7 +38,7 @@ def detailed_health_check():
     """Detailed health check with system metrics"""
     try:
         # Database health
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         # Get system metrics
         memory = psutil.virtual_memory()
@@ -102,7 +103,7 @@ def readiness_check():
     """Kubernetes readiness probe"""
     try:
         # Check if application is ready to serve traffic
-        db.session.execute('SELECT 1')
+        db.session.execute(text('SELECT 1'))
         
         return jsonify({
             'status': 'ready',
