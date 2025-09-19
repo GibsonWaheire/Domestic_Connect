@@ -6,6 +6,8 @@ import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import AuthModal from '@/components/AuthModal';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
+import { errorService } from '@/lib/errorService';
+import { ErrorDisplay } from '@/components/ErrorDisplay';
 import { 
   Building2, 
   User, 
@@ -662,9 +664,17 @@ const LandingPage = () => {
           agency={{
             id: 'demo_agency',
             name: 'Demo Agency Service',
+            location: 'Nairobi, Kenya',
+            verification_status: 'verified',
+            subscription_tier: 'premium',
             license_number: 'DEMO-2024-001',
             rating: 4.9,
-            verified_workers: 50
+            verified_workers: 50,
+            successful_placements: 150,
+            description: 'Professional domestic help agency',
+            contact_email: 'info@demoagency.com',
+            contact_phone: '+254 700 000 000',
+            website: 'https://demoagency.com'
           }}
           onClose={() => {
             setShowPaymentModal(false);

@@ -33,7 +33,21 @@ const AgencyRegistrationModal = ({ isOpen, onClose }: AgencyRegistrationModalPro
   const [bio, setBio] = useState('');
   const [customLocation, setCustomLocation] = useState('');
   const [selectedAgency, setSelectedAgency] = useState('');
-  const [agencies, setAgencies] = useState<any[]>([]);
+  const [agencies, setAgencies] = useState<Array<{
+    id: string;
+    name: string;
+    location: string;
+    verification_status: string;
+    subscription_tier: string;
+    rating: number;
+    license_number: string;
+    verified_workers: number;
+    successful_placements: number;
+    description?: string;
+    contact_email?: string;
+    contact_phone?: string;
+    website?: string;
+  }>>([]);
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -243,7 +257,7 @@ const AgencyRegistrationModal = ({ isOpen, onClose }: AgencyRegistrationModalPro
       if (error) {
         toast({
           title: "Sign Up Error",
-          description: error.message || "Failed to create account. Please try again.",
+          description: error || "Failed to create account. Please try again.",
           variant: "destructive"
         });
       } else {
@@ -255,10 +269,11 @@ const AgencyRegistrationModal = ({ isOpen, onClose }: AgencyRegistrationModalPro
         onClose();
         navigate('/housegirl-dashboard');
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred.";
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: errorMessage,
         variant: "destructive"
       });
     } finally {
@@ -276,7 +291,7 @@ const AgencyRegistrationModal = ({ isOpen, onClose }: AgencyRegistrationModalPro
           variant="ghost"
           size="sm"
           onClick={onClose}
-          className="absolute -top-12 right-0 bg-white/90 hover:bg-white text-gray-700 hover:text-red-600 hover:bg-red-50 rounded-full p-3 shadow-lg border border-gray-200 hover:border-red-300 transition-all duration-200 z-10"
+          className="absolute -top-12 right-0 bg-white/90 hover:bg-red-50 text-gray-700 hover:text-red-600 rounded-full p-3 shadow-lg border border-gray-200 hover:border-red-300 transition-all duration-200 z-10"
         >
           <X className="h-6 w-6 font-bold" />
         </Button>

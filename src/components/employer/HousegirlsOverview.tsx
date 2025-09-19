@@ -204,7 +204,7 @@ const HousegirlsOverview = ({ onViewProfile, onUnlockContact, selectedHousegirl 
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <Card className="border-0 shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
+      <Card className="shadow-lg bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <div>
