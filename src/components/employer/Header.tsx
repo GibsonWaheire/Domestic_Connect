@@ -1,6 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { 
-  Search, Plus, Users, Briefcase, Eye, MessageCircle, Home, RefreshCw
+  Search, Plus, Users, Briefcase, Eye, MessageCircle, Home, RefreshCw, Menu
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown';
 import { useNavigate } from 'react-router-dom';
@@ -18,6 +18,8 @@ interface HeaderProps {
   };
   lastUpdated?: Date | null;
   onRefresh?: () => void;
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const Header = ({
@@ -27,22 +29,34 @@ export const Header = ({
   setShowJobModal,
   stats,
   lastUpdated,
-  onRefresh
+  onRefresh,
+  sidebarCollapsed,
+  setSidebarCollapsed
 }: HeaderProps) => {
   const navigate = useNavigate();
   
   return (
-    <header className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200/50 px-6 py-4">
+    <header className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200/50 px-4 lg:px-6 py-4">
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
+        {/* Mobile Menu Button */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="lg:hidden mr-3"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+
+        <div className="flex items-center space-x-6 flex-1">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 truncate">
               {activeSection === 'housegirls' && 'Available Housegirls'}
               {activeSection === 'jobs' && 'Job Management'}
               {activeSection === 'messages' && 'Messages'}
               {activeSection === 'settings' && 'Settings'}
             </h1>
-            <p className="text-gray-600">
+            <p className="text-sm lg:text-base text-gray-600 hidden sm:block">
               {activeSection === 'housegirls' && 'Browse and connect with qualified housegirls'}
               {activeSection === 'jobs' && 'Create and manage your job postings'}
               {activeSection === 'messages' && 'Communicate with housegirls and manage conversations'}
