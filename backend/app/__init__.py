@@ -2,8 +2,6 @@ from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_cors import CORS
-import firebase_admin
-from firebase_admin import credentials
 import os
 import sys
 
@@ -26,10 +24,7 @@ def create_app(config_name=None):
     # Initialize extensions with app
     db.init_app(app)
     migrate.init_app(app, db)
-    CORS(app, origins=app.config['CORS_ORIGINS'])
-    
-    # Initialize Firebase Admin SDK
-    initialize_firebase(app)
+    CORS(app, origins=app.config['CORS_ORIGINS'], supports_credentials=True)
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -43,6 +38,7 @@ def create_app(config_name=None):
     from app.routes.payments import payments_bp
     from app.routes.photos import photos_bp
     from app.routes.admin import admin_bp
+    from app.routes.mpesa import mpesa_bp
     
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(profiles_bp, url_prefix='/api/profiles')
@@ -52,6 +48,7 @@ def create_app(config_name=None):
     app.register_blueprint(payments_bp, url_prefix='/api/payments')
     app.register_blueprint(photos_bp, url_prefix='/api/photos')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')
+    app.register_blueprint(mpesa_bp, url_prefix='/api/mpesa')
     
     # Error handlers
     @app.errorhandler(404)
@@ -64,24 +61,3 @@ def create_app(config_name=None):
         return {'error': 'Internal server error'}, 500
     
     return app
-
-def initialize_firebase(app):
-    """Initialize Firebase Admin SDK"""
-    try:
-        # Check if Firebase is already initialized
-        if not firebase_admin._apps:
-            # Initialize with service account key
-            if app.config.get('FIREBASE_PROJECT_ID'):
-                cred = credentials.Certificate({
-                    "type": "service_account",
-                    "project_id": app.config['FIREBASE_PROJECT_ID'],
-                    "private_key": app.config['FIREBASE_PRIVATE_KEY'].replace('\\n', '\n'),
-                    "client_email": app.config['FIREBASE_CLIENT_EMAIL'],
-                })
-                firebase_admin.initialize_app(cred)
-            else:
-                # Use default credentials (for development)
-                firebase_admin.initialize_app()
-    except Exception as e:
-        app.logger.warning(f"Firebase initialization failed: {e}")
-        # Continue without Firebase for development

@@ -1,18 +1,10 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class Config:
     """Base configuration class"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///domestic_connect.db'
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    
-    # Firebase configuration
-    FIREBASE_PROJECT_ID = os.environ.get('FIREBASE_PROJECT_ID')
-    FIREBASE_PRIVATE_KEY = os.environ.get('FIREBASE_PRIVATE_KEY')
-    FIREBASE_CLIENT_EMAIL = os.environ.get('FIREBASE_CLIENT_EMAIL')
     
     # File upload configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or 'uploads'
@@ -21,6 +13,14 @@ class Config:
     
     # CORS configuration
     CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    
+    # M-Pesa configuration
+    MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY')
+    MPESA_CONSUMER_SECRET = os.environ.get('MPESA_CONSUMER_SECRET')
+    MPESA_PASSKEY = os.environ.get('MPESA_PASSKEY')
+    MPESA_BUSINESS_SHORT_CODE = os.environ.get('MPESA_BUSINESS_SHORT_CODE', '174379')
+    MPESA_ENVIRONMENT = os.environ.get('MPESA_ENVIRONMENT', 'sandbox')
+    MPESA_CALLBACK_URL = os.environ.get('MPESA_CALLBACK_URL')
 
 class DevelopmentConfig(Config):
     """Development configuration"""
