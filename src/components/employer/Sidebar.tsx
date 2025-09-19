@@ -36,9 +36,23 @@ export const Sidebar = ({
   };
 
   return (
-    <div className={`bg-gradient-to-b from-white to-gray-50 border-r border-gray-200/50 transition-all duration-300 ${
-      sidebarCollapsed ? 'w-16' : 'w-64'
-    } flex-shrink-0`}>
+    <>
+      {/* Mobile Overlay */}
+      {!sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+          onClick={() => setSidebarCollapsed(true)}
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div className={`
+        fixed lg:relative lg:translate-x-0 z-50 lg:z-auto
+        bg-gradient-to-b from-white to-gray-50 border-r border-gray-200/50 
+        transition-all duration-300 h-full
+        ${sidebarCollapsed ? 'w-16 -translate-x-full lg:w-16' : 'w-64 translate-x-0'}
+        lg:flex-shrink-0
+      `}>
       <div className="flex flex-col h-full">
         {/* Header */}
         <div className="p-4 border-b border-gray-200/50">
@@ -139,6 +153,7 @@ export const Sidebar = ({
           )}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
