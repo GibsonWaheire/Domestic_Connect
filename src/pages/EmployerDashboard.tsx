@@ -101,6 +101,13 @@ const EmployerDashboard = () => {
       });
     }
   }, [dataError]);
+
+  // Redirect if user is not authenticated
+  useEffect(() => {
+    if (!user && !loading) {
+      navigate('/');
+    }
+  }, [user, loading, navigate]);
   
   // Show loading state while auth is initializing or data is loading
   if (loading || dataLoading) {
@@ -117,9 +124,7 @@ const EmployerDashboard = () => {
     );
   }
   
-  // Redirect if user is not authenticated
   if (!user) {
-    navigate('/');
     return null;
   }
 

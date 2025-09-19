@@ -1,6 +1,10 @@
 // Use relative URLs for development (proxy handles forwarding)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
+// Import error handling utilities
+import { errorService, UserFriendlyError } from './errorService';
+import { ApiResponse } from './apiErrorHandler';
+
 export interface User {
   id: string;
   email: string;
@@ -10,6 +14,7 @@ export interface User {
   phone_number?: string;
   created_at: string;
   updated_at: string;
+  is_admin?: boolean;
 }
 
 export interface Profile {
@@ -134,22 +139,75 @@ export interface JobPosting {
   applications_count: number;
 }
 
-// Generic API functions
+// Generic API functions with enhanced error handling
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    // Remove credentials for proxy compatibility
-    ...options,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      // Remove credentials for proxy compatibility
+      ...options,
+    });
 
-  if (!response.ok) {
-    throw new Error(`API request failed: ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      
+      // Log the error for debugging
+      const error = new Error(errorMessage);
+      errorService.logError(error, `API call to ${endpoint}`, 'medium');
+      
+      throw error;
+    }
+
+    return response.json();
+  } catch (error) {
+    // Log the error and re-throw for backward compatibility
+    const errorObj = error instanceof Error ? error : new Error(String(error));
+    errorService.logError(errorObj, `API call to ${endpoint}`, 'medium');
+    throw errorObj;
   }
+}
 
-  return response.json();
+// Enhanced API request function that returns user-friendly errors
+async function safeApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      ...options,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      const errorMessage = errorData.error || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+      
+      const apiError = new Error(errorMessage);
+      const userFriendlyError = errorService.handleApiError(apiError, endpoint);
+      
+      return {
+        success: false,
+        error: userFriendlyError,
+      };
+    }
+
+    const data = await response.json();
+    return {
+      success: true,
+      data,
+    };
+  } catch (error) {
+    const userFriendlyError = errorService.handleApiError(error, endpoint);
+    
+    return {
+      success: false,
+      error: userFriendlyError,
+    };
+  }
 }
 
 // Profile API functions
@@ -550,3 +608,6 @@ export interface DashboardData {
 export const crossEntityApi = {
   getDashboardData: () => apiRequest<DashboardData>('/api/cross-entity/dashboard-data')
 };
+
+// Export the safe API request function for components that need user-friendly error handling
+export { safeApiRequest };

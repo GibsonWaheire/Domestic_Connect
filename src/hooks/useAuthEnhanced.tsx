@@ -1,6 +1,7 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
+import { errorService } from '@/lib/errorService';
 
 interface User {
   id: string;
@@ -11,6 +12,7 @@ interface User {
   phone_number?: string;
   created_at: string;
   updated_at: string;
+  is_admin?: boolean;
   // Extended fields for housegirl profiles
   age?: number;
   location?: string;
@@ -83,52 +85,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFirebaseUser, setIsFirebaseUser] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
 
-  // Check session on mount (auto-login)
-  useEffect(() => {
-    checkSession();
-    
-    // Listen to Firebase auth state changes
-    const unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
-      if (firebaseUser) {
-        // User is signed in with Firebase
-        await handleFirebaseUser(firebaseUser);
-      } else {
-        // User is signed out from Firebase
-        if (isFirebaseUser) {
-          setUser(null);
-          setIsFirebaseUser(false);
-        }
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  const handleFirebaseUser = async (firebaseUser: FirebaseUser) => {
-    try {
-      // Get or create user profile in backend
-      const token = await FirebaseAuthService.getIdToken();
-      const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firebase_uid: firebaseUser.uid,
-          email: firebaseUser.email,
-          display_name: firebaseUser.displayName
-        })
-      });
-
-      setUser({ ...response.user, is_firebase_user: true });
-      setIsFirebaseUser(true);
-    } catch (error) {
-      console.error('Failed to sync Firebase user:', error);
-    }
-  };
-
-  const checkSession = async () => {
+  const checkSession = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiRequest<{ user: User | null }>('/api/auth/check_session');
@@ -147,7 +106,81 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  const handleFirebaseUser = useCallback(async (firebaseUser: FirebaseUser) => {
+    try {
+      // Get or create user profile in backend
+      const token = await FirebaseAuthService.getIdToken();
+      const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          firebase_uid: firebaseUser.uid,
+          email: firebaseUser.email,
+          display_name: firebaseUser.displayName
+        })
+      });
+
+      setUser({ ...response.user, is_firebase_user: true });
+      setIsFirebaseUser(true);
+    } catch (error) {
+      // Log the error for debugging
+      const errorObj = error instanceof Error ? error : new Error(String(error));
+      errorService.logError(errorObj, 'Firebase user sync', 'medium');
+      
+      // If the backend endpoint doesn't exist or fails, create a local user profile
+      // This allows the app to continue working even if the backend is not fully set up
+      const fallbackUser: User = {
+        id: firebaseUser.uid,
+        email: firebaseUser.email || '',
+        user_type: 'employer', // Default type
+        first_name: firebaseUser.displayName?.split(' ')[0] || 'User',
+        last_name: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_firebase_user: true,
+      };
+      
+      setUser(fallbackUser);
+      setIsFirebaseUser(true);
+      
+      console.warn('Using fallback Firebase user profile due to backend sync failure:', errorObj.message);
+      
+      // Show a subtle notification to the user
+      toast({
+        title: "Welcome!",
+        description: "You're signed in. Some features may be limited until we sync with our servers.",
+        duration: 5000,
+      });
+    }
+  }, []);
+
+  // Check session on mount (auto-login)
+  useEffect(() => {
+    checkSession();
+    
+    // Listen to Firebase auth state changes
+    const unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
+      // Don't process auth state changes if we're in the process of signing out
+      if (isSigningOut) {
+        return;
+      }
+
+      if (firebaseUser) {
+        // User is signed in with Firebase
+        await handleFirebaseUser(firebaseUser);
+      } else {
+        // User is signed out from Firebase
+        setUser(null);
+        setIsFirebaseUser(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [checkSession, handleFirebaseUser, isSigningOut]);
 
   const signUp = async (
     email: string, 
@@ -347,6 +380,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const signOut = async () => {
     try {
       setLoading(true);
+      setIsSigningOut(true);
 
       if (isFirebaseUser) {
         // Sign out from Firebase
@@ -379,6 +413,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } finally {
       setLoading(false);
+      setIsSigningOut(false);
     }
   };
 

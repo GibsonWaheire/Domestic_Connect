@@ -50,12 +50,13 @@ export default defineConfig(({ mode }) => {
           // Optimize chunk names
           chunkFileNames: (chunkInfo) => {
             const facadeModuleId = chunkInfo.facadeModuleId
-              ? chunkInfo.facadeModuleId.split('/').pop().replace('.tsx', '').replace('.ts', '')
+              ? chunkInfo.facadeModuleId.split('/').pop()?.replace('.tsx', '').replace('.ts', '') || 'chunk'
               : 'chunk';
             return `js/${facadeModuleId}-[hash].js`;
           },
           entryFileNames: 'js/[name]-[hash].js',
           assetFileNames: (assetInfo) => {
+            if (!assetInfo.name) return 'assets/[name]-[hash].[ext]';
             const info = assetInfo.name.split('.');
             const ext = info[info.length - 1];
             if (/\.(css)$/.test(assetInfo.name)) {
