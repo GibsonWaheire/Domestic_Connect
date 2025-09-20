@@ -69,6 +69,30 @@ interface EditFormData {
 const HousegirlDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  
+  // Additional auth check - ensure only housegirls can access this dashboard
+  useEffect(() => {
+    if (user) {
+      if (user.user_type !== 'housegirl' && !user.is_admin) {
+        toast({
+          title: "Access Denied",
+          description: "This dashboard is only accessible to housegirls.",
+          variant: "destructive"
+        });
+        
+        // Redirect based on user type
+        if (user.user_type === 'employer') {
+          navigate('/dashboard');
+        } else if (user.user_type === 'agency') {
+          navigate('/agency-dashboard');
+        } else {
+          navigate('/');
+        }
+        return;
+      }
+    }
+  }, [user, navigate]);
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'messages'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
     // Load photo from localStorage on component mount

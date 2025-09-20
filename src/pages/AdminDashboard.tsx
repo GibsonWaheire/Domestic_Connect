@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,33 @@ import { toast } from '@/hooks/use-toast';
 
 const AdminDashboard: React.FC = () => {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
+  
+  // Additional auth check - ensure only admins can access this dashboard
+  useEffect(() => {
+    if (user) {
+      if (!user.is_admin) {
+        toast({
+          title: "Access Denied",
+          description: "This dashboard is only accessible to administrators.",
+          variant: "destructive"
+        });
+        
+        // Redirect based on user type
+        if (user.user_type === 'employer') {
+          navigate('/dashboard');
+        } else if (user.user_type === 'housegirl') {
+          navigate('/housegirl-dashboard');
+        } else if (user.user_type === 'agency') {
+          navigate('/agency-dashboard');
+        } else {
+          navigate('/');
+        }
+        return;
+      }
+    }
+  }, [user, navigate]);
+  
   const [stats, setStats] = useState<AdminDashboardStats | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [agencies, setAgencies] = useState<AdminAgency[]>([]);
