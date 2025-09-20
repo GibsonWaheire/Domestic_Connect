@@ -142,9 +142,25 @@ export interface JobPosting {
 // Generic API functions with enhanced error handling
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   try {
+    // Get Firebase token for authentication
+    let authHeaders = {};
+    try {
+      const { FirebaseAuthService } = await import('@/lib/firebaseAuth');
+      const token = await FirebaseAuthService.getIdToken();
+      if (token) {
+        authHeaders = {
+          'Authorization': `Bearer ${token}`
+        };
+      }
+    } catch (error) {
+      // If Firebase auth fails, continue without auth headers
+      console.warn('Failed to get Firebase token:', error);
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...options.headers,
       },
       // Remove credentials for proxy compatibility
@@ -174,9 +190,25 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 // Enhanced API request function that returns user-friendly errors
 async function safeApiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   try {
+    // Get Firebase token for authentication
+    let authHeaders = {};
+    try {
+      const { FirebaseAuthService } = await import('@/lib/firebaseAuth');
+      const token = await FirebaseAuthService.getIdToken();
+      if (token) {
+        authHeaders = {
+          'Authorization': `Bearer ${token}`
+        };
+      }
+    } catch (error) {
+      // If Firebase auth fails, continue without auth headers
+      console.warn('Failed to get Firebase token:', error);
+    }
+
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       headers: {
         'Content-Type': 'application/json',
+        ...authHeaders,
         ...options.headers,
       },
       ...options,

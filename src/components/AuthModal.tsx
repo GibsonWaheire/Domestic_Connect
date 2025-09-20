@@ -211,7 +211,12 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
         } else if (currentUser?.is_admin) {
           window.location.href = '/admin-dashboard';
         } else {
-          window.location.href = '/dashboard';
+          // Default fallback - redirect to appropriate dashboard based on user type
+          if (currentUser?.user_type === 'housegirl') {
+            window.location.href = '/housegirl-dashboard';
+          } else {
+            window.location.href = '/dashboard';
+          }
         }
       }
     } catch (error: unknown) {
@@ -298,7 +303,12 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           } else if (currentUser?.is_admin) {
             window.location.href = '/admin-dashboard';
           } else {
-            window.location.href = '/dashboard';
+            // Default fallback - redirect to appropriate dashboard based on user type
+            if (currentUser?.user_type === 'housegirl') {
+              window.location.href = '/housegirl-dashboard';
+            } else {
+              window.location.href = '/dashboard';
+            }
           }
         }
       } else {

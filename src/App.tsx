@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { AuthGuard } from "@/components/AuthGuard";
 import LandingPage from "./pages/LandingPage";
 import HousegirlPage from "./pages/HousegirlPage";
 import AgencyPage from "./pages/AgencyPage";
@@ -43,12 +44,43 @@ const App = () => (
               <Route path="/" element={<LandingPage />} />
               <Route path="/home" element={<LandingPage />} />
               <Route path="/housegirls" element={<HousegirlPage />} />
-              <Route path="/housegirl-dashboard" element={<HousegirlDashboard />} />
               <Route path="/agencies" element={<AgencyPage />} />
               <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
-              <Route path="/agency-dashboard" element={<AgencyDashboard />} />
-              <Route path="/dashboard" element={<EmployerDashboard />} />
-              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              
+              {/* Protected Dashboard Routes */}
+              <Route 
+                path="/housegirl-dashboard" 
+                element={
+                  <AuthGuard allowedUserTypes={['housegirl']}>
+                    <HousegirlDashboard />
+                  </AuthGuard>
+                } 
+              />
+              <Route 
+                path="/agency-dashboard" 
+                element={
+                  <AuthGuard allowedUserTypes={['agency']}>
+                    <AgencyDashboard />
+                  </AuthGuard>
+                } 
+              />
+              <Route 
+                path="/dashboard" 
+                element={
+                  <AuthGuard allowedUserTypes={['employer']}>
+                    <EmployerDashboard />
+                  </AuthGuard>
+                } 
+              />
+              <Route 
+                path="/admin-dashboard" 
+                element={
+                  <AuthGuard allowedUserTypes={['admin']}>
+                    <AdminDashboard />
+                  </AuthGuard>
+                } 
+              />
+              
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

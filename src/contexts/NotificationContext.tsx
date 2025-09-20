@@ -42,48 +42,7 @@ interface NotificationProviderProps {
 }
 
 export const NotificationProvider = ({ children }: NotificationProviderProps) => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      title: 'New Application',
-      message: 'Sarah Wanjiku applied to your "House Manager" position',
-      type: 'info',
-      timestamp: new Date(Date.now() - 1000 * 60 * 30), // 30 minutes ago
-      isRead: false,
-      action: {
-        label: 'View Application',
-        onClick: () => console.log('View application')
-      }
-    },
-    {
-      id: '2',
-      title: 'Message Received',
-      message: 'Grace Akinyi sent you a message about the job posting',
-      type: 'info',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 hours ago
-      isRead: false,
-      action: {
-        label: 'Reply',
-        onClick: () => console.log('Reply to message')
-      }
-    },
-    {
-      id: '3',
-      title: 'Job Posted Successfully',
-      message: 'Your "Experienced House Manager" job has been published',
-      type: 'success',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 day ago
-      isRead: true
-    },
-    {
-      id: '4',
-      title: 'Profile Updated',
-      message: 'Your profile information has been saved successfully',
-      type: 'success',
-      timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 days ago
-      isRead: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 

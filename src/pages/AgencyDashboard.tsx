@@ -129,6 +129,30 @@ interface Placement {
 const AgencyDashboard = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  
+  // Additional auth check - ensure only agencies can access this dashboard
+  useEffect(() => {
+    if (user) {
+      if (user.user_type !== 'agency' && !user.is_admin) {
+        toast({
+          title: "Access Denied",
+          description: "This dashboard is only accessible to agencies.",
+          variant: "destructive"
+        });
+        
+        // Redirect based on user type
+        if (user.user_type === 'housegirl') {
+          navigate('/housegirl-dashboard');
+        } else if (user.user_type === 'employer') {
+          navigate('/dashboard');
+        } else {
+          navigate('/');
+        }
+        return;
+      }
+    }
+  }, [user, navigate]);
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings'>('overview');
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -278,63 +302,23 @@ const AgencyDashboard = () => {
     earnings: 35000 + (index * 5000)
   }));
 
-  const activeJobs: JobPosting[] = [
-    {
-      id: '1',
-      title: 'Live-in House Help Needed',
-      client: 'John & Mary Smith',
-      location: 'Karen, Nairobi',
-      salary: 'KES 20,000',
-      postedDate: '2024-01-15',
-      status: 'active',
-      applications: 8,
-      requirements: ['Cooking', 'Cleaning', 'Childcare', 'Live-in'],
-      commission: 2000,
-      placementFee: 5000
-    },
-    {
-      id: '2',
-      title: 'Part-time Housekeeper',
-      client: 'Dr. Sarah Johnson',
-      location: 'Westlands, Nairobi',
-      salary: 'KES 15,000',
-      postedDate: '2024-01-12',
-      status: 'pending',
-      applications: 5,
-      requirements: ['Cleaning', 'Laundry', 'Live-out'],
-      commission: 1500,
-      placementFee: 3000
-    }
-  ];
+  // Real job opportunities from dashboard data
+  const activeJobs: JobPosting[] = dashboardData?.available_data.job_postings?.slice(0, 3) || [];
 
-  const topClients: Client[] = [
-    {
-      id: '1',
-      name: 'John & Mary Smith',
-      email: 'john.smith@email.com',
-      phone: '+254700123456',
-      location: 'Karen, Nairobi',
-      status: 'premium',
-      totalSpent: 125000,
-      lastContact: '2024-01-15',
-      photo: '/placeholder.svg',
-      placements: 3,
-      satisfaction: 5
-    },
-    {
-      id: '2',
-      name: 'Dr. Sarah Johnson',
-      email: 'sarah.johnson@email.com',
-      phone: '+254700789012',
-      location: 'Westlands, Nairobi',
-      status: 'active',
-      totalSpent: 89000,
-      lastContact: '2024-01-14',
-      photo: '/placeholder.svg',
-      placements: 2,
-      satisfaction: 4
-    }
-  ];
+  // Real clients from dashboard data
+  const topClients: Client[] = agencyClients.slice(0, 3).map(client => ({
+    id: client.id,
+    name: client.name,
+    email: client.email,
+    phone: client.phone_number,
+    location: client.location,
+    status: client.placement_status,
+    totalSpent: 0, // Will be calculated from payments
+    lastContact: client.hire_date,
+    photo: '/placeholder.svg',
+    placements: 1,
+    satisfaction: 4
+  }));
 
   const recentPlacements: Placement[] = [
     {
