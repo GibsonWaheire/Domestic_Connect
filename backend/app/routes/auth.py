@@ -58,7 +58,7 @@ def firebase_auth_required(f):
                 email=firebase_user.get('email', ''),
                 first_name=firebase_user.get('displayName', '').split(' ')[0] if firebase_user.get('displayName') else '',
                 last_name=' '.join(firebase_user.get('displayName', '').split(' ')[1:]) if firebase_user.get('displayName') else '',
-                user_type='housegirl',  # Default type, can be updated later
+                user_type=data.get('user_type', 'employer'),  # Use provided type or default to employer
                 is_firebase_user=True
             )
             db.session.add(user)
@@ -81,7 +81,7 @@ def firebase_signup():
         data = request.get_json()
         
         # Update user with additional profile information
-        user.user_type = data.get('user_type', 'housegirl')
+        user.user_type = data.get('user_type', 'employer')
         user.first_name = data.get('first_name', user.first_name)
         user.last_name = data.get('last_name', user.last_name)
         user.phone_number = data.get('phone_number', user.phone_number)

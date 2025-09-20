@@ -74,13 +74,6 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   return response.json();
 }
 
-// Test login credentials for development
-const TEST_LOGIN_CREDENTIALS = {
-  employer: { email: 'test@employer.com', password: 'password123' },
-  housegirl: { email: 'test@housegirl.com', password: 'password123' },
-  agency: { email: 'test@agency.com', password: 'password123' }
-};
-
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -257,30 +250,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
 
-      // Check if this is a test login
-      const testCredential = Object.values(TEST_LOGIN_CREDENTIALS).find(
-        cred => cred.email === email && cred.password === password
-      );
-
-      if (testCredential) {
-        // Use backend test login
-        const response = await apiRequest<{ message: string; user: User }>('/api/auth/login', {
-          method: 'POST',
-          body: JSON.stringify({ email, password }),
-        });
-
-        setUser(response.user);
-        setIsFirebaseUser(false);
-
-        toast({
-          title: "Signed In",
-          description: "Welcome back! (Test Account)",
-        });
-
-        return { error: null, user: response.user };
-      }
-
-      // Use Firebase for regular login
+      // Use Firebase for login
       const firebaseResult = await FirebaseAuthService.signIn(email, password);
 
       if (!firebaseResult.success) {

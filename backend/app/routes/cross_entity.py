@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import login_required, get_current_user
+from app.services.auth_service import firebase_auth_required, get_current_user
 from app.models import (
     User, Profile, EmployerProfile, HousegirlProfile, AgencyProfile, 
     JobPosting, JobApplication, Agency, AgencyWorker, AgencyClient
@@ -11,11 +11,11 @@ from sqlalchemy.orm import joinedload
 cross_entity_bp = Blueprint('cross_entity', __name__)
 
 @cross_entity_bp.route('/dashboard-data', methods=['GET'])
-@login_required
+@firebase_auth_required
 def get_dashboard_data():
     """Get comprehensive dashboard data based on user type"""
     try:
-        current_user = get_current_user()
+        current_user = request.current_user
         if not current_user:
             return jsonify({'error': 'User not found'}), 404
         

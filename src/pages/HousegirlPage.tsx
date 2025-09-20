@@ -263,28 +263,28 @@ const HousegirlPage = () => {
               <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
                 <Users className="h-8 w-8 text-blue-600" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">1000+</div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">500+</div>
               <div className="text-gray-600 font-medium">Jobs Available</div>
             </div>
             <div className="text-center">
               <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
                 <MapPin className="h-8 w-8 text-indigo-600" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">20+</div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">15+</div>
               <div className="text-gray-600 font-medium">Cities</div>
             </div>
             <div className="text-center">
               <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
                 <Star className="h-8 w-8 text-green-600" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">95%</div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">90%</div>
               <div className="text-gray-600 font-medium">Success Rate</div>
             </div>
             <div className="text-center">
               <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
                 <Zap className="h-8 w-8 text-purple-600" />
               </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">24hrs</div>
+              <div className="text-3xl font-bold text-gray-900 mb-2">48hrs</div>
               <div className="text-gray-600 font-medium">Response Time</div>
             </div>
           </div>

@@ -13,7 +13,6 @@ import AgencyMarketplace from '@/components/employer/AgencyMarketplace';
 import { JobPostingModal } from '@/components/employer/JobPostingModal';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import { NotificationProvider } from '@/contexts/NotificationContext';
-import { mockJobPostings, mockMessages } from '@/data/mockData';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
 import { crossEntityApi, DashboardData } from '@/lib/api';
@@ -22,6 +21,29 @@ import { useRealTimeData } from '@/hooks/useRealTimeData';
 const EmployerDashboard = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  
+  // Additional auth check - ensure only employers can access this dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.user_type !== 'employer' && !user.is_admin) {
+        toast({
+          title: "Access Denied",
+          description: "This dashboard is only accessible to employers.",
+          variant: "destructive"
+        });
+        
+        // Redirect based on user type
+        if (user.user_type === 'housegirl') {
+          navigate('/housegirl-dashboard');
+        } else if (user.user_type === 'agency') {
+          navigate('/agency-dashboard');
+        } else {
+          navigate('/');
+        }
+        return;
+      }
+    }
+  }, [user, loading, navigate]);
   
   // State
   const [activeSection, setActiveSection] = useState('housegirls');
@@ -46,8 +68,8 @@ const EmployerDashboard = () => {
 
   // State for real data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
-  const [jobPostings] = useState(mockJobPostings);
-  const [messages] = useState(mockMessages);
+  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
 
   // Use real-time data hook
   const { 
@@ -141,11 +163,11 @@ const EmployerDashboard = () => {
     selectedLivingArrangement
   );
 
-  // Stats
-  const stats = {
-    totalApplications: 45,
+  // Real-time stats from dashboard data
+  const stats = dashboardData?.stats || {
+    totalApplications: jobPostings.reduce((sum, job) => sum + (job.applications || 0), 0),
     activeJobs: jobPostings.filter(job => job.status === 'active').length,
-    totalViews: 234,
+    totalViews: jobPostings.reduce((sum, job) => sum + (job.views || 0), 0),
     unreadMessages: messages.filter(msg => !msg.isRead).length
   };
 
