@@ -3,6 +3,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGuard } from "@/components/AuthGuard";
@@ -31,61 +32,63 @@ const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <BrowserRouter
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true
-            }}
-          >
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/home" element={<LandingPage />} />
-              <Route path="/housegirls" element={<HousegirlPage />} />
-              <Route path="/agencies" element={<AgencyPage />} />
-              <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
-              
-              {/* Protected Dashboard Routes */}
-              <Route 
-                path="/housegirl-dashboard" 
-                element={
-                  <AuthGuard allowedUserTypes={['housegirl']}>
-                    <HousegirlDashboard />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/agency-dashboard" 
-                element={
-                  <AuthGuard allowedUserTypes={['agency']}>
-                    <AgencyDashboard />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/dashboard" 
-                element={
-                  <AuthGuard allowedUserTypes={['employer']}>
-                    <EmployerDashboard />
-                  </AuthGuard>
-                } 
-              />
-              <Route 
-                path="/admin-dashboard" 
-                element={
-                  <AuthGuard allowedUserTypes={['admin']}>
-                    <AdminDashboard />
-                  </AuthGuard>
-                } 
-              />
-              
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </TooltipProvider>
+        <HelmetProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter
+              future={{
+                v7_startTransition: true,
+                v7_relativeSplatPath: true
+              }}
+            >
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/home" element={<LandingPage />} />
+                <Route path="/housegirls" element={<HousegirlPage />} />
+                <Route path="/agencies" element={<AgencyPage />} />
+                <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
+                
+                {/* Protected Dashboard Routes */}
+                <Route 
+                  path="/housegirl-dashboard" 
+                  element={
+                    <AuthGuard allowedUserTypes={['housegirl']}>
+                      <HousegirlDashboard />
+                    </AuthGuard>
+                  } 
+                />
+                <Route 
+                  path="/agency-dashboard" 
+                  element={
+                    <AuthGuard allowedUserTypes={['agency']}>
+                      <AgencyDashboard />
+                    </AuthGuard>
+                  } 
+                />
+                <Route 
+                  path="/dashboard" 
+                  element={
+                    <AuthGuard allowedUserTypes={['employer']}>
+                      <EmployerDashboard />
+                    </AuthGuard>
+                  } 
+                />
+                <Route 
+                  path="/admin-dashboard" 
+                  element={
+                    <AuthGuard allowedUserTypes={['admin']}>
+                      <AdminDashboard />
+                    </AuthGuard>
+                  } 
+                />
+                
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </HelmetProvider>
       </AuthProvider>
     </QueryClientProvider>
   </ErrorBoundary>

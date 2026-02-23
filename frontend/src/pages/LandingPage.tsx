@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -153,6 +154,10 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-pink-50 to-orange-50">
+      <Helmet>
+        <title>Domestic Connect - Msichana wa Kazi, Housegirls in Kenya | Best Domestic Workers</title>
+        <meta name="description" content="Find reliable housegirls (msichana wa kazi), house managers, nannies, and domestic workers in Kenya. Verified house helps in Nairobi, Mombasa, Kisumu and all of Kenya. Safe, trusted domestic help for your home." />
+      </Helmet>
       {/* Enhanced Header with Unique Design */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-pink-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
