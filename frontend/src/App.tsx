@@ -16,6 +16,7 @@ import HousegirlDashboard from "./pages/HousegirlDashboard";
 import AgencyDashboard from "./pages/AgencyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import BrowseHousegirls from "./pages/BrowseHousegirls";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,6 +49,7 @@ const App = () => (
                 <Route path="/housegirls" element={<HousegirlPage />} />
                 <Route path="/agencies" element={<AgencyPage />} />
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
+                <Route path="/browse-housegirls" element={<BrowseHousegirls />} />
                 
                 {/* Protected Dashboard Routes */}
                 <Route 

@@ -36,9 +36,7 @@ interface HousegirlsProps {
   currentPage: number;
   setCurrentPage: (page: number) => void;
   itemsPerPage: number;
-  setSelectedHousegirl: (housegirl: Housegirl | null) => void;
-  setShowUnlockModal: (show: boolean) => void;
-  setHousegirlToUnlock: (housegirl: Housegirl | null) => void;
+  onUnlock: (housegirl: Housegirl) => void;
 }
 
 export const Housegirls = ({
@@ -62,18 +60,15 @@ export const Housegirls = ({
   currentPage,
   setCurrentPage,
   itemsPerPage,
-  setSelectedHousegirl,
-  setShowUnlockModal,
-  setHousegirlToUnlock
+  onUnlock,
 }: HousegirlsProps) => {
   const [showFilters, setShowFilters] = useState(true);
-  const { showSuccessNotification } = useNotificationActions();
+  const { showSuccessNotification, showInfoNotification } = useNotificationActions();
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedHousegirl, setSelectedHousegirlLocal] = useState<Housegirl | null>(null);
 
   const handleUnlockContact = (housegirl: Housegirl) => {
-    setHousegirlToUnlock(housegirl);
-    setShowUnlockModal(true);
+    onUnlock(housegirl);
     setShowProfileModal(false);
   };
 
@@ -355,10 +350,7 @@ export const Housegirls = ({
                     ) : (
                       <Button
                         size="sm"
-                        onClick={() => {
-                          setHousegirlToUnlock(housegirl);
-                          setShowUnlockModal(true);
-                        }}
+                        onClick={() => onUnlock(housegirl)}
                         className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white shadow-md hover:shadow-lg transition-all duration-300"
                       >
                         <Phone className="h-3 w-3" />

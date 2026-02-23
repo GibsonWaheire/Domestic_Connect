@@ -197,9 +197,10 @@ const EmployerDashboard = () => {
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             itemsPerPage={itemsPerPage}
-            setSelectedHousegirl={setSelectedHousegirl}
-            setShowUnlockModal={setShowUnlockModal}
-            setHousegirlToUnlock={setHousegirlToUnlock}
+            onUnlock={(housegirl) => {
+              setHousegirlToUnlock(housegirl);
+              setShowUnlockModal(true);
+            }}
           />
         );
       case 'agency-marketplace':
@@ -246,9 +247,10 @@ const EmployerDashboard = () => {
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             itemsPerPage={itemsPerPage}
-            setSelectedHousegirl={setSelectedHousegirl}
-            setShowUnlockModal={setShowUnlockModal}
-            setHousegirlToUnlock={setHousegirlToUnlock}
+            onUnlock={(housegirl) => {
+              setHousegirlToUnlock(housegirl);
+              setShowUnlockModal(true);
+            }}
           />
         );
     }
