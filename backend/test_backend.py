@@ -3,11 +3,11 @@
 Simple test script to check if the backend works without complex dependencies
 """
 
-import sys
 import os
+import sys
 
-# Add the backend directory to Python path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'backend'))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
 
 try:
     print("🔍 Testing backend imports...")
@@ -29,11 +29,11 @@ try:
     print("✅ requests imported successfully")
     
     # Test config import
-    from backend.config import Config
+    from config import Config
     print("✅ Config imported successfully")
     
     # Test app creation
-    from backend.app import create_app
+    from app import create_app
     app = create_app()
     print("✅ Flask app created successfully")
     

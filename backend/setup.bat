@@ -29,12 +29,14 @@ if errorlevel 1 (
 )
 
 echo [INFO] Installing frontend dependencies...
+cd frontend
 npm install
 if errorlevel 1 (
     echo [ERROR] Failed to install frontend dependencies
     pause
     exit /b 1
 )
+cd ..
 echo [SUCCESS] Frontend dependencies installed successfully
 
 echo [INFO] Setting up backend environment...
@@ -80,10 +82,10 @@ echo [SUCCESS] Database initialized successfully
 cd ..
 
 REM Create frontend .env file if it doesn't exist
-if not exist ".env" (
+if not exist "frontend\.env" (
     echo [INFO] Creating frontend environment file...
-    copy env.example .env
-    echo [WARNING] Please update .env with your actual configuration values
+    copy frontend\env.example frontend\.env
+    echo [WARNING] Please update frontend\.env with your actual configuration values
 )
 
 echo [SUCCESS] Development environment setup complete!
