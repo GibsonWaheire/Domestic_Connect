@@ -48,6 +48,7 @@ if ! command -v npm &> /dev/null; then
 fi
 
 print_status "Installing frontend dependencies..."
+cd frontend
 npm install
 if [ $? -eq 0 ]; then
     print_success "Frontend dependencies installed successfully"
@@ -55,6 +56,7 @@ else
     print_error "Failed to install frontend dependencies"
     exit 1
 fi
+cd ..
 
 print_status "Setting up backend environment..."
 cd backend
@@ -98,10 +100,10 @@ fi
 cd ..
 
 # Create frontend .env file if it doesn't exist
-if [ ! -f ".env" ]; then
+if [ ! -f "frontend/.env" ]; then
     print_status "Creating frontend environment file..."
-    cp env.example .env
-    print_warning "Please update .env with your actual configuration values"
+    cp frontend/env.example frontend/.env
+    print_warning "Please update frontend/.env with your actual configuration values"
 fi
 
 print_success "Development environment setup complete!"
