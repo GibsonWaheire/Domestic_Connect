@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -63,6 +64,10 @@ const HousegirlPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-50">
+      <Helmet>
+        <title>Jobs for Housegirls in Kenya | Domestic Connect</title>
+        <meta name="description" content="TAFUTA KAZI! Find housegirl jobs in Kenya. Create a free profile on Domestic Connect and connect with families looking for reliable house help." />
+      </Helmet>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-blue-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">
