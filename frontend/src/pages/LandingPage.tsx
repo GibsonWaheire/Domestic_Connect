@@ -298,12 +298,12 @@ const LandingPage = () => {
               </div>
             ) : (
               <Button 
-                onClick={() => openAuthModal('signup')}
+                onClick={() => navigate('/browse-housegirls')}
                 size="lg" 
                 className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
               >
                 <User className="h-6 w-6 mr-3" />
-                Find My Perfect Housegirl →
+                View Housegirls List →
               </Button>
             )}
           </div>
@@ -441,12 +441,12 @@ const LandingPage = () => {
                 </div>
             ) : (
               <Button 
-                onClick={() => openAuthModal('signup')}
+                onClick={() => navigate('/browse-housegirls')}
                 size="lg" 
                 className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
               >
                 <User className="h-6 w-6 mr-3" />
-                Start My Search Now →
+                View Housegirls List →
               </Button>
             )}
           </div>
