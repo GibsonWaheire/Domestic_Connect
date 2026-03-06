@@ -99,6 +99,7 @@ const HousegirlDashboard = () => {
     return localStorage.getItem('housegirl_profile_photo');
   });
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showProfilePromptBanner, setShowProfilePromptBanner] = useState(false);
   const [editFormData, setEditFormData] = useState<EditFormData>({
     bio: '',
     expectedSalary: '',
@@ -178,6 +179,12 @@ const HousegirlDashboard = () => {
     }
   }, [user, navigate]);
 
+  useEffect(() => {
+    if (localStorage.getItem('dc_profile_prompt_housegirl') === 'true') {
+      setShowProfilePromptBanner(true);
+    }
+  }, []);
+
   const handleSignOut = async () => {
     await signOut();
     navigate('/housegirls');
@@ -229,6 +236,83 @@ const HousegirlDashboard = () => {
   }
 
   const userData = getUserData();
+  const parsedSkills = (editFormData.skills || '')
+    .split(',')
+    .map((skill) => skill.trim())
+    .filter(Boolean);
+
+  const housegirlCompletionItems = [
+    {
+      key: 'full-name',
+      label: 'Add your full name',
+      weight: 10,
+      completed: Boolean(`${user.first_name || ''} ${user.last_name || ''}`.trim()),
+    },
+    {
+      key: 'photo',
+      label: 'Upload a profile photo',
+      weight: 15,
+      completed: Boolean(profilePhoto),
+    },
+    {
+      key: 'location',
+      label: 'Add your location',
+      weight: 10,
+      completed: Boolean(editFormData.location || user.location),
+    },
+    {
+      key: 'phone',
+      label: 'Confirm your phone number',
+      weight: 15,
+      completed: Boolean(user.phone_number),
+    },
+    {
+      key: 'role',
+      label: 'Add your role or speciality',
+      weight: 10,
+      completed: Boolean(parsedSkills[0] || (user.skills && user.skills[0])),
+    },
+    {
+      key: 'skills',
+      label: 'Add at least 2 skills',
+      weight: 10,
+      completed: parsedSkills.length >= 2 || (user.skills?.length || 0) >= 2,
+    },
+    {
+      key: 'experience',
+      label: 'Add your years of experience',
+      weight: 10,
+      completed: Boolean(editFormData.experience || user.experience),
+    },
+    {
+      key: 'salary',
+      label: 'Add your expected salary',
+      weight: 10,
+      completed: Boolean(editFormData.expectedSalary || user.expectedSalary),
+    },
+    {
+      key: 'bio',
+      label: 'Add a short bio',
+      weight: 10,
+      completed: Boolean(editFormData.bio || user.bio),
+    },
+  ] as const;
+
+  const housegirlProfileCompletion = housegirlCompletionItems.reduce(
+    (sum, item) => sum + (item.completed ? item.weight : 0),
+    0
+  );
+  const missingHousegirlFields = housegirlCompletionItems.filter((item) => !item.completed);
+
+  const jumpToHousegirlSection = (sectionKey: string) => {
+    setActiveTab('profile');
+    setTimeout(() => {
+      const element = document.getElementById(`housegirl-${sectionKey}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    }, 0);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-50">
@@ -267,6 +351,49 @@ const HousegirlDashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {showProfilePromptBanner && (
+          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-start justify-between gap-3">
+            <p>Complete your profile to unlock all features. Profile completion: 20%</p>
+            <button
+              type="button"
+              className="text-blue-700 hover:text-blue-900 underline"
+              onClick={() => {
+                setShowProfilePromptBanner(false);
+                localStorage.removeItem('dc_profile_prompt_housegirl');
+              }}
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
+          <p className="text-sm font-semibold text-gray-900">Profile {housegirlProfileCompletion}% complete</p>
+          <div className="mt-2 h-2 w-full rounded bg-gray-200">
+            <div className="h-2 rounded bg-black" style={{ width: `${housegirlProfileCompletion}%` }} />
+          </div>
+          {missingHousegirlFields.length > 0 && (
+            <div className="mt-3 space-y-1">
+              {missingHousegirlFields.map((field) => (
+                <button
+                  key={field.key}
+                  type="button"
+                  onClick={() => jumpToHousegirlSection(field.key)}
+                  className="block text-left text-sm text-blue-700 hover:text-blue-900"
+                >
+                  {`→ ${field.label}`}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {housegirlProfileCompletion < 60 && (
+          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Your profile is not visible to employers yet. Complete at least 60% to go live. Currently at {housegirlProfileCompletion}%.
+          </div>
+        )}
+
         {/* Welcome Section */}
         <div className="mb-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
@@ -472,7 +599,7 @@ const HousegirlDashboard = () => {
               <CardContent>
                 <div className="space-y-6">
                   {/* Photo Upload */}
-                  <div className="text-center">
+                  <div className="text-center" id="housegirl-photo">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
                     <PhotoUpload 
                       onPhotoUploaded={handlePhotoUpload}
@@ -483,7 +610,7 @@ const HousegirlDashboard = () => {
 
                   {/* Basic Info */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div>
+                    <div id="housegirl-full-name">
                       <h4 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h4>
                       <div className="space-y-4">
                         <div>
@@ -494,7 +621,7 @@ const HousegirlDashboard = () => {
                           <label className="text-sm font-medium text-gray-700">Email</label>
                           <p className="text-gray-900">{user.email}</p>
                         </div>
-                        <div>
+                        <div id="housegirl-phone">
                           <label className="text-sm font-medium text-gray-700">Phone</label>
                           <p className="text-gray-900">{user.phone_number || 'Not provided'}</p>
                         </div>
@@ -509,14 +636,14 @@ const HousegirlDashboard = () => {
                       </div>
                     </div>
 
-                    <div>
+                    <div id="housegirl-location">
                       <h4 className="text-lg font-semibold text-gray-900 mb-4">Work Preferences</h4>
                       <div className="space-y-4">
                         <div>
                           <label className="text-sm font-medium text-gray-700">Preferred Location</label>
                           <p className="text-gray-900">{userData.location}</p>
                         </div>
-                        <div>
+                        <div id="housegirl-experience">
                           <label className="text-sm font-medium text-gray-700">Experience Level</label>
                           <p className="text-gray-900">{userData.experience}</p>
                         </div>
@@ -524,7 +651,7 @@ const HousegirlDashboard = () => {
                           <label className="text-sm font-medium text-gray-700">Education</label>
                           <p className="text-gray-900">{userData.education}</p>
                         </div>
-                        <div>
+                        <div id="housegirl-salary">
                           <label className="text-sm font-medium text-gray-700">Expected Salary</label>
                           <p className="text-gray-900">{userData.expectedSalary}</p>
                         </div>
@@ -539,7 +666,7 @@ const HousegirlDashboard = () => {
                   <Separator />
 
                   {/* Bio */}
-                  <div>
+                  <div id="housegirl-bio">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">About You</h4>
                     <p className="text-gray-700 bg-gray-50 p-4 rounded-lg">
                       {userData.bio}
@@ -549,10 +676,10 @@ const HousegirlDashboard = () => {
                   <Separator />
 
                   {/* Skills & Languages */}
-                  <div>
+                  <div id="housegirl-role">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Skills & Languages</h4>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                      <div>
+                      <div id="housegirl-skills">
                         <label className="text-sm font-medium text-gray-700 mb-2 block">Skills</label>
                         <div className="flex flex-wrap gap-2">
                           {userData.skills.map((skill) => (

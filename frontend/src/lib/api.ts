@@ -61,6 +61,18 @@ export interface HousegirlProfile {
   updated_at: string;
 }
 
+export interface PaginatedHousegirlResponse {
+  housegirls: HousegirlProfile[];
+  pagination: {
+    page: number;
+    per_page: number;
+    total: number;
+    pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  };
+}
+
 export interface AgencyProfile {
   id: string;
   profile_id: string;
@@ -96,9 +108,15 @@ export interface UserPurchase {
 
 export interface ContactAccess {
   id: string;
-  purchaser_id: string;
+  user_id: string;
   target_profile_id: string;
   accessed_at: string;
+}
+
+export interface ContactCreditsSummary {
+  total_credits: number;
+  used_credits: number;
+  remaining_credits: number;
 }
 
 export interface JobApplication {
@@ -294,12 +312,21 @@ export const employerProfilesApi = {
 
 // Housegirl Profile API functions
 export const housegirlProfilesApi = {
-  getAll: () => apiRequest<HousegirlProfile[]>('/api/housegirls'),
+  getAll: () =>
+    apiRequest<PaginatedHousegirlResponse>('/api/housegirls/').then((response) => response.housegirls),
+  getPaginated: (params?: { page?: number; per_page?: number; is_available?: boolean }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.page) searchParams.append('page', String(params.page));
+    if (params?.per_page) searchParams.append('per_page', String(params.per_page));
+    if (typeof params?.is_available === 'boolean') searchParams.append('is_available', String(params.is_available));
+    const queryString = searchParams.toString();
+    return apiRequest<PaginatedHousegirlResponse>(`/api/housegirls/${queryString ? `?${queryString}` : ''}`);
+  },
   getById: (id: string) => apiRequest<HousegirlProfile>(`/api/housegirls/${id}`),
   getByProfileId: (profileId: string) =>
-    apiRequest<HousegirlProfile[]>(`/api/housegirls?profile_id=${profileId}`),
+    apiRequest<PaginatedHousegirlResponse>(`/api/housegirls/?profile_id=${profileId}`).then((response) => response.housegirls),
   create: (profile: Omit<HousegirlProfile, 'id' | 'created_at' | 'updated_at'>) =>
-    apiRequest<HousegirlProfile>('/api/housegirls', {
+    apiRequest<HousegirlProfile>('/api/housegirls/', {
       method: 'POST',
       body: JSON.stringify({
         ...profile,
@@ -374,18 +401,21 @@ export const userPurchasesApi = {
 
 // Contact Access API functions
 export const contactAccessApi = {
-  getAll: () => apiRequest<ContactAccess[]>('/api/payments/contact-access'),
-  getById: (id: string) => apiRequest<ContactAccess>(`/api/payments/contact-access/${id}`),
-  getByPurchaserId: (purchaserId: string) =>
-    apiRequest<ContactAccess[]>(`/api/payments/contact-access?purchaser_id=${purchaserId}`),
-  create: (access: Omit<ContactAccess, 'id'>) =>
-    apiRequest<ContactAccess>('/api/payments/contact-access', {
+  getMine: () =>
+    apiRequest<{ contact_access: ContactAccess[] }>('/api/payments/contact-access').then((response) => response.contact_access),
+  create: (access: { target_profile_id: string }) =>
+    apiRequest<{ message: string; access_id?: string; remaining_credits: number; used_credits: number; total_credits: number }>(
+      '/api/payments/contact-access',
+      {
       method: 'POST',
       body: JSON.stringify({
-        ...access,
-        accessed_at: new Date().toISOString(),
+        target_profile_id: access.target_profile_id,
       }),
     }),
+};
+
+export const contactCreditsApi = {
+  getSummary: () => apiRequest<ContactCreditsSummary>('/api/payments/contact-credits'),
 };
 
 // Admin API interfaces

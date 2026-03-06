@@ -446,6 +446,14 @@ const AgencyDashboard = () => {
 
         {/* Main Content */}
         <main className="flex-1 p-6">
+          <Card className="mb-6 border border-blue-100 bg-blue-50">
+            <CardContent className="p-4">
+              <p className="text-sm text-blue-900">
+                Agency features are coming soon. For now, ensure your profile is complete so you are ready when we launch agency tools.
+              </p>
+            </CardContent>
+          </Card>
+
           {/* Overview Tab */}
           {activeTab === 'overview' && (
             <div className="space-y-6">

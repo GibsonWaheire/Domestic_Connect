@@ -73,6 +73,16 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentStep, setPaymentStep] = useState<'details' | 'processing' | 'success'>('details');
 
+  const getAuthHeaders = async () => {
+    try {
+      const { FirebaseAuthService } = await import('@/lib/firebaseAuth');
+      const token = await FirebaseAuthService.getIdToken();
+      return token ? { Authorization: `Bearer ${token}` } : {};
+    } catch {
+      return {};
+    }
+  };
+
   const handlePayment = async () => {
     if (!phoneNumber || phoneNumber.length < 10) {
       showErrorNotification('Invalid Phone Number', 'Please enter a valid phone number');
@@ -83,11 +93,14 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
     setPaymentStep('processing');
 
     try {
+      const authHeaders = await getAuthHeaders();
+
       // Real M-Pesa STK Push
       const stkPushResponse = await fetch(`${API_BASE_URL}/api/mpesa/stkpush`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
         },
         body: JSON.stringify({
           phoneNumber: phoneNumber,
@@ -111,15 +124,16 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
         },
         body: JSON.stringify({
-          checkoutRequestId: stkPushResult.data.CheckoutRequestID
+          checkoutRequestId: stkPushResult.checkoutRequestId
         }),
       });
 
       const statusResult = await statusResponse.json();
 
-      if (!statusResult.success || statusResult.data.ResultCode !== '0') {
+      if (!statusResult.success || String(statusResult.resultCode) !== '0') {
         throw new Error('Payment was not completed successfully');
       }
 
@@ -138,9 +152,9 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
         created_at: new Date().toISOString(),
         agency_client_id: `ac_${Date.now()}`,
         terms_accepted: true,
-        mpesa_checkout_request_id: stkPushResult.data.CheckoutRequestID,
-        mpesa_merchant_request_id: stkPushResult.data.MerchantRequestID,
-        transaction_id: statusResult.data.TransactionID || `TXN_${Date.now()}`
+        mpesa_checkout_request_id: stkPushResult.checkoutRequestId,
+        mpesa_merchant_request_id: stkPushResult.merchantRequestId,
+        transaction_id: `TXN_${Date.now()}`
       };
 
       // Save to database
@@ -148,33 +162,37 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...authHeaders,
         },
         body: JSON.stringify(paymentData),
       });
 
       if (response.ok) {
-        // Create agency client record
-        const agencyClientData = {
-          id: paymentData.agency_client_id,
-          agency_id: agency.id,
-          client_id: user?.id,
-          hiring_fee: packageDetails.price,
-          placement_status: 'registered',
-          hire_date: new Date().toISOString(),
-          package_type: packageDetails.id,
-          commission_paid: packageDetails.agencyFee,
-          platform_fee_paid: packageDetails.platformFee,
-          dispute_resolution: null,
-          terms_accepted: true
-        };
+        if (packageDetails.id !== 'contact_unlock') {
+          // Keep legacy agency-client side effect for agency packages only.
+          const agencyClientData = {
+            id: paymentData.agency_client_id,
+            agency_id: agency.id,
+            client_id: user?.id,
+            hiring_fee: packageDetails.price,
+            placement_status: 'registered',
+            hire_date: new Date().toISOString(),
+            package_type: packageDetails.id,
+            commission_paid: packageDetails.agencyFee,
+            platform_fee_paid: packageDetails.platformFee,
+            dispute_resolution: null,
+            terms_accepted: true
+          };
 
-        await fetch(`${API_BASE_URL}/api/agencies/clients`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(agencyClientData),
-        });
+          await fetch(`${API_BASE_URL}/api/agencies/clients`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              ...authHeaders,
+            },
+            body: JSON.stringify(agencyClientData),
+          });
+        }
 
         setPaymentStep('success');
         showSuccessNotification(

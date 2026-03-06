@@ -1,154 +1,100 @@
 import { Helmet } from 'react-helmet-async';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
-import { useNavigate } from 'react-router-dom';
-import { useEffect, useMemo, useState } from 'react';
 import AuthModal from '@/components/AuthModal';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
-import { errorService } from '@/lib/errorService';
-import { ErrorDisplay } from '@/components/ErrorDisplay';
-import { 
-  Building2, 
-  User, 
-  Heart, 
-  Search, 
-  Shield, 
-  Star, 
-  ArrowRight, 
-  MapPin, 
-  CheckCircle, 
-  Users, 
-  Phone, 
-  Mail, 
-  MessageCircle,
-  Briefcase,
-  Zap,
-  Award,
-  Clock,
-  TrendingUp,
-  DollarSign,
-  CheckCircle2
-} from 'lucide-react';
+import { MapPin, Menu, Phone, Search } from 'lucide-react';
+
+type RoleType = 'House Help' | 'Nanny' | 'Cook' | 'Caregiver' | 'Cleaner';
 
 type Profile = {
   id: string;
   name: string;
-  role: 'House Help' | 'Nanny' | 'Cook' | 'Caregiver' | 'Cleaner';
+  role: RoleType;
   location: string;
   tags: string[];
-  rating: number;
-  reviews: number;
   experienceYears: number;
   monthlyRate: number;
-  age: number;
   available: boolean;
   phone: string;
   exactLocation: string;
-  avatar: string;
+  avatar: string | null;
 };
 
 const PROFILE_FILTERS = ['All', 'House Help', 'Nanny', 'Cook', 'Caregiver', 'Cleaner'] as const;
+const KENYA_CITIES_CACHE_KEY = 'dc_kenya_cities_cache_v1';
+const KENYA_CITIES_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const LANDING_PROFILES: Profile[] = [
+const MOCK_PROFILES: Profile[] = [
   {
-    id: 'hg-1',
+    id: 'mock-1',
     name: 'Mary Wanjiku',
     role: 'House Help',
-    location: 'Nairobi',
+    location: 'Kasarani, Nairobi',
     tags: ['Cleaning', 'Laundry', 'Ironing'],
-    rating: 4.8,
-    reviews: 41,
     experienceYears: 5,
     monthlyRate: 15000,
-    age: 29,
     available: true,
     phone: '+254 712 334 110',
     exactLocation: 'Kasarani, Nairobi',
-    avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop'
+    avatar: null,
   },
   {
-    id: 'hg-2',
+    id: 'mock-2',
     name: 'Grace Akinyi',
     role: 'Nanny',
-    location: 'Mombasa',
+    location: 'Nyali, Mombasa',
     tags: ['Childcare', 'Meal Prep', 'Tutoring'],
-    rating: 4.7,
-    reviews: 32,
     experienceYears: 4,
     monthlyRate: 18000,
-    age: 27,
     available: true,
     phone: '+254 701 992 803',
     exactLocation: 'Nyali, Mombasa',
-    avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=200&h=200&fit=crop'
+    avatar: null,
   },
   {
-    id: 'hg-3',
+    id: 'mock-3',
     name: 'Joyce Atieno',
     role: 'Cook',
-    location: 'Kisumu',
-    tags: ['Cooking', 'Baking', 'Cleaning'],
-    rating: 4.9,
-    reviews: 56,
+    location: 'Milimani, Kisumu',
+    tags: ['Cooking', 'Baking', 'Meal Prep'],
     experienceYears: 7,
     monthlyRate: 20000,
-    age: 33,
     available: false,
     phone: '+254 722 883 094',
     exactLocation: 'Milimani, Kisumu',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&h=200&fit=crop'
+    avatar: null,
   },
   {
-    id: 'hg-4',
+    id: 'mock-4',
     name: 'Jane Njeri',
     role: 'Caregiver',
-    location: 'Nakuru',
-    tags: ['Elderly Care', 'Medication', 'Cooking'],
-    rating: 4.6,
-    reviews: 24,
+    location: 'Section 58, Nakuru',
+    tags: ['Elder Care', 'Medication', 'Companionship'],
     experienceYears: 6,
     monthlyRate: 22000,
-    age: 35,
     available: true,
     phone: '+254 734 918 725',
     exactLocation: 'Section 58, Nakuru',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=200&h=200&fit=crop'
+    avatar: null,
   },
   {
-    id: 'hg-5',
+    id: 'mock-5',
     name: 'Faith Chebet',
     role: 'Cleaner',
-    location: 'Eldoret',
+    location: 'Pioneer, Eldoret',
     tags: ['Deep Cleaning', 'Laundry', 'Organization'],
-    rating: 4.5,
-    reviews: 19,
     experienceYears: 3,
     monthlyRate: 14000,
-    age: 25,
     available: true,
     phone: '+254 746 113 302',
     exactLocation: 'Pioneer, Eldoret',
-    avatar: 'https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=200&h=200&fit=crop'
+    avatar: null,
   },
-  {
-    id: 'hg-6',
-    name: 'Sarah Mutheu',
-    role: 'House Help',
-    location: 'Thika',
-    tags: ['Cleaning', 'Childcare', 'Cooking'],
-    rating: 4.7,
-    reviews: 37,
-    experienceYears: 5,
-    monthlyRate: 16000,
-    age: 30,
-    available: false,
-    phone: '+254 711 560 442',
-    exactLocation: 'Makongeni, Thika',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200&h=200&fit=crop'
-  }
 ];
 
 const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
@@ -159,301 +105,354 @@ const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
   platformFee: 200,
   features: ['Direct phone contact', 'Exact location details', 'Instant profile access'],
   color: 'purple',
-  icon: Phone
+  icon: Phone,
 };
 
 const LandingPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const [selectedCategory, setSelectedCategory] = useState<typeof PROFILE_FILTERS[number]>('All');
+  const [searchTerm, setSearchTerm] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPackage, setSelectedPackage] = useState<PackageDetails | null>(null);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [pendingUnlockProfileId, setPendingUnlockProfileId] = useState<string | null>(null);
   const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, boolean>>({});
-  const [selectedCategory, setSelectedCategory] = useState('All');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [selectedLocation, setSelectedLocation] = useState('All locations');
+  const [kenyaCities, setKenyaCities] = useState<string[]>([]);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
 
-  // Mock agency packages for testing
-  const mockPackages: PackageDetails[] = [
-    {
-      id: 'basic',
-      name: 'Basic',
-      price: 1200,
-      agencyFee: 1000,
-      platformFee: 200,
-      features: [
-        'Verified worker',
-        'Basic training',
-        '30-day replacement',
-        'Agency support'
-      ],
-      color: 'green',
-      icon: Shield
-    },
-    {
-      id: 'premium',
-      name: 'Premium',
-      price: 1500,
-      agencyFee: 1000,
-      platformFee: 500,
-      features: [
-        'Verified worker',
-        'Professional training',
-        'Background check',
-        '60-day replacement',
-        'Dispute resolution'
-      ],
-      color: 'blue',
-      icon: Shield
-    },
-    {
-      id: 'international',
-      name: 'International',
-      price: 2000,
-      agencyFee: 1000,
-      platformFee: 1000,
-      features: [
-        'Verified worker',
-        'International training',
-        'Comprehensive background check',
-        '90-day replacement',
-        'Legal compliance'
-      ],
-      color: 'purple',
-      icon: Shield
-    }
-  ];
-
-  const handlePackageSelect = (packageDetails: PackageDetails) => {
-    if (!user) {
-      setAuthMode('login');
-      setAuthModalOpen(true);
-      return;
-    }
-    setSelectedPackage(packageDetails);
-    setShowPaymentModal(true);
-  };
-
-  const handlePaymentSuccess = (paymentData: {
-    id: string;
-    client_id: string;
-    agency_id: string;
-    package_id: string;
-    amount: number;
-    agency_fee: number;
-    platform_fee: number;
-    phone_number: string;
-    status: string;
-    payment_method: string;
-    created_at: string;
-    agency_client_id: string;
-    terms_accepted: boolean;
-  }) => {
-    setShowPaymentModal(false);
-    setSelectedPackage(null);
-    if (selectedProfileId) {
-      setUnlockedProfiles((prev) => ({
-        ...prev,
-        [selectedProfileId]: true
-      }));
-      setSelectedProfileId(null);
-    }
-  };
+  const filteredProfiles = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+    return MOCK_PROFILES.filter((profile) => {
+      const roleMatch = selectedCategory === 'All' || profile.role === selectedCategory;
+      const locationMatch =
+        selectedLocation === 'All locations' ||
+        profile.location.toLowerCase().includes(selectedLocation.toLowerCase());
+      const queryMatch =
+        query.length === 0 ||
+        profile.name.toLowerCase().includes(query) ||
+        profile.location.toLowerCase().includes(query) ||
+        profile.tags.some((tag) => tag.toLowerCase().includes(query));
+      return roleMatch && locationMatch && queryMatch;
+    });
+  }, [searchTerm, selectedCategory, selectedLocation]);
 
   const handleGetContact = (profileId: string) => {
     if (!user) {
-      setPendingUnlockProfileId(profileId);
-      setAuthMode('login');
+      setAuthMode('signup');
       setAuthModalOpen(true);
       return;
     }
-
     setSelectedProfileId(profileId);
-    setSelectedPackage(CONTACT_UNLOCK_PACKAGE);
     setShowPaymentModal(true);
+  };
+
+  const handlePaymentSuccess = () => {
+    if (selectedProfileId) {
+      setUnlockedProfiles((prev) => ({ ...prev, [selectedProfileId]: true }));
+    }
+    setSelectedProfileId(null);
+    setShowPaymentModal(false);
   };
 
   useEffect(() => {
-    if (!user || !pendingUnlockProfileId) {
-      return;
-    }
+    if (!isMenuOpen) return;
 
-    setSelectedProfileId(pendingUnlockProfileId);
-    setSelectedPackage(CONTACT_UNLOCK_PACKAGE);
-    setShowPaymentModal(true);
-    setPendingUnlockProfileId(null);
-  }, [user, pendingUnlockProfileId]);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
 
-  const filteredProfiles = useMemo(() => {
-    return LANDING_PROFILES.filter((profile) => {
-      const roleMatch = selectedCategory === 'All' || profile.role === selectedCategory;
-      const query = searchTerm.trim().toLowerCase();
-      const searchMatch =
-        query.length === 0 ||
-        profile.name.toLowerCase().includes(query) ||
-        profile.location.toLowerCase().includes(query);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
+        setIsMenuOpen(false);
+      }
+    };
 
-      return roleMatch && searchMatch;
-    });
-  }, [searchTerm, selectedCategory]);
+    window.addEventListener('keydown', handleEscape);
+    window.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      window.removeEventListener('keydown', handleEscape);
+      window.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
-  const handleNavigation = (path: string) => {
-    if (!user) {
-      setAuthMode('login');
-      setAuthModalOpen(true);
-      return;
-    }
-    
-    // Redirect based on user type
-    if (user.user_type === 'agency') {
-      navigate('/agency-dashboard');
-    } else if (user.user_type === 'housegirl') {
-      navigate('/housegirl-dashboard');
-    } else if (user.user_type === 'employer') {
-      navigate('/dashboard');
-    } else if (user.is_admin) {
-      navigate('/admin-dashboard');
-    } else {
-      navigate('/dashboard');
-    }
-  };
-
-  const openAuthModal = (mode: 'login' | 'signup') => {
+  const openAuth = (mode: 'login' | 'signup') => {
     setAuthMode(mode);
     setAuthModalOpen(true);
   };
 
-  const closeAuthModal = () => {
-    setAuthModalOpen(false);
+  useEffect(() => {
+    const loadKenyaCities = async () => {
+      try {
+        const cachedValue = localStorage.getItem(KENYA_CITIES_CACHE_KEY);
+        if (cachedValue) {
+          const parsed = JSON.parse(cachedValue) as { timestamp: number; cities: string[] };
+          if (
+            parsed?.timestamp &&
+            Array.isArray(parsed?.cities) &&
+            Date.now() - parsed.timestamp < KENYA_CITIES_CACHE_TTL_MS
+          ) {
+            setKenyaCities(parsed.cities);
+            return;
+          }
+        }
+      } catch {
+        // Ignore cache parse issues and fetch fresh data.
+      }
+
+      try {
+        const response = await fetch('https://countriesnow.space/api/v0.1/countries/cities', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ country: 'Kenya' }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to load Kenya cities: ${response.status}`);
+        }
+
+        const payload = (await response.json()) as { data?: string[] };
+        const cities = Array.isArray(payload?.data)
+          ? Array.from(new Set(payload.data))
+              .filter((city) => typeof city === 'string' && city.trim().length > 0)
+              .sort((a, b) => a.localeCompare(b))
+          : [];
+
+        if (cities.length > 0) {
+          setKenyaCities(cities);
+          localStorage.setItem(
+            KENYA_CITIES_CACHE_KEY,
+            JSON.stringify({
+              timestamp: Date.now(),
+              cities,
+            })
+          );
+        }
+      } catch {
+        const fallbackCities = Array.from(
+          new Set(
+            MOCK_PROFILES.map((profile) => profile.location.split(',').at(-1)?.trim()).filter(
+              (city): city is string => Boolean(city)
+            )
+          )
+        ).sort((a, b) => a.localeCompare(b));
+        setKenyaCities(fallbackCities);
+      }
+    };
+
+    loadKenyaCities();
+  }, []);
+
+  const handleFindHelp = () => {
+    const profilesSection = document.getElementById('profiles-list');
+    if (profilesSection) {
+      profilesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    navigate('/browse-housegirls');
+  };
+
+  const handlePricingScroll = () => {
+    const pricingSection = document.getElementById('pricing-value');
+    if (pricingSection) {
+      pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
+    navigate('/agency-packages');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-pink-50 to-orange-50">
+    <div
+      className="min-h-screen bg-white"
+      style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", lineHeight: 1.5 }}
+    >
       <Helmet>
-        <title>Domestic Connect - Msichana wa Kazi, Housegirls in Kenya | Best Domestic Workers</title>
-        <meta name="description" content="Find reliable housegirls (msichana wa kazi), house managers, nannies, and domestic workers in Kenya. Verified house helps in Nairobi, Mombasa, Kisumu and all of Kenya. Safe, trusted domestic help for your home." />
+        <title>Domestic Connect | Find a Housegirl, Nanny, Caregiver & House Manager in Kenya</title>
+        <meta
+          name="description"
+          content="Looking for a trusted housegirl, nanny, house manager, caregiver or cleaner in Nairobi, Mombasa, Kisumu, Nakuru or anywhere in Kenya? Browse verified profiles and connect today for just KES 200."
+        />
+        <meta
+          name="keywords"
+          content="housegirl kenya, nanny nairobi, caregiver kenya, house manager nairobi, ayah kenya, domestic worker kenya, house help nairobi, cleaner mombasa, nanny mombasa, caregiver nakuru, housegirl kisumu, domestic connect kenya, find housegirl online kenya, trusted nanny kenya, home helper nairobi, house aunty kenya, babysitter nairobi, elderly caregiver kenya, live-in house help, part time cleaner nairobi, domestic staff agency kenya"
+        />
+        <meta property="og:title" content="Domestic Connect | Find a Housegirl, Nanny, Caregiver & House Manager in Kenya" />
+        <meta
+          property="og:description"
+          content="Looking for a trusted housegirl, nanny, house manager, caregiver or cleaner in Nairobi, Mombasa, Kisumu, Nakuru or anywhere in Kenya? Browse verified profiles and connect today for just KES 200."
+        />
+        <meta property="og:url" content="https://www.domesticconnect.co.ke" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href="https://www.domesticconnect.co.ke" />
       </Helmet>
-      {/* Enhanced Header with Unique Design */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-pink-200 sticky top-0 z-50 shadow-sm">
+
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-8">
-              <div className="flex items-center cursor-pointer" onClick={() => {
+          <div className="grid grid-cols-[1fr_auto] md:grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-6">
+            <div
+              className="flex items-center cursor-pointer"
+              onClick={() => {
                 if (user) {
-                  // If logged in, go to appropriate dashboard
-                  if (user.user_type === 'agency') {
-                    navigate('/agency-dashboard');
-                  } else if (user.user_type === 'housegirl') {
-                    navigate('/housegirl-dashboard');
-                  } else {
-                    navigate('/dashboard');
-                  }
+                  if (user.user_type === 'agency') navigate('/agency-dashboard');
+                  else if (user.user_type === 'housegirl') navigate('/housegirl-dashboard');
+                  else navigate('/dashboard');
                 } else {
-                  // If not logged in, stay on home
                   navigate('/home');
                 }
-              }}>
-                <div className="p-2 bg-gradient-to-r from-pink-500 to-orange-500 rounded-xl shadow-lg">
-                  <Heart className="h-6 w-6 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-pink-600 to-orange-600 bg-clip-text text-transparent ml-3">
-                  Domestic Connect
-                </h1>
-              </div>
-              
-              <nav className="hidden md:flex items-center space-x-6">
-                <Button variant="ghost" className="text-pink-600 bg-pink-50 rounded-full">
-                  For Employers
-                </Button>
-                <Button variant="ghost" className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full" onClick={() => navigate('/housegirls')}>
-                  For Housegirls
-                </Button>
-                <Button variant="ghost" className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full" onClick={() => navigate('/agencies')}>
-                  For Agencies
-                </Button>
-                <Button variant="ghost" className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full" onClick={() => navigate('/agency-marketplace')}>
-                  Agency Marketplace
-                </Button>
-              </nav>
+              }}
+            >
+              <h1 className="text-2xl font-bold text-black tracking-tight">Domestic Connect</h1>
             </div>
-            
-            <div className="flex items-center space-x-6">
+
+            <nav className="hidden md:flex items-center justify-center gap-6">
+              <button
+                type="button"
+                onClick={handleFindHelp}
+                className="text-sm font-medium text-gray-800 hover:text-black"
+              >
+                Find Help
+              </button>
+              <button
+                type="button"
+                onClick={handlePricingScroll}
+                className="text-sm font-medium text-gray-800 hover:text-black"
+              >
+                Pricing
+              </button>
+            </nav>
+
+            <div className="flex items-center justify-end gap-3">
               {user ? (
-                <div className="flex items-center space-x-6">
-                  <Badge variant="secondary" className="bg-gradient-to-r from-green-400 to-emerald-500 text-white border-0">
-                    {user.user_type}
-                  </Badge>
-                  <span className="text-sm text-gray-600">
-                    Karibu, {user.first_name}
-                  </span>
-                  <Button onClick={() => {
-                    if (user.user_type === 'agency') {
-                      navigate('/agency-dashboard');
-                    } else if (user.user_type === 'housegirl') {
-                      navigate('/housegirl-dashboard');
-                    } else {
-                      navigate('/dashboard');
-                    }
-                  }} className="bg-gradient-to-r from-pink-500 to-orange-600 hover:from-pink-600 hover:to-orange-700 text-white rounded-full">
-                    Go to Dashboard
+                <>
+                  <Button
+                    onClick={() => navigate('/dashboard')}
+                    className="hidden md:inline-flex bg-black hover:bg-[#333333] text-white rounded-sm transition-opacity duration-150"
+                  >
+                    Dashboard
                   </Button>
-                  <Button variant="outline" onClick={signOut} className="border-pink-300 hover:bg-pink-50 rounded-full">
+                  <Button variant="outline" onClick={signOut} className="hidden md:inline-flex border-gray-300 hover:bg-gray-100 rounded-sm">
                     Logout
                   </Button>
-                </div>
+                </>
               ) : (
-                <div className="flex items-center space-x-3">
-                  <Button variant="ghost" onClick={() => openAuthModal('login')} className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full">
+                <>
+                  <button
+                    type="button"
+                    onClick={() => openAuth('login')}
+                    className="text-sm font-medium text-gray-700 hover:text-black"
+                  >
                     Login
+                  </button>
+                  <Button
+                    onClick={() => openAuth('signup')}
+                    className="hidden md:inline-flex rounded-sm px-5 bg-black hover:bg-[#333333] text-white"
+                  >
+                    Join Today
                   </Button>
-                  <Button onClick={() => openAuthModal('signup')} className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-full shadow-lg">
-                    Join today!
-                </Button>
-                </div>
+                </>
               )}
+
+              <button
+                type="button"
+                aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
+                aria-expanded={isMenuOpen}
+                aria-controls="landing-main-menu"
+                onClick={() => setIsMenuOpen((prev) => !prev)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-gray-200 text-gray-800 hover:text-black hover:border-gray-300"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Slim Hero Banner */}
-      <section className="sticky top-[73px] z-40 border-b border-pink-200 bg-white/95 backdrop-blur-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3 min-h-[96px] flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div>
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">
-              Find your perfect housegirl - just KES 200 via M-Pesa
-            </h2>
-            <div className="flex flex-wrap gap-3 text-xs text-gray-600 mt-2">
-              <span className="flex items-center">
-                <CheckCircle className="h-3.5 w-3.5 text-green-500 mr-1" />
-                Verified Profiles
-              </span>
-              <span className="flex items-center">
-                <Shield className="h-3.5 w-3.5 text-blue-500 mr-1" />
-                Safe & Secure
-              </span>
-              <span className="flex items-center">
-                <Clock className="h-3.5 w-3.5 text-orange-500 mr-1" />
-                Same Day Access
-              </span>
+      <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'bg-black/0 opacity-0 pointer-events-none'}`}>
+        <aside
+          id="landing-main-menu"
+          ref={drawerRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Navigation menu"
+          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${
+            isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
+        >
+          <div className="h-full overflow-y-auto p-6">
+            <div className="space-y-6">
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Employers</p>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); handleFindHelp(); }} className="text-left text-gray-800 hover:text-black">Find a Housegirl</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="text-left text-gray-800 hover:text-black">How It Works</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="text-left text-gray-800 hover:text-black">Pricing & Packages</button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Housegirls</p>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="text-left text-gray-800 hover:text-black">Register as Housegirl</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="text-left text-gray-800 hover:text-black">How to Get Listed</button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Agencies</p>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="text-left text-gray-800 hover:text-black">Agency Marketplace</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="text-left text-gray-800 hover:text-black">List Your Agency</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="text-left text-gray-800 hover:text-black">Agency Packages</button>
+                </div>
+              </div>
+
+              <div>
+                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">General</p>
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="text-left text-gray-800 hover:text-black">About Us</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="text-left text-gray-800 hover:text-black">Help Center</button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="text-left text-gray-800 hover:text-black">Contact Us</button>
+                </div>
+              </div>
             </div>
           </div>
-          <Button
-            onClick={() => document.getElementById('profiles-list')?.scrollIntoView({ behavior: 'smooth' })}
-            className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-full px-6"
-          >
-            View List ↓
-          </Button>
-        </div>
-      </section>
+        </aside>
+      </div>
 
-      {/* Profiles List - Main Content */}
-      <section id="profiles-list" className="py-10 bg-gradient-to-br from-white via-pink-50 to-orange-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="mb-6 bg-white rounded-2xl border border-pink-100 shadow-sm p-4 md:p-5">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+      <section className="sticky top-[73px] z-40 border-b border-gray-200 bg-white">
+        <div className="max-w-[900px] mx-auto px-4 py-3">
+          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
+            <div className="flex flex-1 items-center gap-2 flex-wrap border border-[#e5e5e5] bg-[#f7f7f7] p-2 text-[13px] tracking-[0.3px]">
+              <div className="relative min-w-[220px] flex-1 max-w-md">
+                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Input
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Search by name, location or skill..."
+                  className="h-9 rounded-[2px] pl-10 border border-[#d8d8d8] bg-white text-[13px] focus-visible:ring-0"
+                />
+              </div>
+              <div className="min-w-[200px]">
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="h-9 w-full rounded-[2px] border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#555] focus:outline-none"
+                >
+                  <option value="All locations">All locations</option>
+                  {kenyaCities.map((city) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                </select>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {PROFILE_FILTERS.map((filter) => (
                   <Button
@@ -462,471 +461,209 @@ const LandingPage = () => {
                     onClick={() => setSelectedCategory(filter)}
                     className={
                       selectedCategory === filter
-                        ? 'bg-gradient-to-r from-pink-500 to-orange-500 text-white rounded-full'
-                        : 'rounded-full border-pink-200 text-gray-700 hover:bg-pink-50'
+                        ? 'h-9 rounded-[2px] bg-black text-white text-[13px] px-3 hover:bg-black'
+                        : 'h-9 rounded-[2px] border border-[#d8d8d8] bg-white text-[#555] text-[13px] px-3 hover:bg-white'
                     }
                   >
                     {filter}
                   </Button>
                 ))}
               </div>
-              <div className="relative w-full lg:w-72">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by name or location"
-                  className="pl-10 border-pink-200 focus-visible:ring-pink-200"
-                />
-              </div>
             </div>
+            <p className="text-[13px] text-[#666]">{filteredProfiles.length} housegirls available</p>
           </div>
+          <p className="text-[13px] text-[#666] mt-3 text-left">
+            Verified profiles · KES 200 one-time M-Pesa fee · No subscription · Instant access
+          </p>
+        </div>
+      </section>
 
-          <div className="space-y-4">
+      <main id="profiles-list" className="py-8">
+        <div className="w-full px-10">
+          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="space-y-3">
             {filteredProfiles.map((profile) => {
               const isUnlocked = Boolean(unlockedProfiles[profile.id]);
               return (
                 <article
                   key={profile.id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-pink-200 transition-all duration-200 p-4 md:p-6"
+                  className="bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6"
                 >
                   <div className="flex flex-col md:flex-row gap-5 md:items-center">
-                    <div className="md:w-44 flex md:flex-col items-center md:items-start gap-3">
-                      <div className="h-20 w-20 rounded-full border-2 border-pink-100 bg-gradient-to-br from-pink-50 to-orange-50 text-pink-700 font-semibold text-[11px] leading-tight flex items-center justify-center text-center px-2">
-                        Perfect Match
+                    <div className="md:w-[130px]">
+                      <div className="relative w-fit">
+                        {profile.avatar ? (
+                          <img
+                            src={profile.avatar}
+                            alt={profile.name}
+                            className="h-[110px] w-[110px] rounded-full object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="h-[110px] w-[110px] rounded-full bg-[#4b5563] text-white font-semibold text-2xl leading-tight flex items-center justify-center text-center">
+                            {profile.name
+                              .split(' ')
+                              .filter(Boolean)
+                              .slice(0, 2)
+                              .map((namePart) => namePart[0]?.toUpperCase())
+                              .join('')}
+                          </div>
+                        )}
+                        <span
+                          className={`absolute bottom-1 right-1 h-2 w-2 rounded-full border border-white ${
+                            profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
+                          }`}
+                        />
                       </div>
-                      <Badge
-                        className={
-                          profile.available
-                            ? 'bg-green-100 text-green-700 border border-green-200'
-                            : 'bg-gray-100 text-gray-600 border border-gray-200'
-                        }
-                      >
-                        <span className={profile.available ? 'h-2 w-2 rounded-full bg-green-500 mr-2' : 'h-2 w-2 rounded-full bg-gray-400 mr-2'} />
-                        {profile.available ? 'Available' : 'Unavailable'}
-                      </Badge>
                     </div>
 
                     <div className="flex-1">
                       <div className="flex flex-col gap-2">
-                        <h3 className="text-2xl font-bold text-gray-900">{profile.name}</h3>
-                        <p className="text-pink-600 font-medium">{profile.role}</p>
-                        <p className="text-gray-600 flex items-center">
-                          <MapPin className="h-4 w-4 mr-1 text-orange-500" />
+                        <h3 className="text-[18px] font-semibold text-[#111]">{profile.name}</h3>
+                        <Badge variant="secondary" className="w-fit border border-black bg-transparent text-black text-[13px] px-3 py-1 rounded-[2px]">
+                          {profile.role}
+                        </Badge>
+                        <p className="text-[#555] text-[13px] flex items-center gap-1">
+                          <MapPin className="h-4 w-4 text-[#555]" />
                           {profile.location}
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {profile.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="secondary" className="bg-pink-50 text-pink-700 border border-pink-100">
+                            <Badge key={tag} variant="secondary" className="border border-[#ddd] bg-transparent text-[#555] text-[12px] rounded-[2px] px-2 py-1">
                               {tag}
                             </Badge>
                           ))}
                         </div>
-                        <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                          <span className="flex items-center">
-                            <Star className="h-4 w-4 text-amber-500 mr-1 fill-amber-400" />
-                            {profile.rating} ({profile.reviews} reviews)
-                          </span>
-                          <span>{profile.experienceYears} years experience</span>
-                        </div>
+                        <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
                         {isUnlocked && (
-                          <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2 w-fit">
+                          <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit">
                             Contact: {profile.phone} · {profile.exactLocation}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="md:w-56 md:text-right flex md:block items-center justify-between gap-4">
-                      <div>
-                        <p className="text-sm text-gray-500">Monthly Rate</p>
-                        <p className="text-2xl font-bold text-gray-900">
-                          KES {profile.monthlyRate.toLocaleString()}
-                          <span className="text-sm font-medium text-gray-500">/mo</span>
-                        </p>
-                        <p className="text-sm text-gray-600 mt-1">Age {profile.age}</p>
-                        <p className="text-sm text-gray-600">{profile.available ? 'Available now' : 'Currently booked'}</p>
-                      </div>
+                    <div className="md:w-56 flex flex-col gap-1 md:items-end">
+                      <p className="text-[22px] font-bold text-[#111]">
+                        KES {profile.monthlyRate.toLocaleString()}
+                        <span className="text-sm font-medium text-gray-500">/mo</span>
+                      </p>
                       <Button
                         onClick={() => handleGetContact(profile.id)}
-                        className="rounded-full px-6 bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white shadow"
+                        className="w-full md:w-auto rounded-[4px] px-6 bg-black hover:bg-[#333333] text-white transition-opacity duration-150"
                       >
                         {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
                       </Button>
+                      {!isUnlocked && (
+                        <>
+                          <p className="text-[11px] text-[#888]">KES 200 via M-Pesa to unlock</p>
+                          <p className="text-[11px] text-[#888]">Or unlock 3 contacts for KES 500 — save KES 100</p>
+                        </>
+                      )}
                     </div>
                   </div>
                 </article>
               );
             })}
+            </div>
+
+            <aside className="hidden lg:block sticky top-[80px]">
+              <div className="space-y-4 w-[320px]">
+                <div className="w-[320px]">
+                  <img
+                    src="/housegirls.webp"
+                    alt="Domestic workers in Kenya"
+                    loading="lazy"
+                    className="w-[320px] h-[280px] object-cover object-[center_26%] rounded-[6px]"
+                  />
+                </div>
+                <div className="w-[320px]">
+                  <img
+                    src="/woooies.avif"
+                    alt="Home support services in Kenya"
+                    loading="lazy"
+                    className="w-[320px] h-[280px] object-cover object-center rounded-[6px]"
+                  />
+                </div>
+              </div>
+            </aside>
           </div>
 
           {filteredProfiles.length === 0 && (
-            <div className="text-center py-14 bg-white rounded-2xl border border-gray-100 shadow-sm">
-              <p className="text-gray-600">No profiles match your search right now.</p>
+            <div className="text-center py-14 bg-white rounded-2xl border border-gray-100 shadow-sm mt-4">
+              <p className="text-gray-600">No housegirls found. Try adjusting your filters.</p>
             </div>
           )}
         </div>
-      </section>
+      </main>
 
-      {/* How It Works - Enhanced Design */}
-      <section className="py-20 bg-white relative">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h3 className="text-4xl font-bold text-gray-900 mb-4">
-              How It Works
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Simple steps to find your perfect housegirl. No stress, no hassle!
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center group">
-              <div className="p-6 bg-gradient-to-br from-pink-100 to-pink-200 rounded-2xl inline-block mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Search className="h-10 w-10 text-pink-600" />
-              </div>
-              <div className="bg-pink-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-4 text-sm font-bold">1</div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">Browse Available Housegirls</h4>
-              <p className="text-gray-600">
-                See hundreds of verified housegirls ready to work. Filter by location, experience, and more!
-              </p>
+      <section id="pricing-value" className="border-y border-gray-200 bg-[#f9f9f9]">
+        <div className="max-w-[1100px] mx-auto px-4 py-10">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Single Unlock</p>
+              <p className="mt-2 text-2xl font-bold text-[#111]">KES 200</p>
+              <p className="mt-2 text-[13px] text-[#555]">Unlock one profile contact instantly via M-Pesa.</p>
             </div>
-
-            <div className="text-center group">
-              <div className="p-6 bg-gradient-to-br from-orange-100 to-orange-200 rounded-2xl inline-block mb-6 group-hover:scale-110 transition-transform duration-300">
-                <Shield className="h-10 w-10 text-orange-600" />
-              </div>
-              <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-4 text-sm font-bold">2</div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">Unlock Profile Access</h4>
-              <p className="text-gray-600">
-                Found your match? Unlock their full profile for just <span className="text-pink-600 font-semibold">200 bob</span> via M-Pesa
-              </p>
+            <div className="border border-[#111] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-600">Best Value</p>
+              <p className="mt-2 text-2xl font-bold text-[#111]">KES 500</p>
+              <p className="mt-2 text-[13px] text-[#555]">Unlock 3 contacts and save KES 100.</p>
             </div>
-
-            <div className="text-center group">
-              <div className="p-6 bg-gradient-to-br from-green-100 to-green-200 rounded-2xl inline-block mb-6 group-hover:scale-110 transition-transform duration-300">
-                <CheckCircle className="h-10 w-10 text-green-600" />
-              </div>
-              <div className="bg-green-500 text-white rounded-full w-8 h-8 flex items-center justify-center mx-auto mb-4 text-sm font-bold">3</div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">Hire & Connect</h4>
-              <p className="text-gray-600">
-                Contact your chosen housegirl directly and arrange hiring. Simple as that!
-              </p>
-            </div>
-                  </div>
-                </div>
-      </section>
-
-      {/* Stats Section - New Addition */}
-      <section className="py-16 bg-gradient-to-r from-pink-50 to-orange-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
-                <Users className="h-8 w-8 text-pink-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">500+</div>
-              <div className="text-gray-600 font-medium">Housegirls Available</div>
-            </div>
-            <div className="text-center">
-              <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
-                <MapPin className="h-8 w-8 text-orange-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">15+</div>
-              <div className="text-gray-600 font-medium">Cities Covered</div>
-            </div>
-            <div className="text-center">
-              <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
-                <Star className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">98%</div>
-              <div className="text-gray-600 font-medium">Success Rate</div>
-            </div>
-            <div className="text-center">
-              <div className="p-4 bg-white rounded-2xl shadow-lg inline-block mb-4">
-                <Zap className="h-8 w-8 text-purple-600" />
-              </div>
-              <div className="text-3xl font-bold text-gray-900 mb-2">24hrs</div>
-              <div className="text-gray-600 font-medium">Response Time</div>
-                </div>
-                  </div>
-                </div>
-      </section>
-
-      {/* Second CTA - Enhanced */}
-      <section className="py-20 bg-white">
-        <div className="max-w-4xl mx-auto text-center px-4">
-          <div className="bg-gradient-to-r from-pink-50 to-orange-50 rounded-3xl p-12 shadow-xl">
-            <h3 className="text-3xl font-bold text-gray-900 mb-6">
-              Ready to Stop the Struggle?
-            </h3>
-            <p className="text-xl text-gray-600 mb-8">
-              Join thousands of happy families who found their perfect housegirl for just <span className="text-pink-600 font-bold text-2xl">200 bob</span>
-            </p>
-            {user ? (
-              <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                <Button 
-                  onClick={() => navigate('/dashboard')}
-                  size="lg"
-                  className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <User className="h-6 w-6 mr-3" />
-                  Go to Dashboard →
-                </Button>
-                <Button 
-                  variant="outline"
-                  size="lg"
-                  className="border-2 border-pink-300 text-pink-600 hover:bg-pink-50 px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-                >
-                  <ArrowRight className="h-6 w-6 mr-3" />
-                  Stay on Home
-                </Button>
-                </div>
-            ) : (
-              <Button 
-                onClick={() => navigate('/browse-housegirls')}
-                size="lg" 
-                className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
-              >
-                <User className="h-6 w-6 mr-3" />
-                View Housegirls List →
-              </Button>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* Why Choose Us - Enhanced Section */}
-      <section className="py-20 bg-gradient-to-r from-pink-50 to-orange-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <h3 className="text-4xl font-bold text-gray-900 mb-4">
-              Why Choose Domestic Connect?
-            </h3>
-            <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-              We're not just another platform - we're your solution to house help problems
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center group">
-              <div className="p-6 bg-white rounded-2xl shadow-lg inline-block mb-6 group-hover:shadow-xl transition-shadow duration-300">
-                <Briefcase className="h-10 w-10 text-pink-600" />
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">Digital Housegirl Bureau</h4>
-              <p className="text-gray-600">
-                We do the hard work of finding vetted housegirls so you don't have to stress about it.
-              </p>
-            </div>
-
-            <div className="text-center group">
-              <div className="p-6 bg-white rounded-2xl shadow-lg inline-block mb-6 group-hover:shadow-xl transition-shadow duration-300">
-                <Award className="h-10 w-10 text-orange-600" />
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">No Hidden Fees</h4>
-              <p className="text-gray-600">
-                Unlike traditional bureaus, you only pay for profile access. No salary deductions, no surprises!
-              </p>
-            </div>
-
-            <div className="text-center group">
-              <div className="p-6 bg-white rounded-2xl shadow-lg inline-block mb-6 group-hover:shadow-xl transition-shadow duration-300">
-                <TrendingUp className="h-10 w-10 text-green-600" />
-              </div>
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">Earn While Helping</h4>
-              <p className="text-gray-600">
-                Refer friends and earn money! Our affiliate program lets you make money while helping others.
-              </p>
-              <Button variant="outline" className="mt-4 bg-green-100 border-green-300 text-green-700 hover:bg-green-200 rounded-full">
-                Coming soon
-              </Button>
+            <div className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">No Subscription</p>
+              <p className="mt-2 text-2xl font-bold text-[#111]">Pay As You Hire</p>
+              <p className="mt-2 text-[13px] text-[#555]">No monthly commitment. Only pay when you need contacts.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Try Our Agency Service - Mock Section */}
-      <section className="py-20 bg-gradient-to-r from-blue-50 to-indigo-50">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-6">
-              <Building2 className="h-8 w-8 text-white" />
+      <section className="bg-white">
+        <div className="max-w-[1100px] mx-auto px-4 py-10">
+          <div className="border border-[#e5e5e5] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h2 className="text-2xl font-semibold text-[#111]">Ready to hire safely and faster?</h2>
+              <p className="mt-1 text-[14px] text-[#555]">Browse profiles and unlock contact details when you find the right fit.</p>
             </div>
-            <h3 className="text-4xl font-bold text-gray-900 mb-4">
-              Try Our Agency Service
-            </h3>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Experience our premium agency service with verified workers and guaranteed satisfaction. 
-              <span className="text-blue-600 font-semibold"> Test the payment system now!</span>
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            {mockPackages.map((packageDetails) => (
-              <Card 
-                key={packageDetails.id}
-                className={`border-2 border-gray-200 hover:border-${packageDetails.color}-300 transition-all duration-300 cursor-pointer hover:shadow-xl`}
-                onClick={() => handlePackageSelect(packageDetails)}
-              >
-                <CardHeader className="pb-4">
-                  <CardTitle className="text-xl flex items-center justify-between">
-                    <div className="flex items-center">
-                      <packageDetails.icon className={`h-6 w-6 text-${packageDetails.color}-600 mr-3`} />
-                      {packageDetails.name} Package
-                    </div>
-                    {packageDetails.id === 'premium' && (
-                      <Badge className="bg-blue-600 text-white">Most Popular</Badge>
-                    )}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="text-center">
-                    <p className="text-4xl font-bold text-gray-900">KES {packageDetails.price.toLocaleString()}</p>
-                    <p className="text-sm text-gray-600">One-time registration fee</p>
-                  </div>
-                  <ul className="space-y-2">
-                    {packageDetails.features.map((feature, index) => (
-                      <li key={index} className="flex items-center text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-green-600 mr-2 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button 
-                    className={`w-full bg-${packageDetails.color}-600 hover:bg-${packageDetails.color}-700 text-white`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handlePackageSelect(packageDetails);
-                    }}
-                  >
-                    <DollarSign className="h-4 w-4 mr-2" />
-                    Try This Package
-                  </Button>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-
-          <div className="text-center">
-            <div className="bg-white rounded-2xl p-6 shadow-lg max-w-2xl mx-auto">
-              <h4 className="text-xl font-semibold text-gray-900 mb-3">Why Try Our Agency Service?</h4>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                <div className="flex items-center">
-                  <Shield className="h-5 w-5 text-green-600 mr-2" />
-                  <span>Verified Workers</span>
-                </div>
-                <div className="flex items-center">
-                  <CheckCircle2 className="h-5 w-5 text-blue-600 mr-2" />
-                  <span>Guaranteed Replacement</span>
-                </div>
-                <div className="flex items-center">
-                  <Star className="h-5 w-5 text-yellow-600 mr-2" />
-                  <span>Professional Training</span>
-                </div>
-              </div>
-              <p className="text-gray-600 mt-4 text-sm">
-                <strong>Note:</strong> This is a demo to test our payment system. Real agencies will be available soon!
-              </p>
-            </div>
+            <Button
+              onClick={handleFindHelp}
+              className="rounded-[4px] bg-black hover:bg-[#333333] text-white px-6 transition-opacity duration-150"
+            >
+              Start Browsing
+            </Button>
           </div>
         </div>
       </section>
 
-      {/* Enhanced Footer */}
-      <footer className="bg-gradient-to-r from-pink-900 to-orange-900 text-white py-16">
-        <div className="max-w-6xl mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 mb-12">
-            <div>
-              <div className="flex items-center mb-6">
-                <div className="p-2 bg-gradient-to-r from-pink-400 to-orange-400 rounded-lg">
-                  <Heart className="h-6 w-6 text-white" />
-                </div>
-                <h4 className="text-2xl font-bold ml-3">Domestic Connect</h4>
-              </div>
-              <p className="text-pink-100 mb-6">
-                Making house help easy, affordable, and stress-free for Kenyan families.
-              </p>
-              <div className="flex space-x-4">
-                <div className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors cursor-pointer">
-                  <Phone className="h-5 w-5" />
-                </div>
-                <div className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors cursor-pointer">
-                  <Mail className="h-5 w-5" />
-                </div>
-                <div className="p-2 bg-white/10 rounded-lg hover:bg-white/20 transition-colors cursor-pointer">
-                  <MessageCircle className="h-5 w-5" />
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <h5 className="text-lg font-semibold mb-6">Quick Links</h5>
-              <ul className="space-y-3 text-pink-100">
-                <li><a href="#" className="hover:text-white transition-colors">For Housegirls</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">For Employers</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">How It Works</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Success Stories</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h5 className="text-lg font-semibold mb-6">Support</h5>
-              <ul className="space-y-3 text-pink-100">
-                <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Safety Guidelines</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Support</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">FAQ</a></li>
-              </ul>
-            </div>
-            
-            <div>
-              <h5 className="text-lg font-semibold mb-6">Legal</h5>
-              <ul className="space-y-3 text-pink-100">
-                <li><a href="#" className="hover:text-white transition-colors">Terms of Service</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Cookie Policy</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Refund Policy</a></li>
-              </ul>
-            </div>
-          </div>
-          
-          <div className="border-t border-pink-700 pt-8 text-center">
-            <p className="text-pink-200">
-              © 2024 Domestic Connect. All rights reserved. Making Kenya better, one home at a time.
-            </p>
-          </div>
+      <footer className="bg-black text-white py-8 mt-10">
+        <div className="max-w-6xl mx-auto px-4 text-center">
+          <p className="text-gray-300">© 2024 Domestic Connect. All rights reserved.</p>
         </div>
       </footer>
 
-      {/* Auth Modal */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={closeAuthModal} 
-        defaultMode={authMode} 
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultMode={authMode}
       />
 
-      {/* Payment Modal */}
-      {showPaymentModal && selectedPackage && (
+      {showPaymentModal && (
         <PaymentModal
-          package={selectedPackage}
+          package={CONTACT_UNLOCK_PACKAGE}
           agency={{
-            id: 'demo_agency',
-            name: 'Demo Agency Service',
-            location: 'Nairobi, Kenya',
+            id: 'contact_unlock_bundle',
+            name: 'Domestic Connect',
+            location: 'Kenya',
             verification_status: 'verified',
             subscription_tier: 'premium',
-            license_number: 'DEMO-2024-001',
-            rating: 4.9,
-            verified_workers: 50,
-            successful_placements: 150,
-            description: 'Professional domestic help agency',
-            contact_email: 'info@demoagency.com',
-            contact_phone: '+254 700 000 000',
-            website: 'https://demoagency.com'
+            license_number: 'DC-2024-001',
+            rating: 5,
+            verified_workers: 0,
+            successful_placements: 0,
           }}
           onClose={() => {
             setShowPaymentModal(false);
-            setSelectedPackage(null);
+            setSelectedProfileId(null);
           }}
           onSuccess={handlePaymentSuccess}
         />
