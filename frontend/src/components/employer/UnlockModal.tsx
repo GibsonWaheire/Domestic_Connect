@@ -78,7 +78,7 @@ export const UnlockModal = ({
           {/* Housegirl Info */}
           <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
             <img
-              src={housegirlToUnlock.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face'}
+              src={housegirlToUnlock.profileImage || '/placeholder.svg'}
               alt={housegirlToUnlock.name}
               className="w-12 h-12 rounded-full object-cover"
             />

@@ -40,7 +40,7 @@ export const ProfileModal = ({
           <div className="flex items-start space-x-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
             <div className="relative">
               <img
-                src={housegirl.profileImage || 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face'}
+                src={housegirl.profileImage || '/placeholder.svg'}
                 alt={housegirl.name}
                 className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
               />

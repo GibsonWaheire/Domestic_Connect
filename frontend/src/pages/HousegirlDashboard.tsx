@@ -29,6 +29,7 @@ import {
   Edit,
   Settings,
   LogOut,
+  RefreshCw,
   Eye,
   Calendar,
   DollarSign,
@@ -67,12 +68,12 @@ interface EditFormData {
 }
 
 const HousegirlDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   
   // Additional auth check - ensure only housegirls can access this dashboard
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       if (user.user_type !== 'housegirl' && !user.is_admin) {
         toast({
           title: "Access Denied",
@@ -91,7 +92,7 @@ const HousegirlDashboard = () => {
         return;
       }
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
   
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'messages'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
@@ -137,6 +138,7 @@ const HousegirlDashboard = () => {
     dashboardData, 
     loading: dataLoading, 
     error: dataError, 
+    refreshing,
     lastUpdated, 
     refreshData 
   } = useRealTimeData({ 
@@ -174,10 +176,10 @@ const HousegirlDashboard = () => {
   }, [dataError]);
 
   useEffect(() => {
-    if (!user || user.user_type !== 'housegirl') {
+    if (!loading && (!user || user.user_type !== 'housegirl')) {
       navigate('/housegirls');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   useEffect(() => {
     if (localStorage.getItem('dc_profile_prompt_housegirl') === 'true') {
@@ -231,7 +233,7 @@ const HousegirlDashboard = () => {
     }
   }, [user, getUserData]);
 
-  if (!user || user.user_type !== 'housegirl') {
+  if (loading || !user || user.user_type !== 'housegirl') {
     return null;
   }
 
@@ -315,17 +317,17 @@ const HousegirlDashboard = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-white via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-blue-200 sticky top-0 z-50 shadow-sm">
+      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex justify-between items-center">
             <div className="flex items-center space-x-4">
-              <div className="flex items-center cursor-pointer" onClick={() => navigate('/home')}>
-                <div className="p-2 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl shadow-lg">
-                  <Heart className="h-5 w-5 text-white" />
+              <div className="flex items-center cursor-pointer" onClick={() => navigate('/')}>
+                <div className="p-2 border border-gray-200 bg-white rounded-lg">
+                  <Heart className="h-5 w-5 text-gray-700" />
                 </div>
-                <h1 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent ml-2">
+                <h1 className="text-xl font-bold text-gray-900 ml-2">
                   Domestic Connect
                 </h1>
               </div>
@@ -334,13 +336,13 @@ const HousegirlDashboard = () => {
             </div>
             
             <div className="flex items-center space-x-2">
-              <Badge variant="secondary" className="bg-gradient-to-r from-blue-400 to-indigo-500 text-white border-0 text-xs">
+              <Badge variant="secondary" className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {user.user_type}
               </Badge>
               <span className="text-sm text-gray-600 hidden sm:block">
                 Karibu, {user.first_name}
               </span>
-              <Button variant="outline" onClick={handleSignOut} className="border-blue-300 hover:bg-blue-50 rounded-full p-2">
+              <Button variant="outline" onClick={handleSignOut} className="border-gray-300 hover:bg-gray-100 p-2">
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline ml-2">Logout</span>
               </Button>
@@ -408,7 +410,7 @@ const HousegirlDashboard = () => {
             <div className="flex items-center space-x-4">
               <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
                 <AvatarImage src={profilePhoto || undefined} />
-                <AvatarFallback className="bg-gradient-to-r from-blue-500 to-indigo-500 text-white text-lg sm:text-xl font-bold">
+                <AvatarFallback className="bg-gray-100 text-gray-700 text-lg sm:text-xl font-bold">
                   {user.first_name.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -429,22 +431,31 @@ const HousegirlDashboard = () => {
         </div>
 
         {/* Navigation Tabs */}
-        <div className="flex space-x-1 bg-white rounded-lg p-1 mb-6 shadow-sm">
-          {[
-            { id: 'overview', label: 'Overview', icon: Home },
-            { id: 'profile', label: 'My Profile', icon: User },
-            { id: 'messages', label: 'Messages', icon: MessageCircle }
-          ].map((tab) => (
-            <Button
-              key={tab.id}
-              variant={activeTab === tab.id ? 'default' : 'ghost'}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'profile' | 'messages')}
-              className={`flex-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
-            >
-              {tab.label}
-            </Button>
-          ))}
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
+            {[
+              { id: 'overview', label: 'Overview', icon: Home },
+              { id: 'profile', label: 'My Profile', icon: User },
+              { id: 'messages', label: 'Messages', icon: MessageCircle }
+            ].map((tab) => (
+              <Button
+                key={tab.id}
+                variant={activeTab === tab.id ? 'default' : 'ghost'}
+                onClick={() => setActiveTab(tab.id as 'overview' | 'profile' | 'messages')}
+                className={`flex-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
+              >
+                {tab.label}
+              </Button>
+            ))}
+          </div>
+          <Button variant="outline" onClick={() => refreshData(false)} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
+        {lastUpdated && (
+          <p className="mb-6 text-xs text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+        )}
 
         {/* Tab Content */}
         {activeTab === 'overview' && (
@@ -463,7 +474,7 @@ const HousegirlDashboard = () => {
                 {dataLoading ? (
                   <div className="flex items-center justify-center py-8">
                     <div className="text-center">
-                      <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+                      <div className="w-8 h-8 border-2 border-gray-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                       <p className="text-gray-600">Loading job opportunities...</p>
                     </div>
                   </div>

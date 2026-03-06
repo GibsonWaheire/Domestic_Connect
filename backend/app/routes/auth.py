@@ -48,22 +48,10 @@ def firebase_auth_required(f):
         if not firebase_user:
             return jsonify({'error': 'Invalid Firebase token'}), 401
         
-        # Get or create user in our database
+        # Attach firebase payload and existing user only.
+        # Endpoints decide whether to create/update a user to avoid silent role defaults.
         user = User.query.filter_by(firebase_uid=firebase_user['localId']).first()
-        if not user:
-            # Create new user from Firebase data
-            user = User(
-                id=str(uuid.uuid4()),
-                firebase_uid=firebase_user['localId'],
-                email=firebase_user.get('email', ''),
-                first_name=firebase_user.get('displayName', '').split(' ')[0] if firebase_user.get('displayName') else '',
-                last_name=' '.join(firebase_user.get('displayName', '').split(' ')[1:]) if firebase_user.get('displayName') else '',
-                user_type=data.get('user_type', 'employer'),  # Use provided type or default to employer
-                is_firebase_user=True
-            )
-            db.session.add(user)
-            db.session.commit()
-        
+        request.firebase_user = firebase_user
         request.current_user = user
         return f(*args, **kwargs)
     
@@ -77,11 +65,30 @@ def firebase_auth_required(f):
 def firebase_signup():
     """Create user profile for Firebase authenticated user"""
     try:
-        user = request.current_user
         data = request.get_json()
+        firebase_user = request.firebase_user
+        user = request.current_user
+        required_role = data.get('user_type')
+        if required_role not in ['employer', 'housegirl', 'agency']:
+            return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
+
+        if not user:
+            user = User(
+                id=str(uuid.uuid4()),
+                firebase_uid=firebase_user['localId'],
+                email=data.get('email') or firebase_user.get('email', ''),
+                first_name=data.get('first_name', ''),
+                last_name=data.get('last_name', ''),
+                phone_number=data.get('phone_number'),
+                user_type=required_role,
+                is_firebase_user=True
+            )
+            db.session.add(user)
+        elif user.user_type != required_role:
+            return jsonify({'error': 'This account is already registered with a different role.'}), 409
         
         # Update user with additional profile information
-        user.user_type = data.get('user_type', 'employer')
+        user.user_type = required_role
         user.first_name = data.get('first_name', user.first_name)
         user.last_name = data.get('last_name', user.last_name)
         user.phone_number = data.get('phone_number', user.phone_number)
@@ -95,6 +102,8 @@ def firebase_signup():
             db.session.add(profile)
         
         db.session.commit()
+        session['user_id'] = user.id
+        session['user_type'] = user.user_type
         
         # Log user action
         log_user_action(user.id, 'firebase_signup', {'user_type': data.get('user_type')})
@@ -117,6 +126,16 @@ def firebase_user():
     try:
         user = request.current_user
         data = request.get_json()
+        firebase_user = request.firebase_user
+        if not user:
+            lookup_email = data.get('email') or firebase_user.get('email')
+            if lookup_email:
+                user = User.query.filter_by(email=lookup_email).first()
+                if user:
+                    user.firebase_uid = firebase_user['localId']
+                    user.is_firebase_user = True
+            if not user:
+                return jsonify({'error': 'User profile not found. Complete signup first.'}), 404
         
         # Update user information if provided
         if data.get('display_name'):
@@ -128,6 +147,8 @@ def firebase_user():
             user.email = data['email']
         
         db.session.commit()
+        session['user_id'] = user.id
+        session['user_type'] = user.user_type
         
         return jsonify({
             'user': user.to_dict()

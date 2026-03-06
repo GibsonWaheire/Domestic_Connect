@@ -112,6 +112,13 @@ const LandingPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
 
+  const getDashboardRoute = () => {
+    if (!user) return '/';
+    if (user.user_type === 'agency') return '/agency-dashboard';
+    if (user.user_type === 'housegirl') return '/housegirl-dashboard';
+    return '/dashboard';
+  };
+
   const [selectedCategory, setSelectedCategory] = useState<typeof PROFILE_FILTERS[number]>('All');
   const [searchTerm, setSearchTerm] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -142,6 +149,7 @@ const LandingPage = () => {
 
   const handleGetContact = (profileId: string) => {
     if (!user) {
+      localStorage.setItem('pendingContactId', profileId);
       setAuthMode('signup');
       setAuthModalOpen(true);
       return;
@@ -157,6 +165,40 @@ const LandingPage = () => {
     setSelectedProfileId(null);
     setShowPaymentModal(false);
   };
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    const searchParams = new URLSearchParams(window.location.search);
+    const pendingFromQuery = searchParams.get('pendingContactId');
+    const pendingContactId = pendingFromQuery || localStorage.getItem('pendingContactId');
+    if (!pendingContactId) {
+      return;
+    }
+
+    const matchingProfile = MOCK_PROFILES.find((profile) => profile.id === pendingContactId);
+    if (!matchingProfile) {
+      localStorage.removeItem('pendingContactId');
+      if (pendingFromQuery) {
+        searchParams.delete('pendingContactId');
+        const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
+        window.history.replaceState({}, '', nextUrl);
+      }
+      return;
+    }
+
+    setSelectedProfileId(matchingProfile.id);
+    setShowPaymentModal(true);
+    localStorage.removeItem('pendingContactId');
+
+    if (pendingFromQuery) {
+      searchParams.delete('pendingContactId');
+      const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
+      window.history.replaceState({}, '', nextUrl);
+    }
+  }, [user]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -299,13 +341,7 @@ const LandingPage = () => {
             <div
               className="flex items-center cursor-pointer"
               onClick={() => {
-                if (user) {
-                  if (user.user_type === 'agency') navigate('/agency-dashboard');
-                  else if (user.user_type === 'housegirl') navigate('/housegirl-dashboard');
-                  else navigate('/dashboard');
-                } else {
-                  navigate('/home');
-                }
+                navigate(getDashboardRoute());
               }}
             >
               <h1 className="text-2xl font-bold text-black tracking-tight">Domestic Connect</h1>
@@ -332,7 +368,7 @@ const LandingPage = () => {
               {user ? (
                 <>
                   <Button
-                    onClick={() => navigate('/dashboard')}
+                    onClick={() => navigate(getDashboardRoute())}
                     className="hidden md:inline-flex bg-black hover:bg-[#333333] text-white rounded-sm transition-opacity duration-150"
                   >
                     Dashboard

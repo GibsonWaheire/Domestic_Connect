@@ -83,6 +83,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkSession = useCallback(async () => {
     try {
       setLoading(true);
+      if (FirebaseAuthService.getCurrentUser()) {
+        setLoading(false);
+        return;
+      }
       const response = await apiRequest<{ user: User | null }>('/api/auth/check_session');
       
       if (response.user) {
@@ -93,7 +97,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setIsFirebaseUser(false);
       }
     } catch (error) {
-      console.error('Session check failed:', error);
       setUser(null);
       setIsFirebaseUser(false);
     } finally {
@@ -123,30 +126,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Log the error for debugging
       const errorObj = error instanceof Error ? error : new Error(String(error));
       errorService.logError(errorObj, 'Firebase user sync', 'medium');
-      
-      // If the backend endpoint doesn't exist or fails, create a local user profile
-      // This allows the app to continue working even if the backend is not fully set up
-      const fallbackUser: User = {
-        id: firebaseUser.uid,
-        email: firebaseUser.email || '',
-        user_type: 'employer', // Default type
-        first_name: firebaseUser.displayName?.split(' ')[0] || 'User',
-        last_name: firebaseUser.displayName?.split(' ').slice(1).join(' ') || '',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_firebase_user: true,
-      };
-      
-      setUser(fallbackUser);
-      setIsFirebaseUser(true);
-      
-      console.warn('Using fallback Firebase user profile due to backend sync failure:', errorObj.message);
-      
-      // Show a subtle notification to the user
       toast({
-        title: "Welcome!",
-        description: "You're signed in. Some features may be limited until we sync with our servers.",
-        duration: 5000,
+        title: "Profile Sync Required",
+        description: "We could not verify your account role right now. Please try logging in again.",
+        variant: "destructive",
       });
     }
   }, []);
@@ -163,6 +146,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (firebaseUser) {
+        // Prevent duplicate sync calls right after successful login
+        if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
+          setLoading(false);
+          return;
+        }
         // User is signed in with Firebase
         await handleFirebaseUser(firebaseUser);
       } else {
@@ -173,7 +161,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     return () => unsubscribe();
-  }, [checkSession, handleFirebaseUser, isSigningOut]);
+  }, [checkSession, handleFirebaseUser, isSigningOut, user]);
 
   const signUp = async (
     email: string, 
@@ -222,10 +210,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       setUser({ ...response.user, is_firebase_user: true });
       setIsFirebaseUser(true);
+      await FirebaseAuthService.signOut();
+      setUser(null);
+      setIsFirebaseUser(false);
 
       toast({
         title: "Account Created",
-        description: "Your account has been created successfully! Please check your email to verify your account.",
+        description: "Your account has been created successfully. Please login with your password.",
       });
 
       return { error: null };
@@ -257,7 +248,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: firebaseResult.error || 'Invalid email or password' };
       }
 
-      // Get user profile from backend
       const token = await FirebaseAuthService.getIdToken();
       const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
         method: 'POST',
@@ -270,8 +260,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           display_name: firebaseResult.user?.displayName
         })
       });
-
-      setUser({ ...response.user, is_firebase_user: true });
+      const signedInUser = { ...response.user, is_firebase_user: true };
+      setUser(signedInUser);
       setIsFirebaseUser(true);
 
       toast({
@@ -279,7 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Welcome back!",
       });
 
-      return { error: null, user: response.user };
+      return { error: null, user: signedInUser };
     } catch (error: unknown) {
       console.error('Signin error:', error);
       
@@ -307,7 +297,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { error: firebaseResult.error || 'Failed to sign in with Google' };
       }
 
-      // Get or create user profile in backend
       const token = await FirebaseAuthService.getIdToken();
       const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
         method: 'POST',
@@ -320,8 +309,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           display_name: firebaseResult.user?.displayName
         })
       });
-
-      setUser({ ...response.user, is_firebase_user: true });
+      const signedInUser: User = { ...response.user, is_firebase_user: true };
+      setUser(signedInUser);
       setIsFirebaseUser(true);
 
       toast({
@@ -329,7 +318,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "Welcome back!",
       });
 
-      return { error: null, user: response.user };
+      return { error: null, user: signedInUser };
     } catch (error: unknown) {
       console.error('Google signin error:', error);
       

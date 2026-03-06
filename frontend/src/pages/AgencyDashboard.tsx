@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input';
 import { agenciesApi, housegirlProfilesApi, employerProfilesApi, crossEntityApi, DashboardData } from '@/lib/api';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { 
-  Building2, 
   Users, 
   MessageCircle, 
   BarChart3, 
@@ -40,7 +39,6 @@ import {
   FileText, 
   Shield, 
   Home, 
-  Menu, 
   X,
   User,
   Briefcase,
@@ -127,12 +125,12 @@ interface Placement {
 }
 
 const AgencyDashboard = () => {
-  const { user, signOut } = useAuth();
+  const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   
   // Additional auth check - ensure only agencies can access this dashboard
   useEffect(() => {
-    if (user) {
+    if (!loading && user) {
       if (user.user_type !== 'agency' && !user.is_admin) {
         toast({
           title: "Access Denied",
@@ -151,10 +149,9 @@ const AgencyDashboard = () => {
         return;
       }
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
   
   const [activeTab, setActiveTab] = useState<'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings'>('overview');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [agencyData, setAgencyData] = useState<{
@@ -193,6 +190,7 @@ const AgencyDashboard = () => {
     dashboardData, 
     loading: dataLoading, 
     error: dataError, 
+    refreshing,
     lastUpdated, 
     refreshData 
   } = useRealTimeData({ 
@@ -235,17 +233,17 @@ const AgencyDashboard = () => {
   const [showWhatsApp, setShowWhatsApp] = useState(false);
 
   useEffect(() => {
-    if (!user || user.user_type !== 'agency') {
+    if (!loading && (!user || user.user_type !== 'agency')) {
       navigate('/agencies');
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/agencies');
   };
 
-  if (!user || user.user_type !== 'agency') {
+  if (loading || !user || user.user_type !== 'agency') {
     return null;
   }
 
@@ -344,59 +342,32 @@ const AgencyDashboard = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-50">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                className="lg:hidden"
-              >
-                <Menu className="h-5 w-5" />
-              </Button>
-              
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                  <Building2 className="h-6 w-6 text-white" />
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-slate-900">Domestic Connect Agency</h1>
-                  <p className="text-sm text-slate-500">Welcome back, {user.first_name}</p>
-                </div>
-              </div>
-              
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigate('/home')}
-                className="text-slate-600 hover:text-blue-600 hover:bg-blue-50"
-              >
-                <Home className="h-4 w-4 mr-2" />
-                Back to Home
-              </Button>
-            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate('/')}
+              className="text-slate-700"
+            >
+              <Home className="h-4 w-4 mr-2" />
+              Back to Home
+            </Button>
 
-            <div className="flex items-center space-x-4">
-              {/* Quick Stats */}
-              <div className="hidden lg:flex items-center space-x-6">
-                <div className="flex items-center space-x-2 text-sm">
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-slate-600">{agencyStats.activePlacements} Active</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-green-600" />
-                  <span className="text-slate-600">KES {agencyStats.thisMonthRevenue.toLocaleString()}</span>
-                </div>
-                <div className="flex items-center space-x-2 text-sm">
-                  <Users className="h-4 w-4 text-blue-600" />
-                  <span className="text-slate-600">{agencyStats.totalHousegirls}</span>
-                </div>
+            <div className="flex items-center space-x-2">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 w-56"
+                />
               </div>
-
               <Button
                 variant="ghost"
                 size="sm"
@@ -407,45 +378,47 @@ const AgencyDashboard = () => {
                 <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </Button>
 
-              <Button variant="outline" onClick={handleSignOut} className="text-sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
-              </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <aside className={`${sidebarCollapsed ? 'w-16' : 'w-64'} bg-white/80 backdrop-blur-md shadow-lg transition-all duration-300 lg:block ${sidebarCollapsed ? 'hidden' : 'block'}`}>
-          <div className="p-4">
-            <nav className="space-y-2">
-              {[
-                { id: 'overview', label: 'Overview', icon: Home },
-                { id: 'housegirls', label: 'Housegirls', icon: Users },
-                { id: 'jobs', label: 'Job Postings', icon: Briefcase },
-                { id: 'clients', label: 'Clients', icon: User },
-                { id: 'placements', label: 'Placements', icon: CheckCircle },
-                { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-                { id: 'settings', label: 'Settings', icon: Settings }
-              ].map((tab) => (
-                <Button
-                  key={tab.id}
-                  variant={activeTab === tab.id ? 'default' : 'ghost'}
-                  onClick={() => setActiveTab(tab.id as 'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings')}
-                  className={`w-full justify-start ${activeTab === tab.id ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg' : 'text-slate-600 hover:text-blue-600 hover:bg-blue-50'}`}
-                >
-                  <tab.icon className="h-4 w-4 mr-3" />
-                  {!sidebarCollapsed && tab.label}
-                </Button>
-              ))}
-            </nav>
-          </div>
-        </aside>
+      <div className="p-6">
+        <div className="mb-4 flex flex-wrap gap-2 border border-slate-200 bg-white rounded-lg p-2">
+          {[
+            { id: 'overview', label: 'Overview', icon: Home },
+            { id: 'housegirls', label: 'Housegirls', icon: Users },
+            { id: 'jobs', label: 'Job Postings', icon: Briefcase },
+            { id: 'clients', label: 'Clients', icon: User },
+            { id: 'placements', label: 'Placements', icon: CheckCircle },
+            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
+            { id: 'settings', label: 'Settings', icon: Settings }
+          ].map((tab) => (
+            <Button
+              key={tab.id}
+              variant="outline"
+              onClick={() => setActiveTab(tab.id as 'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings')}
+              className={activeTab === tab.id ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-slate-700'}
+            >
+              <tab.icon className="h-4 w-4 mr-2" />
+              {tab.label}
+            </Button>
+          ))}
+          <Button variant="outline" onClick={() => refreshData(false)} disabled={refreshing}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button variant="outline" className="ml-auto" onClick={handleSignOut}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Logout
+          </Button>
+        </div>
+        {lastUpdated && (
+          <p className="mb-3 text-xs text-slate-500">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+        )}
 
         {/* Main Content */}
-        <main className="flex-1 p-6">
+        <main>
           <Card className="mb-6 border border-blue-100 bg-blue-50">
             <CardContent className="p-4">
               <p className="text-sm text-blue-900">
@@ -466,60 +439,60 @@ const AgencyDashboard = () => {
                 <>
                   {/* Hero Stats */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-gradient-to-br from-blue-500 to-blue-600 text-white border-0 shadow-xl">
+                <Card className="bg-white border border-slate-200 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-blue-100 text-sm font-medium">Total Housegirls</p>
+                        <p className="text-slate-600 text-sm font-medium">Total Housegirls</p>
                         <p className="text-3xl font-bold">{agencyStats.totalHousegirls}</p>
-                        <p className="text-blue-200 text-xs">+{agencyStats.thisMonthPlacements} this month</p>
+                        <p className="text-slate-500 text-xs">+{agencyStats.thisMonthPlacements} this month</p>
                       </div>
-                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                         <Users className="h-6 w-6" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-green-500 to-green-600 text-white border-0 shadow-xl">
+                <Card className="bg-white border border-slate-200 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-green-100 text-sm font-medium">Active Placements</p>
+                        <p className="text-slate-600 text-sm font-medium">Active Placements</p>
                         <p className="text-3xl font-bold">{agencyStats.activePlacements}</p>
-                        <p className="text-green-200 text-xs">+{agencyStats.thisMonthPlacements} this month</p>
+                        <p className="text-slate-500 text-xs">+{agencyStats.thisMonthPlacements} this month</p>
                       </div>
-                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                         <CheckCircle className="h-6 w-6" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-purple-500 to-purple-600 text-white border-0 shadow-xl">
+                <Card className="bg-white border border-slate-200 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-purple-100 text-sm font-medium">Monthly Revenue</p>
+                        <p className="text-slate-600 text-sm font-medium">Monthly Revenue</p>
                         <p className="text-3xl font-bold">KES {agencyStats.monthlyRevenue.toLocaleString()}</p>
-                        <p className="text-purple-200 text-xs">+{agencyStats.thisMonthRevenue.toLocaleString()} this month</p>
+                        <p className="text-slate-500 text-xs">+{agencyStats.thisMonthRevenue.toLocaleString()} this month</p>
                       </div>
-                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                         <DollarSign className="h-6 w-6" />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="bg-gradient-to-br from-orange-500 to-orange-600 text-white border-0 shadow-xl">
+                <Card className="bg-white border border-slate-200 shadow-sm">
                   <CardContent className="p-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-orange-100 text-sm font-medium">Placement Rate</p>
+                        <p className="text-slate-600 text-sm font-medium">Placement Rate</p>
                         <p className="text-3xl font-bold">{agencyStats.placementRate}%</p>
-                        <p className="text-orange-200 text-xs">{agencyStats.pendingInterviews} pending</p>
+                        <p className="text-slate-500 text-xs">{agencyStats.pendingInterviews} pending</p>
                       </div>
-                      <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
                         <Target className="h-6 w-6" />
                       </div>
                     </div>
@@ -529,7 +502,7 @@ const AgencyDashboard = () => {
 
               {/* Quick Actions */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="border-0 shadow-lg">
+                <Card className="border border-slate-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Zap className="h-5 w-5 text-blue-600" />
@@ -564,7 +537,7 @@ const AgencyDashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-lg">
+                <Card className="border border-slate-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <Activity className="h-5 w-5 text-green-600" />
@@ -600,7 +573,7 @@ const AgencyDashboard = () => {
                   </CardContent>
                 </Card>
 
-                <Card className="border-0 shadow-lg">
+                <Card className="border border-slate-200 shadow-sm">
                   <CardHeader>
                     <CardTitle className="flex items-center space-x-2">
                       <TrendingUp className="h-5 w-5 text-purple-600" />
@@ -614,7 +587,7 @@ const AgencyDashboard = () => {
                         <span className="text-sm font-medium">{agencyStats.placementRate}%</span>
                       </div>
                       <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full" style={{ width: `${agencyStats.placementRate}%` }}></div>
+                        <div className="bg-slate-900 h-2 rounded-full" style={{ width: `${agencyStats.placementRate}%` }}></div>
                       </div>
                     </div>
                     <div>
@@ -631,7 +604,7 @@ const AgencyDashboard = () => {
               </div>
 
               {/* Recent Housegirls */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -653,7 +626,7 @@ const AgencyDashboard = () => {
                       {recentHousegirls.map((housegirl) => (
                         <div key={housegirl.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                           <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold">
+                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-700 font-semibold">
                               {housegirl.name.split(' ').map(n => n[0]).join('')}
                             </div>
                             <div>
@@ -701,7 +674,7 @@ const AgencyDashboard = () => {
               </Card>
 
               {/* Active Jobs */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -758,14 +731,14 @@ const AgencyDashboard = () => {
           {/* Housegirls Tab */}
           {activeTab === 'housegirls' && (
             <div className="space-y-6">
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Housegirls Management</CardTitle>
                       <CardDescription>Manage your registered housegirls, track their placements, and monitor performance</CardDescription>
                     </div>
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    <Button className="bg-slate-900 hover:bg-slate-800 text-white">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Housegirl
                     </Button>
@@ -788,14 +761,14 @@ const AgencyDashboard = () => {
           {/* Jobs Tab */}
           {activeTab === 'jobs' && (
             <div className="space-y-6">
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Job Postings</CardTitle>
                       <CardDescription>Create and manage job postings, track applications, and match housegirls to clients</CardDescription>
                     </div>
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    <Button className="bg-slate-900 hover:bg-slate-800 text-white">
                       <Plus className="h-4 w-4 mr-2" />
                       Create Job Posting
                     </Button>
@@ -818,14 +791,14 @@ const AgencyDashboard = () => {
           {/* Clients Tab */}
           {activeTab === 'clients' && (
             <div className="space-y-6">
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle>Client Management</CardTitle>
                       <CardDescription>Manage your client relationships, track their requirements, and maintain communication</CardDescription>
                     </div>
-                    <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700">
+                    <Button className="bg-slate-900 hover:bg-slate-800 text-white">
                       <Plus className="h-4 w-4 mr-2" />
                       Add Client
                     </Button>
@@ -848,7 +821,7 @@ const AgencyDashboard = () => {
           {/* Placements Tab */}
           {activeTab === 'placements' && (
             <div className="space-y-6">
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -878,7 +851,7 @@ const AgencyDashboard = () => {
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
             <div className="space-y-6">
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
@@ -908,7 +881,7 @@ const AgencyDashboard = () => {
           {/* Settings Tab */}
           {activeTab === 'settings' && (
             <div className="space-y-6">
-              <Card className="border-0 shadow-lg">
+              <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
                   <CardTitle>Agency Settings</CardTitle>
                   <CardDescription>Manage your agency profile, preferences, and system configuration</CardDescription>
@@ -933,7 +906,7 @@ const AgencyDashboard = () => {
       <div className="fixed bottom-6 right-6 z-50">
         <Button
           onClick={() => setShowWhatsApp(!showWhatsApp)}
-          className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-lg"
+          className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-sm"
         >
           <MessageSquare className="h-6 w-6" />
         </Button>
@@ -942,7 +915,7 @@ const AgencyDashboard = () => {
       {/* WhatsApp Chat Modal */}
       {showWhatsApp && (
         <div className="fixed bottom-20 right-6 z-50">
-          <Card className="w-80 shadow-2xl border-0">
+          <Card className="w-80 border border-slate-200 shadow-sm">
             <CardHeader className="bg-green-500 text-white">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-2">

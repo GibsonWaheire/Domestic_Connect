@@ -13,39 +13,57 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
   
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [nextRetryAt, setNextRetryAt] = useState<number>(0);
+  const [failureCount, setFailureCount] = useState(0);
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (force = false) => {
     // Don't fetch if user is not authenticated
     if (!user) {
       setLoading(false);
       return;
     }
 
+    if (!force && nextRetryAt > Date.now()) {
+      setLoading(false);
+      return;
+    }
+
     try {
+      setRefreshing(true);
       setError(null);
       const data = await crossEntityApi.getDashboardData();
       setDashboardData(data);
       setLastUpdated(new Date());
+      setFailureCount(0);
+      setNextRetryAt(0);
     } catch (err) {
       console.error('Error fetching real-time data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      const message = err instanceof Error ? err.message : 'Failed to fetch data';
+      setError(message);
+      const updatedFailureCount = failureCount + 1;
+      setFailureCount(updatedFailureCount);
+      setNextRetryAt(Date.now() + Math.min(updatedFailureCount * 15000, 120000));
       
       // If it's an authentication error, stop trying to fetch
-      if (err instanceof Error && err.message.includes('Authentication required')) {
+      if (message.includes('Authentication required')) {
         setLoading(false);
         return;
       }
     } finally {
+      setRefreshing(false);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, nextRetryAt, failureCount]);
 
-  const refreshData = useCallback(() => {
+  const refreshData = useCallback((showLoader = false) => {
     if (!user) return;
-    setLoading(true);
-    fetchData();
+    if (showLoader) {
+      setLoading(true);
+    }
+    fetchData(true);
   }, [fetchData, user]);
 
   useEffect(() => {
@@ -73,6 +91,7 @@ export const useRealTimeData = (options: UseRealTimeDataOptions = {}) => {
     dashboardData,
     loading,
     error,
+    refreshing,
     lastUpdated,
     refreshData,
     isStale: lastUpdated ? Date.now() - lastUpdated.getTime() > refreshInterval * 2 : false

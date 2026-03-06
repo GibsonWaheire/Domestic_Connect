@@ -46,15 +46,24 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
     if (isAdmin) return '/admin-dashboard';
     if (type === 'agency') return '/agency-dashboard';
     if (type === 'housegirl') return '/housegirl-dashboard';
-    return '/dashboard';
+    if (type === 'employer') return '/dashboard';
+    return '/';
+  };
+
+  const getPostAuthRoute = (type?: string, isAdmin?: boolean) => {
+    const pendingContactId = localStorage.getItem('pendingContactId');
+    if (pendingContactId && type === 'employer' && !isAdmin) {
+      return `/?pendingContactId=${encodeURIComponent(pendingContactId)}`;
+    }
+    return getRouteByUserType(type, isAdmin);
   };
 
   useEffect(() => {
-    if (user) {
+    if (user && isLogin) {
       onClose();
-      navigate(getRouteByUserType(user.user_type, user.is_admin));
+      navigate(getPostAuthRoute(user.user_type, user.is_admin));
     }
-  }, [user, onClose, navigate]);
+  }, [user, isLogin, onClose, navigate]);
 
   useEffect(() => {
     setIsLogin(defaultMode === 'login');
@@ -72,8 +81,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
         });
       } else {
         onClose();
+        localStorage.setItem('dc_auth_provider', 'google');
         const currentUser = result.user;
-        window.location.href = getRouteByUserType(currentUser?.user_type, currentUser?.is_admin);
+        navigate(getPostAuthRoute(currentUser?.user_type, currentUser?.is_admin));
       }
     } catch (error: unknown) {
       const errorObj = error instanceof Error ? error : new Error(String(error));
@@ -139,7 +149,21 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
 
     try {
       if (isLogin) {
-        const result = await signIn(email, password);
+        const normalizedLoginIdentifier = email.trim();
+        if (!normalizedLoginIdentifier) {
+          toast({
+            title: "Email or Phone Required",
+            description: "Please enter your email address or phone number.",
+            variant: "destructive"
+          });
+          setLoading(false);
+          return;
+        }
+        const loginEmail = normalizedLoginIdentifier.includes('@')
+          ? normalizedLoginIdentifier.toLowerCase()
+          : `phone_${formatPhoneNumber(normalizedLoginIdentifier).replace(/\D/g, '')}@domesticconnect.user`;
+
+        const result = await signIn(loginEmail, password);
         if (result.error) {
           toast({
             title: "Sign In Error",
@@ -148,8 +172,9 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
           });
         } else {
           onClose();
+          localStorage.setItem('dc_auth_provider', 'password');
           const currentUser = result.user;
-          window.location.href = getRouteByUserType(currentUser?.user_type, currentUser?.is_admin);
+          navigate(getPostAuthRoute(currentUser?.user_type, currentUser?.is_admin));
         }
       } else {
         if (password.length < 8) {
@@ -212,9 +237,15 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             variant: "destructive"
           });
         } else {
-          onClose();
           localStorage.setItem(`dc_profile_prompt_${userType}`, 'true');
-          window.location.href = getRouteByUserType(userType);
+          setIsLogin(true);
+          setPassword('');
+          setSignupIdentifier('');
+          setEmail(normalizedIdentifier);
+          toast({
+            title: "Account Created",
+            description: "Please login with the credentials you created.",
+          });
         }
       }
     } catch (error: unknown) {
@@ -357,15 +388,15 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
 
               {isLogin && (
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700 font-medium">Email Address</Label>
+                <Label htmlFor="email" className="text-gray-700 font-medium">Email or Phone Number</Label>
                 <Input
                   id="email"
-                  type="email"
+                  type="text"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="border-gray-300 focus:border-blue-500"
-                  placeholder="Enter your email"
+                  placeholder="Enter your email or phone number"
                 />
               </div>
               )}
