@@ -6,6 +6,27 @@ import uuid
 
 payments_bp = Blueprint('payments', __name__)
 
+CONTACT_BUNDLE_PACKAGE_ID = 'contact_unlock'
+CONTACT_BUNDLE_PRICE = 200
+CONTACT_BUNDLE_CONTACTS = 3
+
+
+def get_contact_credit_summary(user_id):
+    purchases = UserPurchase.query.filter_by(user_id=user_id, status='completed').all()
+    total_credits = sum(
+        purchase.payment_package.contacts_included
+        for purchase in purchases
+        if purchase.payment_package is not None
+    )
+    used_credits = ContactAccess.query.filter_by(user_id=user_id).count()
+    remaining_credits = max(total_credits - used_credits, 0)
+
+    return {
+        'total_credits': total_credits,
+        'used_credits': used_credits,
+        'remaining_credits': remaining_credits
+    }
+
 @payments_bp.route('/packages', methods=['GET'])
 def get_payment_packages():
     """Get all active payment packages"""
@@ -44,8 +65,21 @@ def create_purchase():
         if not package_id or not amount:
             return jsonify({'error': 'Package ID and amount required'}), 400
         
-        # Verify package exists
-        package = PaymentPackage.query.get_or_404(package_id)
+        package = PaymentPackage.query.get(package_id)
+        if not package:
+            if package_id == CONTACT_BUNDLE_PACKAGE_ID:
+                package = PaymentPackage(
+                    id=CONTACT_BUNDLE_PACKAGE_ID,
+                    name='Contact Unlock Bundle',
+                    description='Unlock 3 contacts for KES 200',
+                    price=CONTACT_BUNDLE_PRICE,
+                    contacts_included=CONTACT_BUNDLE_CONTACTS,
+                    is_active=True
+                )
+                db.session.add(package)
+                db.session.flush()
+            else:
+                return jsonify({'error': 'Payment package not found'}), 404
         
         # Create purchase record
         purchase = UserPurchase(
@@ -59,10 +93,15 @@ def create_purchase():
         
         db.session.add(purchase)
         db.session.commit()
+
+        credit_summary = get_contact_credit_summary(user.id)
         
         return jsonify({
             'message': 'Purchase created successfully',
-            'purchase_id': purchase.id
+            'purchase_id': purchase.id,
+            'package_id': package.id,
+            'contacts_granted': package.contacts_included,
+            'remaining_credits': credit_summary['remaining_credits']
         }), 201
         
     except Exception as e:
@@ -89,8 +128,18 @@ def unlock_contact():
         ).first()
         
         if existing_access:
-            return jsonify({'message': 'Contact already unlocked'}), 200
+            return jsonify({
+                'message': 'Contact already unlocked',
+                **get_contact_credit_summary(user.id)
+            }), 200
         
+        credit_summary = get_contact_credit_summary(user.id)
+        if credit_summary['remaining_credits'] <= 0:
+            return jsonify({
+                'error': 'No contact credits available. Complete payment to unlock contacts.',
+                **credit_summary
+            }), 402
+
         # Create contact access record
         contact_access = ContactAccess(
             id=str(uuid.uuid4()),
@@ -101,9 +150,12 @@ def unlock_contact():
         db.session.add(contact_access)
         db.session.commit()
         
+        updated_summary = get_contact_credit_summary(user.id)
+
         return jsonify({
             'message': 'Contact unlocked successfully',
-            'access_id': contact_access.id
+            'access_id': contact_access.id,
+            **updated_summary
         }), 201
         
     except Exception as e:
@@ -132,5 +184,37 @@ def get_user_purchases():
         
         return jsonify({'purchases': result}), 200
         
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@payments_bp.route('/contact-access', methods=['GET'])
+@firebase_auth_required
+def get_contact_access():
+    """Get unlocked contacts for current user"""
+    try:
+        user = request.current_user
+        access_records = ContactAccess.query.filter_by(user_id=user.id).all()
+        return jsonify({
+            'contact_access': [
+                {
+                    'id': record.id,
+                    'target_profile_id': record.target_profile_id,
+                    'accessed_at': record.accessed_at.isoformat()
+                }
+                for record in access_records
+            ]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@payments_bp.route('/contact-credits', methods=['GET'])
+@firebase_auth_required
+def get_contact_credits():
+    """Get contact credit summary for current user"""
+    try:
+        user = request.current_user
+        return jsonify(get_contact_credit_summary(user.id)), 200
     except Exception as e:
         return jsonify({'error': str(e)}), 500

@@ -17,6 +17,12 @@ import AgencyDashboard from "./pages/AgencyDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import BrowseHousegirls from "./pages/BrowseHousegirls";
+import Auth from "./pages/Auth";
+import HowItWorksPage from "./pages/HowItWorksPage";
+import StatsPage from "./pages/StatsPage";
+import WhyChoosePage from "./pages/WhyChoosePage";
+import AgencyPackagesPage from "./pages/AgencyPackagesPage";
+import ContactUsPage from "./pages/ContactUsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -46,6 +52,13 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/home" element={<LandingPage />} />
+                <Route path="/register" element={<Auth />} />
+                <Route path="/how-it-works" element={<HowItWorksPage />} />
+                <Route path="/stats" element={<StatsPage />} />
+                <Route path="/why-choose-us" element={<WhyChoosePage />} />
+                <Route path="/agency-packages" element={<AgencyPackagesPage />} />
+                <Route path="/contact-us" element={<ContactUsPage />} />
+                <Route path="/contact" element={<ContactUsPage />} />
                 <Route path="/housegirls" element={<HousegirlPage />} />
                 <Route path="/agencies" element={<AgencyPage />} />
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />

@@ -8,9 +8,9 @@ export const getApiBaseUrl = (): string => {
     return envUrl;
   }
   
-  // In production, use relative URLs (Vercel proxy handles forwarding)
-  // In development, use localhost
-  return import.meta.env.PROD ? '' : 'http://localhost:5000';
+  // Prefer relative URLs both in development and production.
+  // In development, Vite proxy handles forwarding /api to the backend.
+  return '';
 };
 
 export const API_BASE_URL = getApiBaseUrl();

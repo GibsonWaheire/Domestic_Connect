@@ -503,7 +503,7 @@ const AgencyPage = () => {
                     <span>White-label options</span>
                   </li>
                 </ul>
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600 rounded-full">
+                <Button onClick={() => navigate('/contact-us')} className="w-full bg-emerald-500 hover:bg-emerald-600 rounded-full">
                   Contact Sales
                 </Button>
               </CardContent>
@@ -644,7 +644,7 @@ const AgencyPage = () => {
               <ul className="space-y-3 text-emerald-100">
                 <li><a href="#" className="hover:text-white transition-colors">Help Center</a></li>
                 <li><a href="#" className="hover:text-white transition-colors">Developer Portal</a></li>
-                <li><a href="#" className="hover:text-white transition-colors">Contact Support</a></li>
+                <li><button type="button" onClick={() => navigate('/contact-us')} className="hover:text-white transition-colors">Contact Support</button></li>
                 <li><a href="#" className="hover:text-white transition-colors">Training Resources</a></li>
               </ul>
             </div>

@@ -65,6 +65,8 @@ const EmployerDashboard = () => {
   const [selectedWorkType, setSelectedWorkType] = useState('');
   const [selectedExperience, setSelectedExperience] = useState('');
   const [selectedLivingArrangement, setSelectedLivingArrangement] = useState('');
+  const [showProfilePromptBanner, setShowProfilePromptBanner] = useState(false);
+  const [unlockRestrictionMessage, setUnlockRestrictionMessage] = useState<string | null>(null);
 
   // State for real data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
@@ -130,6 +132,12 @@ const EmployerDashboard = () => {
       navigate('/');
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (localStorage.getItem('dc_profile_prompt_employer') === 'true') {
+      setShowProfilePromptBanner(true);
+    }
+  }, []);
   
   // Show loading state while auth is initializing or data is loading
   if (loading || dataLoading) {
@@ -171,6 +179,71 @@ const EmployerDashboard = () => {
     unreadMessages: messages.filter(msg => !msg.isRead).length
   };
 
+  const employerCompletionItems = [
+    {
+      key: 'full-name',
+      label: 'Add your full name',
+      weight: 15,
+      completed: Boolean(`${user?.first_name || ''} ${user?.last_name || ''}`.trim()),
+    },
+    {
+      key: 'location',
+      label: 'Add your location',
+      weight: 15,
+      completed: Boolean((user as { location?: string } | null)?.location || localStorage.getItem('employer_location')),
+    },
+    {
+      key: 'phone',
+      label: 'Confirm your phone number',
+      weight: 20,
+      completed: Boolean(user?.phone_number),
+    },
+    {
+      key: 'photo',
+      label: 'Upload a profile photo',
+      weight: 10,
+      completed: Boolean(localStorage.getItem('employer_profile_photo')),
+    },
+    {
+      key: 'about',
+      label: 'Add your description',
+      weight: 20,
+      completed: Boolean((user as { bio?: string } | null)?.bio || localStorage.getItem('employer_about')),
+    },
+    {
+      key: 'budget',
+      label: 'Set your budget range',
+      weight: 20,
+      completed: Boolean((user as { budget_range?: string } | null)?.budget_range || localStorage.getItem('employer_budget_range')),
+    },
+  ] as const;
+
+  const employerProfileCompletion = employerCompletionItems.reduce(
+    (sum, item) => sum + (item.completed ? item.weight : 0),
+    0
+  );
+  const missingEmployerFields = employerCompletionItems.filter((item) => !item.completed);
+
+  const jumpToEmployerProfileSection = (sectionKey: string) => {
+    setActiveSection('settings');
+    setTimeout(() => {
+      window.location.hash = `employer-${sectionKey}`;
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 0);
+  };
+
+  const handleUnlockAttempt = (housegirl: Housegirl) => {
+    if (employerProfileCompletion < 60) {
+      setUnlockRestrictionMessage(
+        'Complete at least 60% of your profile to unlock contacts.'
+      );
+      return;
+    }
+    setUnlockRestrictionMessage(null);
+    setHousegirlToUnlock(housegirl);
+    setShowUnlockModal(true);
+  };
+
   // Render section based on active section
   const renderSection = () => {
     switch (activeSection) {
@@ -197,10 +270,7 @@ const EmployerDashboard = () => {
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             itemsPerPage={itemsPerPage}
-            onUnlock={(housegirl) => {
-              setHousegirlToUnlock(housegirl);
-              setShowUnlockModal(true);
-            }}
+            onUnlock={handleUnlockAttempt}
           />
         );
       case 'agency-marketplace':
@@ -247,10 +317,7 @@ const EmployerDashboard = () => {
             currentPage={currentPage}
             setCurrentPage={setCurrentPage}
             itemsPerPage={itemsPerPage}
-            onUnlock={(housegirl) => {
-              setHousegirlToUnlock(housegirl);
-              setShowUnlockModal(true);
-            }}
+            onUnlock={handleUnlockAttempt}
           />
         );
     }
@@ -286,6 +353,55 @@ const EmployerDashboard = () => {
 
           {/* Main Content Area */}
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+            {showProfilePromptBanner && (
+              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-start justify-between gap-3">
+                <p>Complete your profile to unlock all features. Profile completion: 20%</p>
+                <button
+                  type="button"
+                  className="text-blue-700 hover:text-blue-900 underline"
+                  onClick={() => {
+                    setShowProfilePromptBanner(false);
+                    localStorage.removeItem('dc_profile_prompt_employer');
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
+
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
+              <p className="text-sm font-semibold text-gray-900">Profile {employerProfileCompletion}% complete</p>
+              <div className="mt-2 h-2 w-full rounded bg-gray-200">
+                <div className="h-2 rounded bg-black" style={{ width: `${employerProfileCompletion}%` }} />
+              </div>
+              {missingEmployerFields.length > 0 && (
+                <div className="mt-3 space-y-1">
+                  {missingEmployerFields.map((field) => (
+                    <button
+                      key={field.key}
+                      type="button"
+                      onClick={() => jumpToEmployerProfileSection(field.key)}
+                      className="block text-left text-sm text-blue-700 hover:text-blue-900"
+                    >
+                      {`→ ${field.label}`}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {activeSection === 'housegirls' && unlockRestrictionMessage && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                Complete at least 60% of your profile to unlock contacts.{' '}
+                <button
+                  type="button"
+                  className="underline font-medium"
+                  onClick={() => jumpToEmployerProfileSection('full-name')}
+                >
+                  Complete now →
+                </button>
+              </div>
+            )}
             {renderSection()}
           </main>
 
