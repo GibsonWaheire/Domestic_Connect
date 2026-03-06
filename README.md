@@ -6,6 +6,46 @@
 
 **👉 [Try it now: https://domestic-connect.co.ke/](https://domestic-connect.co.ke/)**
 
+## 🛠️ **Local Development (Frontend + Backend)**
+
+Run these steps to start the API and frontend in sync.
+
+### 1) Start backend API (`http://localhost:5000`)
+
+```bash
+cd backend
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python run.py
+```
+
+Health checks:
+
+- `http://localhost:5000/api/health`
+- `http://localhost:5000/api/health/detailed`
+
+### 2) Start frontend (`http://localhost:5173`)
+
+Open a second terminal:
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### 3) Confirm API base URL alignment
+
+Frontend defaults to `http://localhost:5000` in development via `frontend/src/lib/apiConfig.ts`.
+
+Optional override:
+
+```bash
+cd frontend
+echo "VITE_API_BASE_URL=http://localhost:5000" > .env.local
+```
+
 ## 🏠 **What We Do**
 
 Connect Kenyan families with trusted domestic workers and professional agencies. Simple, safe, and efficient.
