@@ -1,92 +1,35 @@
 import { Button } from '@/components/ui/button';
 import { 
-  Search, Plus, Users, Briefcase, Eye, MessageCircle, Home, RefreshCw, Menu
+  Search, Home
 } from 'lucide-react';
 import { NotificationDropdown } from '@/components/ui/NotificationDropdown';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
-  activeSection: string;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
-  setShowJobModal: (show: boolean) => void;
-  stats: {
-    totalApplications: number;
-    activeJobs: number;
-    totalViews: number;
-    unreadMessages: number;
-  };
-  lastUpdated?: Date | null;
-  onRefresh?: () => void;
-  sidebarCollapsed: boolean;
-  setSidebarCollapsed: (collapsed: boolean) => void;
 }
 
 export const Header = ({
-  activeSection,
   searchTerm,
-  setSearchTerm,
-  setShowJobModal,
-  stats,
-  lastUpdated,
-  onRefresh,
-  sidebarCollapsed,
-  setSidebarCollapsed
+  setSearchTerm
 }: HeaderProps) => {
   const navigate = useNavigate();
   
   return (
-    <header className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200/50 px-4 lg:px-6 py-4">
-      <div className="flex items-center justify-between">
-        {/* Mobile Menu Button */}
+    <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-4">
+      <div className="flex items-center justify-between gap-3">
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="lg:hidden mr-3"
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          onClick={() => navigate('/')}
+          className="text-gray-700"
         >
-          <Menu className="h-5 w-5" />
+          <Home className="h-4 w-4 mr-2" />
+          Back to Home
         </Button>
 
-        <div className="flex items-center space-x-6 flex-1">
-          <div className="min-w-0 flex-1">
-            <h1 className="text-xl lg:text-2xl font-bold text-gray-900 truncate">
-              {activeSection === 'housegirls' && 'Available Housegirls'}
-              {activeSection === 'jobs' && 'Job Management'}
-              {activeSection === 'messages' && 'Messages'}
-              {activeSection === 'settings' && 'Settings'}
-            </h1>
-            <p className="text-sm lg:text-base text-gray-600 hidden sm:block">
-              {activeSection === 'housegirls' && 'Browse and connect with qualified housegirls'}
-              {activeSection === 'jobs' && 'Create and manage your job postings'}
-              {activeSection === 'messages' && 'Communicate with housegirls and manage conversations'}
-              {activeSection === 'settings' && 'Manage your account and preferences'}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-4">
-          {/* Stats Icons */}
-          <div className="flex items-center space-x-3">
-            <div className="bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 flex items-center space-x-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-700">{stats.totalApplications}</span>
-            </div>
-            <div className="bg-green-50 px-3 py-2 rounded-lg border border-green-200 flex items-center space-x-2">
-              <Briefcase className="h-4 w-4 text-green-600" />
-              <span className="text-sm font-medium text-green-700">{stats.activeJobs}</span>
-            </div>
-            <div className="bg-purple-50 px-3 py-2 rounded-lg border border-purple-200 flex items-center space-x-2">
-              <Eye className="h-4 w-4 text-purple-600" />
-              <span className="text-sm font-medium text-purple-700">{stats.totalViews}</span>
-            </div>
-            <div className="bg-orange-50 px-3 py-2 rounded-lg border border-orange-200 flex items-center space-x-2">
-              <MessageCircle className="h-4 w-4 text-orange-600" />
-              <span className="text-sm font-medium text-orange-700">{stats.unreadMessages}</span>
-            </div>
-          </div>
-
-          {/* Search Bar */}
+        <div className="flex items-center space-x-2">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
@@ -94,52 +37,10 @@ export const Header = ({
               placeholder="Search..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
+              className="pl-10 pr-4 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
             />
           </div>
-
-          {/* Refresh Indicator */}
-          {lastUpdated && (
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
-              <RefreshCw className="h-4 w-4" />
-              <span>Last updated: {lastUpdated.toLocaleTimeString()}</span>
-              {onRefresh && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={onRefresh}
-                  className="text-gray-500 hover:text-blue-600"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex items-center space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/home')}
-              className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-            
-            <NotificationDropdown />
-            
-            {activeSection === 'jobs' && (
-              <Button
-                onClick={() => setShowJobModal(true)}
-                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Post Job
-              </Button>
-            )}
-          </div>
+          <NotificationDropdown />
         </div>
       </div>
     </header>

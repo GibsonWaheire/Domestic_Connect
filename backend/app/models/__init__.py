@@ -142,9 +142,11 @@ class User(db.Model):
         return cls.query.filter_by(email=email).first()
     
     @classmethod
-    def create_user(cls, firebase_uid, email, user_type='employer', **kwargs):
+    def create_user(cls, firebase_uid, email, user_type=None, **kwargs):
         """Class method to create a new user using SQLAlchemy ORM"""
         from app import db
+        if user_type not in ['employer', 'housegirl', 'agency']:
+            raise ValueError('A valid user_type is required to create a user.')
         
         user = cls(
             id=f"user_{firebase_uid}",

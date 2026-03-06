@@ -2,24 +2,92 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-import { Sidebar } from '@/components/employer/Sidebar';
 import { Header } from '@/components/employer/Header';
 import { Footer } from '@/components/employer/Footer';
 import { Housegirls } from '@/components/employer/Housegirls';
-import { Jobs } from '@/components/employer/Jobs';
-import { Messages } from '@/components/employer/Messages';
 import { Settings } from '@/components/employer/Settings';
-import AgencyMarketplace from '@/components/employer/AgencyMarketplace';
-import { JobPostingModal } from '@/components/employer/JobPostingModal';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
-import { crossEntityApi, DashboardData } from '@/lib/api';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
+import { Button } from '@/components/ui/button';
+import { Building2, LogOut, Phone, RefreshCw, Settings as SettingsIcon, Users } from 'lucide-react';
+
+const MOCK_HOUSEGIRLS: Housegirl[] = [
+  {
+    id: 900001,
+    name: 'Mary Wanjiku',
+    age: 24,
+    location: 'Kasarani, Nairobi',
+    experience: '5 years',
+    education: 'Form 4 and Above',
+    salary: 'KES 15,000',
+    status: 'available',
+    bio: 'Reliable house help with strong cleaning and laundry skills.',
+    skills: ['Cleaning', 'Laundry', 'Ironing'],
+    rating: 4.8,
+    reviews: 18,
+    contactUnlocked: false,
+    unlockCount: 0,
+    phone: '',
+    email: '',
+    nationality: 'Kenyan',
+    community: 'Kikuyu',
+    workType: 'Live-in',
+    livingArrangement: 'Live-in',
+    profileImage: ''
+  },
+  {
+    id: 900002,
+    name: 'Grace Akinyi',
+    age: 29,
+    location: 'Nyali, Mombasa',
+    experience: '4 years',
+    education: 'Form 4 and Above',
+    salary: 'KES 18,000',
+    status: 'available',
+    bio: 'Professional nanny with childcare and tutoring experience.',
+    skills: ['Childcare', 'Meal Prep', 'Tutoring'],
+    rating: 4.5,
+    reviews: 11,
+    contactUnlocked: false,
+    unlockCount: 0,
+    phone: '',
+    email: '',
+    nationality: 'Kenyan',
+    community: 'Luo',
+    workType: 'Live-in',
+    livingArrangement: 'Live-in',
+    profileImage: ''
+  },
+  {
+    id: 900003,
+    name: 'Teresa Otsieno',
+    age: 28,
+    location: 'Milimani, Kisumu',
+    experience: '4 years',
+    education: 'Form 4 and Above',
+    salary: 'KES 18,000',
+    status: 'available',
+    bio: 'Strong background in childcare and elderly support.',
+    skills: ['Childcare', 'Elderly Care', 'Cleaning'],
+    rating: 4.7,
+    reviews: 23,
+    contactUnlocked: false,
+    unlockCount: 0,
+    phone: '',
+    email: '',
+    nationality: 'Kenyan',
+    community: 'Luo',
+    workType: 'Live-out',
+    livingArrangement: 'Live-out',
+    profileImage: ''
+  }
+];
 
 const EmployerDashboard = () => {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
   
   // Additional auth check - ensure only employers can access this dashboard
@@ -47,10 +115,7 @@ const EmployerDashboard = () => {
   
   // State
   const [activeSection, setActiveSection] = useState('housegirls');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [showJobModal, setShowJobModal] = useState(false);
   const [showUnlockModal, setShowUnlockModal] = useState(false);
-  const [selectedHousegirl, setSelectedHousegirl] = useState<Housegirl | null>(null);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,16 +135,15 @@ const EmployerDashboard = () => {
 
   // State for real data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
-  const [jobPostings, setJobPostings] = useState<JobPosting[]>([]);
-  const [messages, setMessages] = useState<Message[]>([]);
 
   // Use real-time data hook
   const { 
     dashboardData, 
     loading: dataLoading, 
-    error: dataError, 
-    lastUpdated, 
-    refreshData 
+    error: dataError,
+    refreshing,
+    lastUpdated,
+    refreshData
   } = useRealTimeData({ 
     refreshInterval: 30000, // 30 seconds
     enabled: !!user 
@@ -87,9 +151,9 @@ const EmployerDashboard = () => {
 
   // Transform dashboard data when it changes
   useEffect(() => {
-    if (dashboardData?.available_data.housegirls) {
-      const transformedHousegirls: Housegirl[] = dashboardData.available_data.housegirls.map(hg => ({
-        id: parseInt(hg.id),
+    const apiHousegirls = dashboardData?.available_data.housegirls || [];
+    const transformedHousegirls: Housegirl[] = apiHousegirls.map((hg, index) => ({
+        id: Number(hg.id) || (100000 + index),
         name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
         age: hg.age,
         location: hg.location,
@@ -111,8 +175,19 @@ const EmployerDashboard = () => {
         livingArrangement: hg.accommodation_type,
         profileImage: hg.profile_photo_url
       }));
-      setHousegirls(transformedHousegirls);
-    }
+
+    const sortedRealHousegirls = transformedHousegirls.sort((a, b) => {
+      const aMatch = apiHousegirls.find((hg) => (Number(hg.id) || 0) === a.id);
+      const bMatch = apiHousegirls.find((hg) => (Number(hg.id) || 0) === b.id);
+      const aTime = Date.parse((aMatch as { created_at?: string } | undefined)?.created_at || '');
+      const bTime = Date.parse((bMatch as { created_at?: string } | undefined)?.created_at || '');
+      if (Number.isFinite(aTime) && Number.isFinite(bTime)) {
+        return bTime - aTime;
+      }
+      return b.id - a.id;
+    });
+    const mergedHousegirls = [...sortedRealHousegirls, ...MOCK_HOUSEGIRLS];
+    setHousegirls(mergedHousegirls);
   }, [dashboardData]);
 
   // Show error if data fetching fails
@@ -142,10 +217,10 @@ const EmployerDashboard = () => {
   // Show loading state while auth is initializing or data is loading
   if (loading || dataLoading) {
     return (
-      <div className="flex h-screen items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="flex h-screen items-center justify-center bg-gray-50">
         <div className="text-center">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
-            <div className="w-8 h-8 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-16 h-16 rounded-full border border-gray-200 bg-white flex items-center justify-center mx-auto mb-4">
+            <div className="w-8 h-8 border-2 border-gray-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
           <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard</h2>
           <p className="text-gray-600">Please wait while we load your account and data...</p>
@@ -173,48 +248,36 @@ const EmployerDashboard = () => {
 
   // Real-time stats from dashboard data
   const stats = dashboardData?.stats || {
-    totalApplications: jobPostings.reduce((sum, job) => sum + (job.applications || 0), 0),
-    activeJobs: jobPostings.filter(job => job.status === 'active').length,
-    totalViews: jobPostings.reduce((sum, job) => sum + (job.views || 0), 0),
-    unreadMessages: messages.filter(msg => !msg.isRead).length
+    totalApplications: housegirls.length,
+    activeJobs: 0,
+    totalViews: 0,
+    unreadMessages: 0
   };
 
   const employerCompletionItems = [
     {
-      key: 'full-name',
-      label: 'Add your full name',
-      weight: 15,
-      completed: Boolean(`${user?.first_name || ''} ${user?.last_name || ''}`.trim()),
+      key: 'first-name',
+      label: 'Add your first name',
+      weight: 25,
+      completed: Boolean((localStorage.getItem('employer_first_name') || user?.first_name || '').trim()),
+    },
+    {
+      key: 'last-name',
+      label: 'Add your last name',
+      weight: 25,
+      completed: Boolean((localStorage.getItem('employer_last_name') || user?.last_name || '').trim()),
     },
     {
       key: 'location',
       label: 'Add your location',
-      weight: 15,
-      completed: Boolean((user as { location?: string } | null)?.location || localStorage.getItem('employer_location')),
-    },
-    {
-      key: 'phone',
-      label: 'Confirm your phone number',
-      weight: 20,
-      completed: Boolean(user?.phone_number),
+      weight: 25,
+      completed: Boolean((localStorage.getItem('employer_location') || (user as { location?: string } | null)?.location || '').trim()),
     },
     {
       key: 'photo',
       label: 'Upload a profile photo',
-      weight: 10,
+      weight: 25,
       completed: Boolean(localStorage.getItem('employer_profile_photo')),
-    },
-    {
-      key: 'about',
-      label: 'Add your description',
-      weight: 20,
-      completed: Boolean((user as { bio?: string } | null)?.bio || localStorage.getItem('employer_about')),
-    },
-    {
-      key: 'budget',
-      label: 'Set your budget range',
-      weight: 20,
-      completed: Boolean((user as { budget_range?: string } | null)?.budget_range || localStorage.getItem('employer_budget_range')),
     },
   ] as const;
 
@@ -232,6 +295,19 @@ const EmployerDashboard = () => {
     }, 0);
   };
 
+  const handleLogout = async () => {
+    try {
+      await signOut();
+      navigate('/');
+    } catch {
+      toast({
+        title: "Logout failed",
+        description: "Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
   const handleUnlockAttempt = (housegirl: Housegirl) => {
     if (employerProfileCompletion < 60) {
       setUnlockRestrictionMessage(
@@ -243,6 +319,13 @@ const EmployerDashboard = () => {
     setHousegirlToUnlock(housegirl);
     setShowUnlockModal(true);
   };
+
+  const sidebarItems = [
+    { id: 'housegirls', label: 'Browse Housegirls', icon: Users },
+    { id: 'contacts', label: 'My Contacts', icon: Phone },
+    { id: 'agency', label: 'Agency Services', icon: Building2 },
+    { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  ] as const;
 
   // Render section based on active section
   const renderSection = () => {
@@ -273,26 +356,80 @@ const EmployerDashboard = () => {
             onUnlock={handleUnlockAttempt}
           />
         );
-      case 'agency-marketplace':
-        return <AgencyMarketplace />;
-      case 'jobs':
+      case 'contacts': {
+        const unlockedContacts = housegirls.filter((housegirl) => housegirl.contactUnlocked);
         return (
-          <Jobs
-            jobPostings={jobPostings}
-            setShowJobModal={setShowJobModal}
-          />
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="text-lg font-semibold text-gray-900">My Contacts</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Housegirls whose contact details you have unlocked.
+              </p>
+            </div>
+            {unlockedContacts.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-600">
+                No contacts unlocked yet. Browse housegirls and click Unlock Contact.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {unlockedContacts.map((contact) => (
+                  <div key={contact.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-base font-semibold text-gray-900">{contact.name}</p>
+                    <p className="mt-1 text-sm text-gray-600">{contact.location}</p>
+                    <p className="mt-2 text-sm text-gray-700">Phone: {contact.phone || 'Not available'}</p>
+                    <p className="text-sm text-gray-700">Email: {contact.email || 'Not available'}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         );
-      case 'messages':
-        return (
-          <Messages
-            messages={messages}
-          />
-        );
+      }
       case 'settings':
         return (
           <Settings
             stats={stats}
           />
+        );
+      case 'agency':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="text-lg font-semibold text-gray-900">Agency Services</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Explore trusted agency options and packages when you need fully managed hiring support.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-base font-semibold text-gray-900">Agency Marketplace</p>
+                <p className="mt-1 text-sm text-gray-600">
+                  Compare agencies by services and location before you hire.
+                </p>
+                <Button
+                  type="button"
+                  className="mt-3"
+                  onClick={() => navigate('/agency-marketplace')}
+                >
+                  Browse Agencies
+                </Button>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-base font-semibold text-gray-900">Agency Packages</p>
+                <p className="mt-1 text-sm text-gray-600">
+                  View package plans with replacement and support options.
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="mt-3"
+                  onClick={() => navigate('/agency-packages')}
+                >
+                  View Packages
+                </Button>
+              </div>
+            </div>
+          </div>
         );
       default:
         return (
@@ -325,37 +462,58 @@ const EmployerDashboard = () => {
 
   return (
     <NotificationProvider>
-      <div className="flex h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
-        {/* Sidebar */}
-        <Sidebar
-          activeSection={activeSection}
-          setActiveSection={setActiveSection}
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
-          setSelectedWorkType={setSelectedWorkType}
-          filteredHousegirlsCount={filteredHousegirls.length}
-        />
-
-        {/* Main Content */}
-        <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
           <Header
-            activeSection={activeSection}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            setShowJobModal={setShowJobModal}
-            stats={stats}
-            lastUpdated={lastUpdated}
-            onRefresh={refreshData}
-            sidebarCollapsed={sidebarCollapsed}
-            setSidebarCollapsed={setSidebarCollapsed}
           />
 
           {/* Main Content Area */}
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+            <div className="mb-4 flex flex-wrap gap-2 border border-gray-200 bg-white rounded-lg p-2">
+              {sidebarItems.map((item) => {
+                const Icon = item.icon;
+                const isActive = activeSection === item.id;
+                return (
+                  <Button
+                    key={item.id}
+                    type="button"
+                    variant="outline"
+                    onClick={() => setActiveSection(item.id)}
+                    className={isActive ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-gray-700'}
+                  >
+                    <Icon className="h-4 w-4 mr-2" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+              <Button
+                type="button"
+                variant="outline"
+                className="ml-auto"
+                onClick={() => refreshData(false)}
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Log Out
+              </Button>
+            </div>
+            {lastUpdated && (
+              <p className="mb-3 text-xs text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+            )}
             {showProfilePromptBanner && (
               <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-start justify-between gap-3">
-                <p>Complete your profile to unlock all features. Profile completion: 20%</p>
+                <p>Complete your profile to unlock all features. Profile completion: {employerProfileCompletion}%</p>
                 <button
                   type="button"
                   className="text-blue-700 hover:text-blue-900 underline"
@@ -396,7 +554,7 @@ const EmployerDashboard = () => {
                 <button
                   type="button"
                   className="underline font-medium"
-                  onClick={() => jumpToEmployerProfileSection('full-name')}
+                  onClick={() => jumpToEmployerProfileSection('first-name')}
                 >
                   Complete now →
                 </button>
@@ -410,12 +568,6 @@ const EmployerDashboard = () => {
             filteredHousegirlsCount={filteredHousegirls.length}
           />
         </div>
-
-        {/* Modals */}
-        <JobPostingModal
-          showJobModal={showJobModal}
-          setShowJobModal={setShowJobModal}
-        />
 
         <UnlockModal
           showUnlockModal={showUnlockModal}

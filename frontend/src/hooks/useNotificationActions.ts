@@ -1,7 +1,12 @@
 import { useNotifications } from '@/contexts/NotificationContext';
 
 export const useNotificationActions = () => {
-  const { addNotification } = useNotifications();
+  let addNotification: (notification: { title: string; message: string; type: 'success' | 'error' | 'warning' | 'info'; action?: { label: string; onClick: () => void } }) => void;
+  try {
+    ({ addNotification } = useNotifications());
+  } catch {
+    addNotification = () => {};
+  }
 
   const showSuccessNotification = (title: string, message: string, action?: { label: string; onClick: () => void }) => {
     addNotification({

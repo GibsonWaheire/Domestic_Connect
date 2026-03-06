@@ -11,11 +11,13 @@ def verify_password(password, hashed):
     """Verify a password against its hash"""
     return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
 
-def get_or_create_user(email, password=None, user_type='employer', **kwargs):
+def get_or_create_user(email, password=None, user_type=None, **kwargs):
     """Get existing user or create new one"""
     user = User.query.filter_by(email=email).first()
     
     if not user and password:
+        if user_type not in ['employer', 'housegirl', 'agency']:
+            raise ValueError('A valid user_type is required to create a user.')
         # Create new user
         try:
             hashed_password = hash_password(password)

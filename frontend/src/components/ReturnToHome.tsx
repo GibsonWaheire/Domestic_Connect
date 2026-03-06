@@ -18,7 +18,7 @@ const ReturnToHome = ({
   const navigate = useNavigate();
 
   const handleReturnHome = () => {
-    navigate('/home', { replace: true });
+    navigate('/', { replace: true });
   };
 
   return (
