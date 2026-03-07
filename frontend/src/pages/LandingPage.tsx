@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import AuthModal from '@/components/AuthModal';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -12,6 +13,14 @@ const LandingPage = () => {
   const [authDefaultUserType, setAuthDefaultUserType] = useState<'employer' | 'housegirl' | 'agency' | undefined>(undefined);
   const [authUserTypeFixed, setAuthUserTypeFixed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { user } = useAuth();
+  
+  const getDashboardRoute = () => {
+    if (!user) return '/';
+    if (user.user_type === 'agency') return '/agency-dashboard';
+    if (user.user_type === 'housegirl') return '/housegirl-dashboard';
+    return '/employer-dashboard';
+  };
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
   const openRegister = () => {
@@ -80,13 +89,20 @@ const LandingPage = () => {
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-         
-            <Button onClick={openLogin} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">
-              Login
-            </Button>
-            <Button onClick={openRegister} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
-              Join Today
-            </Button>
+            {user ? (
+              <Button onClick={() => navigate(getDashboardRoute())} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
+                Dashboard →
+              </Button>
+            ) : (
+              <>
+                <Button onClick={openLogin} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">
+                  Login
+                </Button>
+                <Button onClick={openRegister} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
+                  Join Today
+                </Button>
+              </>
+            )}
           </div>
 
           <button
@@ -163,12 +179,20 @@ const LandingPage = () => {
               </div>
 
               <div className="pt-2 flex flex-col gap-2">
-                <Button onClick={openLogin} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
-                  Login
-                </Button>
-                <Button onClick={openRegister} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
-                  Join Today
-                </Button>
+                {user ? (
+                  <Button onClick={() => { setIsMenuOpen(false); navigate(getDashboardRoute()); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
+                    Dashboard →
+                  </Button>
+                ) : (
+                  <>
+                    <Button onClick={openLogin} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
+                      Login
+                    </Button>
+                    <Button onClick={openRegister} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
+                      Join Today
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -403,7 +427,11 @@ const LandingPage = () => {
             <div className="flex flex-col gap-2 text-sm">
               <button type="button" onClick={openHousegirlRegister} className="text-left text-white hover:text-[#aaa] transition-colors">Register Free</button>
               <Link to="/housegirls" className="text-white hover:text-[#aaa] transition-colors">How to Get Listed</Link>
-              <button type="button" onClick={openLogin} className="text-left text-white hover:text-[#aaa] transition-colors">Dashboard Login</button>
+              {user ? (
+                <button type="button" onClick={() => navigate(getDashboardRoute())} className="text-left text-white hover:text-[#aaa] transition-colors">Go to Dashboard</button>
+              ) : (
+                <button type="button" onClick={openLogin} className="text-left text-white hover:text-[#aaa] transition-colors">Dashboard Login</button>
+              )}
             </div>
           </div>
           <div>

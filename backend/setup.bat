@@ -98,8 +98,8 @@ echo 4. Start the frontend: npm run dev
 echo.
 echo 🌐 Access points:
 echo - Frontend: http://localhost:5173
-echo - Backend API: http://localhost:5000
-echo - API Documentation: http://localhost:5000/api
+echo - Backend API: http://localhost:5001
+echo - API Documentation: http://localhost:5001/api
 echo.
 echo [SUCCESS] Happy coding! 🎉
 pause

@@ -16,9 +16,10 @@ try:
     from flask import Flask
     print("✅ Flask imported successfully")
     
-    # Test SQLAlchemy import
-    from flask_sqlalchemy import SQLAlchemy
-    print("✅ SQLAlchemy imported successfully")
+    # Test Firebase Admin import
+    import firebase_admin
+    from firebase_admin import credentials, firestore
+    print("✅ Firebase Admin imported successfully")
     
     # Test bcrypt import
     import bcrypt
@@ -41,7 +42,7 @@ try:
     print("\n📋 Next steps:")
     print("1. cd backend")
     print("2. python run.py")
-    print("3. Backend will be available at http://localhost:5000")
+    print("3. Backend will be available at http://localhost:5001")
     
 except ImportError as e:
     print(f"❌ Import error: {e}")

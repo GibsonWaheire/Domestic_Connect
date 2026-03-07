@@ -2,11 +2,9 @@
 Health check endpoint for monitoring application health
 """
 from flask import Blueprint, jsonify
-from app import db
-from app.models import User, JobPosting, JobApplication
+from app.firebase_init import db
 from app.middleware.performance import get_cache_stats
 from app.middleware.logging import logger
-from sqlalchemy import text
 import time
 import os
 
@@ -39,8 +37,8 @@ def _get_system_metrics():
 def health_check():
     """Basic health check endpoint"""
     try:
-        # Check database connection
-        db.session.execute(text('SELECT 1'))
+        # Check database connection (Firestore)
+        docs = list(db.collection('users').limit(1).stream())
         
         return jsonify({
             'status': 'healthy',
@@ -60,12 +58,12 @@ def detailed_health_check():
     """Detailed health check with system metrics"""
     try:
         # Database health
-        db.session.execute(text('SELECT 1'))
+        docs = list(db.collection('users').limit(1).stream())
         
         # Get application metrics
-        user_count = User.query.count()
-        job_count = JobPosting.query.count()
-        application_count = JobApplication.query.count()
+        user_count = len(list(db.collection('users').stream()))
+        job_count = len(list(db.collection('job_postings').stream()))
+        application_count = len(list(db.collection('job_applications').stream()))
         
         # Get cache stats
         cache_stats = get_cache_stats()
@@ -134,7 +132,7 @@ def readiness_check():
     """Kubernetes readiness probe"""
     try:
         # Check if application is ready to serve traffic
-        db.session.execute(text('SELECT 1'))
+        docs = list(db.collection('users').limit(1).stream())
         
         return jsonify({
             'status': 'ready',
@@ -173,9 +171,9 @@ def metrics():
     """Prometheus-style metrics endpoint"""
     try:
         # Get application metrics
-        user_count = User.query.count()
-        job_count = JobPosting.query.count()
-        application_count = JobApplication.query.count()
+        user_count = len(list(db.collection('users').stream()))
+        job_count = len(list(db.collection('job_postings').stream()))
+        application_count = len(list(db.collection('job_applications').stream()))
         
         # Get system metrics (optional when psutil is unavailable)
         system_metrics = _get_system_metrics()

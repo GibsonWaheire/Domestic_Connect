@@ -58,21 +58,36 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const { headers, ...restOptions } = options;
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...restOptions,
-    credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...headers,
-    },
-  });
+  
+  // Abort request if it takes longer than 10 seconds to respond
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData.error || `API request failed: ${response.statusText}`);
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...restOptions,
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+        ...headers,
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `API request failed: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    if ((error as Error).name === 'AbortError') {
+      throw new Error('Request timed out. Please check your connection.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  return response.json();
 }
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -135,34 +150,62 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  // Check session on mount (auto-login)
+  // Initialize auth state
   useEffect(() => {
-    checkSession();
+    let unsubscribe: () => void = () => {};
     
-    // Listen to Firebase auth state changes
-    const unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
-      // Don't process auth state changes if we're in the process of signing out
-      if (isSigningOut) {
-        return;
+    // Failsafe timeout: if auth takes longer than 5 seconds, forcefully clear loading
+    const fallbackTimeout = setTimeout(() => {
+      setLoading(false);
+    }, 5000);
+
+    const setupAuth = async () => {
+      try {
+        // Await persistence resolution first
+        const { auth } = await import('@/lib/firebase');
+        const { setPersistence, browserLocalPersistence } = await import('firebase/auth');
+        await setPersistence(auth, browserLocalPersistence);
+      } catch (err) {
+        console.error('Firebase persistence init error:', err);
       }
 
-      if (firebaseUser) {
-        // Prevent duplicate sync calls right after successful login
-        if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
-          setLoading(false);
+      unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
+        // Don't process auth state changes if we're in the process of signing out
+        if (isSigningOut) {
+          clearTimeout(fallbackTimeout);
           return;
         }
-        // User is signed in with Firebase
-        await handleFirebaseUser(firebaseUser);
-      } else {
-        // User is signed out from Firebase
-        setUser(null);
-        setIsFirebaseUser(false);
-      }
-    });
 
-    return () => unsubscribe();
-  }, [checkSession, handleFirebaseUser, isSigningOut, user]);
+        try {
+          if (firebaseUser) {
+            // Prevent duplicate sync calls right after successful login
+            if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
+              setLoading(false);
+              clearTimeout(fallbackTimeout);
+              return;
+            }
+            // User is signed in with Firebase
+            await handleFirebaseUser(firebaseUser);
+          } else {
+            // User is signed out from Firebase
+            setUser(null);
+            setIsFirebaseUser(false);
+          }
+        } finally {
+          // ALWAYS finish loading after Firebase resolves
+          setLoading(false);
+          clearTimeout(fallbackTimeout);
+        }
+      });
+    };
+
+    setupAuth();
+
+    return () => {
+      clearTimeout(fallbackTimeout);
+      unsubscribe();
+    };
+  }, [handleFirebaseUser, isSigningOut, user]);
 
   const signUp = async (
     email: string, 
