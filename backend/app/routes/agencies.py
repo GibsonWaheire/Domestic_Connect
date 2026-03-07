@@ -118,9 +118,14 @@ def get_agency(agency_id):
         return jsonify({'error': str(e)}), 500
 
 @agencies_bp.route('/', methods=['POST'])
+@firebase_auth_required
 def create_agency():
     """Create new agency"""
     try:
+        user = request.current_user
+        if not user.is_admin:
+            return jsonify({'error': 'Unauthorized, admin only'}), 403
+            
         data = request.get_json()
         
         # Validate required fields
@@ -177,9 +182,14 @@ def create_agency():
         return jsonify({'error': str(e)}), 500
 
 @agencies_bp.route('/<agency_id>', methods=['PUT'])
+@firebase_auth_required
 def update_agency(agency_id):
     """Update agency"""
     try:
+        user = request.current_user
+        if not user.is_admin:
+            return jsonify({'error': 'Unauthorized, admin only'}), 403
+            
         agency = Agency.query.get_or_404(agency_id)
         data = request.get_json()
         
@@ -244,9 +254,14 @@ def update_agency(agency_id):
         return jsonify({'error': str(e)}), 500
 
 @agencies_bp.route('/<agency_id>', methods=['DELETE'])
+@firebase_auth_required
 def delete_agency(agency_id):
     """Delete agency"""
     try:
+        user = request.current_user
+        if not user.is_admin:
+            return jsonify({'error': 'Unauthorized, admin only'}), 403
+            
         agency = Agency.query.get_or_404(agency_id)
         db.session.delete(agency)
         db.session.commit()

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import login_required, get_current_user
+from app.services.auth_service import firebase_auth_required
 from app.models import HousegirlProfile, Profile, User
 from app import db
 from datetime import datetime
@@ -118,9 +118,11 @@ def get_housegirl(housegirl_id):
         return jsonify({'error': str(e)}), 500
 
 @housegirls_bp.route('/', methods=['POST'])
+@firebase_auth_required
 def create_housegirl():
     """Create new housegirl profile"""
     try:
+        user = request.current_user
         data = request.get_json()
         
         # Validate required fields
@@ -129,6 +131,10 @@ def create_housegirl():
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
         
+        profile = Profile.query.get_or_404(data['profile_id'])
+        if profile.user_id != user.id and not user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
         # Create housegirl profile
         housegirl = HousegirlProfile(
             profile_id=data['profile_id'],
@@ -171,10 +177,16 @@ def create_housegirl():
         return jsonify({'error': str(e)}), 500
 
 @housegirls_bp.route('/<housegirl_id>', methods=['PUT'])
+@firebase_auth_required
 def update_housegirl(housegirl_id):
     """Update housegirl profile"""
     try:
+        user = request.current_user
         housegirl = HousegirlProfile.query.get_or_404(housegirl_id)
+        
+        if housegirl.profile.user_id != user.id and not user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
         data = request.get_json()
         
         # Update fields
@@ -227,10 +239,16 @@ def update_housegirl(housegirl_id):
         return jsonify({'error': str(e)}), 500
 
 @housegirls_bp.route('/<housegirl_id>', methods=['DELETE'])
+@firebase_auth_required
 def delete_housegirl(housegirl_id):
     """Delete housegirl profile"""
     try:
+        user = request.current_user
         housegirl = HousegirlProfile.query.get_or_404(housegirl_id)
+        
+        if housegirl.profile.user_id != user.id and not user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
         db.session.delete(housegirl)
         db.session.commit()
         

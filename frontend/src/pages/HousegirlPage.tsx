@@ -81,7 +81,7 @@ const HousegirlPage = () => {
                   } else if (user.user_type === 'housegirl') {
                     navigate('/housegirl-dashboard');
                   } else {
-                    navigate('/dashboard');
+                    navigate('/employer-dashboard');
                   }
                 } else {
                   // If not logged in, go to home
@@ -127,7 +127,7 @@ const HousegirlPage = () => {
                       } else if (user.user_type === 'housegirl') {
                         navigate('/housegirl-dashboard');
                       } else {
-                        navigate('/dashboard');
+                        navigate('/employer-dashboard');
                       }
                     }} 
                     className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full"

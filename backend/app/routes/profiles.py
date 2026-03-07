@@ -7,17 +7,16 @@ import uuid
 profiles_bp = Blueprint('profiles', __name__)
 
 @profiles_bp.route('/', methods=['GET'])
+@firebase_auth_required
 def get_all_profiles():
-    """Get all profiles with optional filtering"""
+    """Get all profiles for the current user"""
     try:
-        user_type = request.args.get('user_type')
+        user = request.current_user
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
         
-        query = Profile.query
-        
-        if user_type:
-            query = query.join(User).filter(User.user_type == user_type)
+        # Strictly scope to the authenticated user's ID
+        query = Profile.query.filter_by(user_id=user.id)
         
         profiles = query.paginate(
             page=page, 
@@ -86,10 +85,16 @@ def get_all_profiles():
         return jsonify({'error': str(e)}), 500
 
 @profiles_bp.route('/<profile_id>', methods=['GET'])
+@firebase_auth_required
 def get_profile(profile_id):
-    """Get specific profile by ID"""
+    """Get specific profile by ID (must own the profile)"""
     try:
+        user = request.current_user
         profile = Profile.query.get_or_404(profile_id)
+        
+        # Ensure the user requesting the profile actually owns it
+        if profile.user_id != user.id:
+            return jsonify({'error': 'Unauthorized to access this profile'}), 403
         
         profile_data = {
             'id': profile.id,

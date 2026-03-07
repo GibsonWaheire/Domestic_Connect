@@ -82,7 +82,7 @@ const App = () => (
                   } 
                 />
                 <Route 
-                  path="/dashboard" 
+                  path="/employer-dashboard" 
                   element={
                     <AuthGuard allowedUserTypes={['employer']}>
                       <EmployerDashboard />

@@ -66,7 +66,7 @@ const AgencyPage = () => {
                   } else if (user.user_type === 'housegirl') {
                     navigate('/housegirl-dashboard');
                   } else {
-                    navigate('/dashboard');
+                    navigate('/employer-dashboard');
                   }
                 } else {
                   // If not logged in, go to home
@@ -112,7 +112,7 @@ const AgencyPage = () => {
                       } else if (user.user_type === 'housegirl') {
                         navigate('/housegirl-dashboard');
                       } else {
-                        navigate('/dashboard');
+                        navigate('/employer-dashboard');
                       }
                     }} 
                     className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-full"

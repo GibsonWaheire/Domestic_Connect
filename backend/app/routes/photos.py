@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from app.services.auth_service import firebase_auth_required
 from app.models import Photo, Profile
 from app import db
@@ -36,16 +36,21 @@ def upload_photo():
             # Generate unique filename
             unique_filename = f"{uuid.uuid4()}_{filename}"
             
-            # Save file
-            upload_folder = current_app.config['UPLOAD_FOLDER']
-            file_path = os.path.join(upload_folder, unique_filename)
+            # Save file in user-specific isolated folder
+            upload_base_folder = current_app.config['UPLOAD_FOLDER']
+            user_upload_folder = os.path.join(upload_base_folder, str(user.id))
+            
+            # Ensure the user's isolated upload directory exists
+            os.makedirs(user_upload_folder, exist_ok=True)
+            
+            file_path = os.path.join(user_upload_folder, unique_filename)
             file.save(file_path)
             
             # Create photo record
             photo = Photo(
                 id=str(uuid.uuid4()),
                 profile_id=user.profile.id,
-                photo_url=f"/uploads/{unique_filename}",
+                photo_url=f"/uploads/{user.id}/{unique_filename}",
                 is_primary=request.form.get('is_primary', False)
             )
             

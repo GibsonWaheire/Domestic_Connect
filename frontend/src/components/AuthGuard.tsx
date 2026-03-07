@@ -50,7 +50,7 @@ export const AuthGuard = ({
       // Redirect to appropriate dashboard based on user type
       switch (userType) {
         case 'employer':
-          navigate('/dashboard');
+          navigate('/employer-dashboard');
           break;
         case 'housegirl':
           navigate('/housegirl-dashboard');

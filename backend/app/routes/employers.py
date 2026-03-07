@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import login_required, get_current_user
+from app.services.auth_service import firebase_auth_required
 from app.models import EmployerProfile, Profile, User
 from app import db
 from datetime import datetime
@@ -74,9 +74,11 @@ def get_employer(employer_id):
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/', methods=['POST'])
+@firebase_auth_required
 def create_employer():
     """Create new employer profile"""
     try:
+        user = request.current_user
         data = request.get_json()
         
         # Validate required fields
@@ -85,6 +87,10 @@ def create_employer():
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
         
+        profile = Profile.query.get_or_404(data['profile_id'])
+        if profile.user_id != user.id and not user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
         # Create employer profile
         employer = EmployerProfile(
             profile_id=data['profile_id'],
@@ -111,10 +117,16 @@ def create_employer():
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/<employer_id>', methods=['PUT'])
+@firebase_auth_required
 def update_employer(employer_id):
     """Update employer profile"""
     try:
+        user = request.current_user
         employer = EmployerProfile.query.get_or_404(employer_id)
+        
+        if employer.profile.user_id != user.id and not user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
         data = request.get_json()
         
         # Update fields
@@ -143,10 +155,16 @@ def update_employer(employer_id):
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/<employer_id>', methods=['DELETE'])
+@firebase_auth_required
 def delete_employer(employer_id):
     """Delete employer profile"""
     try:
+        user = request.current_user
         employer = EmployerProfile.query.get_or_404(employer_id)
+        
+        if employer.profile.user_id != user.id and not user.is_admin:
+            return jsonify({'error': 'Unauthorized'}), 403
+            
         db.session.delete(employer)
         db.session.commit()
         

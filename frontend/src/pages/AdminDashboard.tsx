@@ -29,7 +29,7 @@ const AdminDashboard: React.FC = () => {
         
         // Redirect based on user type
         if (user.user_type === 'employer') {
-          navigate('/dashboard');
+          navigate('/employer-dashboard');
         } else if (user.user_type === 'housegirl') {
           navigate('/housegirl-dashboard');
         } else if (user.user_type === 'agency') {
