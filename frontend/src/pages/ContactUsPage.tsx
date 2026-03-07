@@ -75,8 +75,8 @@ const ContactUsPage = () => {
             </CardHeader>
             <CardContent>
               <p className="text-gray-600 mb-4">Best for urgent agency and placement support.</p>
-              <a href="tel:+254700000000" className="text-pink-600 hover:text-pink-700 font-medium">
-                +254 700 000 000
+              <a href="tel:+254726899113" className="text-pink-600 hover:text-pink-700 font-medium">
+                +254 726 899 113
               </a>
             </CardContent>
           </Card>
