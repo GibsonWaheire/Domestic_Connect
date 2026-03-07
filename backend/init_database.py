@@ -176,7 +176,7 @@ def init_database():
             accommodation_type="live_in",
             tribe="Kikuyu",
             is_available=True,
-            profile_photo_url="https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+            profile_photo_url="https://ui-avatars.com/api/?name=User&background=random"
         )
         db.session.add(housegirl_profile1)
         
@@ -193,7 +193,7 @@ def init_database():
             accommodation_type="live_out",
             tribe="Luo",
             is_available=True,
-            profile_photo_url="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
+            profile_photo_url="https://ui-avatars.com/api/?name=User&background=random"
         )
         db.session.add(housegirl_profile2)
         
@@ -210,7 +210,7 @@ def init_database():
             accommodation_type="live_in",
             tribe="Kikuyu",
             is_available=True,
-            profile_photo_url="https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face"
+            profile_photo_url="https://ui-avatars.com/api/?name=User&background=random"
         )
         db.session.add(housegirl_profile3)
         

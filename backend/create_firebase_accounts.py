@@ -24,26 +24,26 @@ def create_firebase_accounts():
     # Test accounts to create
     test_accounts = [
         {
-            'email': 'housegirl1@test.com',
-            'password': 'testpassword123',
+            'email': 'sarah.wanjiku@example.com',
+            'password': 'password123',
             'displayName': 'Sarah Wanjiku',
             'user_type': 'housegirl'
         },
         {
-            'email': 'housegirl2@test.com', 
-            'password': 'testpassword123',
+            'email': 'grace.akinyi@example.com', 
+            'password': 'password123',
             'displayName': 'Grace Akinyi',
             'user_type': 'housegirl'
         },
         {
-            'email': 'employer1@test.com',
-            'password': 'testpassword123', 
+            'email': 'john.doe@example.com',
+            'password': 'password123', 
             'displayName': 'John Doe',
             'user_type': 'employer'
         },
         {
-            'email': 'agency1@test.com',
-            'password': 'testpassword123',
+            'email': 'admin@domesticconnect.co.ke',
+            'password': 'password123',
             'displayName': 'Domestic Connect',
             'user_type': 'agency'
         }

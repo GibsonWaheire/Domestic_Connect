@@ -8,7 +8,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["Cooking", "Cleaning", "Childcare"], rating: 4.8, reviews: 12,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Kikuyu", education: "Form 4 and Above", workType: "Lives in", livingArrangement: "Live-in",
-    profileImage: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 2, name: "Grace Akinyi", age: 32, location: "Kilimani, Nairobi",
@@ -17,7 +17,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["House Management", "Cooking", "Cleaning"], rating: 4.9, reviews: 18,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Luo", education: "Form 4 and Above", workType: "Day job", livingArrangement: "Live-out",
-    profileImage: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 3, name: "Mary Muthoni", age: 25, location: "Lavington, Nairobi",
@@ -26,7 +26,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["Cleaning", "Childcare", "Pet Care"], rating: 4.5, reviews: 8,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Kikuyu", education: "Class 8 and Above", workType: "Lives in", livingArrangement: "Live-in",
-    profileImage: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 4, name: "Jane Njeri", age: 35, location: "Karen, Nairobi",
@@ -35,7 +35,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["House Management", "Cooking", "Childcare", "Gardening"], rating: 4.9, reviews: 25,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Kikuyu", education: "Form 4 and Above", workType: "Lives in", livingArrangement: "Live-in",
-    profileImage: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 5, name: "Faith Wambui", age: 27, location: "Muthaiga, Nairobi",
@@ -44,7 +44,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["Cooking", "Cleaning", "Laundry"], rating: 4.7, reviews: 15,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Kamba", education: "Form 4 and Above", workType: "Day job", livingArrangement: "Live-out",
-    profileImage: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 6, name: "Lucy Wangari", age: 30, location: "Runda, Nairobi",
@@ -53,7 +53,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["Childcare", "Cooking", "Cleaning"], rating: 4.6, reviews: 20,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Kikuyu", education: "Form 4 and Above", workType: "Lives in", livingArrangement: "Live-in",
-    profileImage: "https://images.unsplash.com/photo-1508214751196-bcfd4ca60f91?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 7, name: "Esther Achieng", age: 29, location: "Kilimani, Nairobi",
@@ -62,7 +62,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["House Management", "Cooking", "Childcare", "Pet Care"], rating: 4.8, reviews: 16,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Luo", education: "College/University", workType: "Lives in", livingArrangement: "Live-in",
-    profileImage: "https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   },
   {
     id: 8, name: "Ruth Mwikali", age: 26, location: "Westlands, Nairobi",
@@ -71,7 +71,7 @@ export const mockHousegirls: Housegirl[] = [
     skills: ["Cooking", "Cleaning", "Laundry"], rating: 4.4, reviews: 10,
     contactUnlocked: false, unlockCount: 0,
     nationality: "Kenya", community: "Kamba", education: "Form 4 and Above", workType: "Day job", livingArrangement: "Live-out",
-    profileImage: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face"
+    profileImage: "https://ui-avatars.com/api/?name=User&background=random"
   }
 ];
 
