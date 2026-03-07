@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
 import { errorService } from '@/lib/errorService';
-import { User, Heart, Building2, Eye, EyeOff, X, Shield, CheckCircle, Clock, Mail } from 'lucide-react';
+import { User, Heart, Eye, EyeOff, X, Shield, CheckCircle, Clock } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -371,47 +371,41 @@ const AuthModal = ({
 
             <form onSubmit={handleSubmit} className="space-y-8 pt-4 max-w-3xl mx-auto">
               {!userTypeFixed && (
-                <div className="space-y-2">
-                  <Label className="text-gray-700 font-medium">I am a</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {[
-                      { value: 'employer', label: 'Employer', icon: Building2 },
-                      { value: 'housegirl', label: 'Housegirl', icon: User },
-                      { value: 'agency', label: 'Agency', icon: Heart },
-                    ].map((option) => (
-                      <Button
-                        key={option.value}
-                        type="button"
-                        variant="outline"
-                        onClick={() => setUserType(option.value as 'employer' | 'housegirl' | 'agency')}
-                        className={`justify-center gap-2 border-gray-300 ${
-                          userType === option.value ? 'bg-blue-50 border-blue-500 text-blue-700' : ''
-                        }`}
-                      >
-                        <option.icon className="h-4 w-4" />
-                        {option.label}
-                      </Button>
-                    ))}
-                  </div>
+                <div className="bg-gray-100 rounded-full p-1 flex w-full max-w-xs mx-auto">
+                  {[
+                    { value: 'employer', label: '👔 Employer' },
+                    { value: 'housegirl', label: '👩 Housegirl' },
+                  ].map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => setUserType(option.value as 'employer' | 'housegirl' | 'agency')}
+                      className={`flex-1 text-center py-2 rounded-full text-sm font-medium cursor-pointer transition-all ${
+                        userType === option.value
+                          ? 'bg-white text-black shadow-sm'
+                          : 'text-gray-400 hover:text-gray-600'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
                 </div>
               )}
 
               {!isLogin && (
-                <>
-                  <div className="space-y-2">
-                    <Label htmlFor="signupIdentifier" className="text-gray-700 font-medium">Phone number or email</Label>
-                    <Input
-                      id="signupIdentifier"
-                      type="text"
-                      value={signupIdentifier}
-                      onChange={(e) => setSignupIdentifier(e.target.value)}
-                      required
-                      className="border-gray-300 focus:border-blue-500"
-                      placeholder="07XX XXX XXX or your@email.com"
-                    />
-                    <p className="text-xs text-gray-500">Use either a Kenyan phone number or an email address.</p>
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label htmlFor="signupIdentifier" className="text-gray-700 font-medium">Phone number or email</Label>
+                  <Input
+                    id="signupIdentifier"
+                    type="text"
+                    value={signupIdentifier}
+                    onChange={(e) => setSignupIdentifier(e.target.value)}
+                    required
+                    className="border-gray-300 focus:border-blue-500"
+                    placeholder="07XX XXX XXX or your@email.com"
+                  />
+                  <p className="text-xs text-gray-500">Use either a Kenyan phone number or an email address.</p>
+                </div>
               )}
 
               {isLogin && (
