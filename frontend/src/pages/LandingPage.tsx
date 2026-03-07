@@ -335,7 +335,7 @@ const LandingPage = () => {
         <link rel="canonical" href="https://www.domesticconnect.co.ke" />
       </Helmet>
 
-      <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+      <header className="bg-white border-b border-gray-200 relative md:sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="grid grid-cols-[1fr_auto] md:grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-6">
             <div
@@ -462,7 +462,7 @@ const LandingPage = () => {
         </aside>
       </div>
 
-      <section className="sticky top-[73px] z-40 border-b border-gray-200 bg-white">
+      <section className="relative md:sticky top-[73px] z-40 border-b border-gray-200 bg-white">
         <div className="max-w-[900px] mx-auto px-4 py-3">
           <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
             <div className="flex flex-1 items-center gap-2 flex-wrap border border-[#e5e5e5] bg-[#f7f7f7] p-2 text-[13px] tracking-[0.3px]">
