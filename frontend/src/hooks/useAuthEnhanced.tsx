@@ -60,6 +60,7 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   const { headers, ...restOptions } = options;
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...restOptions,
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...headers,

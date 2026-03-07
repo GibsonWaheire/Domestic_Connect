@@ -3,8 +3,6 @@ import os
 class Config:
     """Base configuration class"""
     SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///domestic_connect.db'
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
     # File upload configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or 'uploads'
@@ -12,7 +10,12 @@ class Config:
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     
     # CORS configuration
-    CORS_ORIGINS = os.environ.get('CORS_ORIGINS', 'http://localhost:5173').split(',')
+    cors_origins_env = os.environ.get('CORS_ORIGINS')
+    if cors_origins_env:
+        CORS_ORIGINS = cors_origins_env.split(',')
+    else:
+        # We will enforce explicit origins in ProductionConfig
+        CORS_ORIGINS = ['http://localhost:5173']
     
     # M-Pesa configuration
     MPESA_CONSUMER_KEY = os.environ.get('MPESA_CONSUMER_KEY')
@@ -25,17 +28,19 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///domestic_connect_dev.db'
 
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or 'sqlite:///domestic_connect_prod.db'
+    
+    @classmethod
+    def init_app(cls, app):
+        if not os.environ.get('CORS_ORIGINS'):
+            raise ValueError("CORS_ORIGINS environment variable is required in production.")
 
 class TestingConfig(Config):
     """Testing configuration"""
     TESTING = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
     WTF_CSRF_ENABLED = False
 
 config = {
