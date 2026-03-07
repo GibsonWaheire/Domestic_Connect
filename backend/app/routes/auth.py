@@ -129,6 +129,78 @@ def firebase_user():
         traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
+@auth_bp.route('/verify', methods=['POST'])
+@firebase_auth_required
+@rate_limit(max_requests=10, window_seconds=300)
+@log_request()
+@log_error()
+def verify_phone_auth():
+    try:
+        data = request.get_json() or {}
+        decoded_token = request.firebase_user or {}
+        uid = decoded_token.get('uid')
+        user_type = data.get('user_type')
+
+        if not uid:
+            return jsonify({'error': 'Invalid Firebase token.'}), 401
+
+        if user_type not in ['employer', 'housegirl', 'agency']:
+            return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
+
+        phone_number = decoded_token.get('phone_number')
+        email = decoded_token.get('email', None)
+        timestamp = datetime.utcnow().isoformat()
+        user_id = f"user_{uid}"
+        user_doc_ref = db.collection('users').document(user_id)
+        user_doc = user_doc_ref.get()
+
+        if user_doc.exists:
+            existing_data = user_doc.to_dict() or {}
+            user_data = {
+                **existing_data,
+                'uid': uid,
+                'firebase_uid': uid,
+                'phone': phone_number,
+                'phone_number': phone_number,
+                'email': email,
+                'user_type': user_type,
+                'updated_at': timestamp,
+                'profile_complete': existing_data.get('profile_complete', False)
+            }
+            user_doc_ref.set(user_data, merge=True)
+        else:
+            user_data = {
+                'id': user_id,
+                'uid': uid,
+                'firebase_uid': uid,
+                'phone': phone_number,
+                'phone_number': phone_number,
+                'email': email,
+                'user_type': user_type,
+                'first_name': '',
+                'last_name': '',
+                'created_at': timestamp,
+                'updated_at': timestamp,
+                'profile_complete': False,
+                'is_active': True,
+                'is_admin': False,
+                'is_firebase_user': True
+            }
+            user_doc_ref.set(user_data)
+
+        session['user_id'] = user_id
+        session['user_type'] = user_type
+
+        return jsonify({
+            'message': 'Phone verification successful',
+            'user_type': user_type,
+            'user': user_data
+        }), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
 @auth_bp.route('/signup', methods=['POST'])
 @rate_limit(max_requests=5, window_seconds=300)  # 5 requests per 5 minutes
 @validate_json_input(USER_SCHEMA)

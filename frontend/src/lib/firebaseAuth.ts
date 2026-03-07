@@ -1,14 +1,11 @@
 import {
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
+  signInWithPhoneNumber,
+  RecaptchaVerifier,
+  ConfirmationResult,
+  PhoneAuthProvider,
   signOut,
   onAuthStateChanged,
   User,
-  updateProfile,
-  sendPasswordResetEmail,
-  GoogleAuthProvider,
-  signInWithPopup,
-  sendEmailVerification,
   setPersistence,
   browserLocalPersistence
 } from 'firebase/auth';
@@ -17,89 +14,75 @@ import { auth } from './firebase';
 // Ensure authentication state persists across page reloads
 setPersistence(auth, browserLocalPersistence).catch(console.error);
 
-// Google Auth Provider
-const googleProvider = new GoogleAuthProvider();
+declare global {
+  interface Window {
+    recaptchaVerifier?: RecaptchaVerifier | null;
+  }
+}
 
 // Authentication service class
 export class FirebaseAuthService {
-  // Sign up with email and password
-  static async signUp(email: string, password: string, displayName?: string) {
+  static formatKenyanPhone(phone: string): string {
+    const cleaned = phone.replace(/[\s\-()]/g, '');
+    if (cleaned.startsWith('+254') && cleaned.length === 13) return cleaned;
+    if (cleaned.startsWith('254') && cleaned.length === 12) return `+${cleaned}`;
+    if (cleaned.startsWith('0') && cleaned.length === 10) return `+254${cleaned.slice(1)}`;
+    if (cleaned.startsWith('7') && cleaned.length === 9) return `+254${cleaned}`;
+    return cleaned;
+  }
+
+  static async setupRecaptcha() {
+    if (window.recaptchaVerifier) {
+      window.recaptchaVerifier.clear();
+      window.recaptchaVerifier = null;
+    }
+    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible'
+    });
+    await window.recaptchaVerifier.render();
+    return window.recaptchaVerifier;
+  }
+
+  static async sendOTP(phoneNumber: string) {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      // Update display name if provided
-      if (displayName) {
-        await updateProfile(user, { displayName });
+      const recaptchaVerifier = await this.setupRecaptcha();
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+      return {
+        success: true,
+        confirmationResult
+      };
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code.';
+      const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
+      return {
+        success: false,
+        error: errorMessage,
+        code: errorCode
+      };
+    }
+  }
+
+  static async verifyOTP(confirmationResult: ConfirmationResult, code: string) {
+    try {
+      if (!PhoneAuthProvider) {
+        throw new Error('Phone authentication is unavailable.');
       }
-      
-      // Send email verification
-      await sendEmailVerification(user);
-      
+      const userCredential = await confirmationResult.confirm(code);
       return {
         success: true,
-        user: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          emailVerified: user.emailVerified
-        }
+        userCredential
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to verify code.';
+      const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
       return {
         success: false,
-        error: error.message
+        error: errorMessage,
+        code: errorCode
       };
     }
   }
 
-  // Sign in with email and password
-  static async signIn(email: string, password: string) {
-    try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
-      return {
-        success: true,
-        user: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          emailVerified: user.emailVerified
-        }
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Sign in with Google
-  static async signInWithGoogle() {
-    try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-      
-      return {
-        success: true,
-        user: {
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName,
-          emailVerified: user.emailVerified
-        }
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Sign out
   static async signOut() {
     try {
       await signOut(auth);
@@ -112,25 +95,10 @@ export class FirebaseAuthService {
     }
   }
 
-  // Reset password
-  static async resetPassword(email: string) {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      return { success: true };
-    } catch (error: any) {
-      return {
-        success: false,
-        error: error.message
-      };
-    }
-  }
-
-  // Get current user
   static getCurrentUser(): User | null {
     return auth.currentUser;
   }
 
-  // Get Firebase ID token
   static async getIdToken(): Promise<string | null> {
     const user = auth.currentUser;
     if (user) {
@@ -139,7 +107,6 @@ export class FirebaseAuthService {
     return null;
   }
 
-  // Listen to auth state changes
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, callback);
   }

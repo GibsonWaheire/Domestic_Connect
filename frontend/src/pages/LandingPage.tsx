@@ -2,16 +2,11 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import AuthModal from '@/components/AuthModal';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const heroImage = '/woooies.avif';
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-  const [authDefaultUserType, setAuthDefaultUserType] = useState<'employer' | 'housegirl' | 'agency' | undefined>(undefined);
-  const [authUserTypeFixed, setAuthUserTypeFixed] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
   
@@ -24,26 +19,17 @@ const LandingPage = () => {
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
   const openRegister = () => {
-    setAuthMode('signup');
-    setAuthDefaultUserType(undefined);
-    setAuthUserTypeFixed(false);
-    setAuthModalOpen(true);
+    navigate('/login');
     setIsMenuOpen(false);
   };
 
   const openHousegirlRegister = () => {
-    setAuthMode('signup');
-    setAuthDefaultUserType('housegirl');
-    setAuthUserTypeFixed(true);
-    setAuthModalOpen(true);
+    navigate('/login');
     setIsMenuOpen(false);
   };
 
   const openLogin = () => {
-    setAuthMode('login');
-    setAuthDefaultUserType('employer');
-    setAuthUserTypeFixed(true);
-    setAuthModalOpen(true);
+    navigate('/login');
     setIsMenuOpen(false);
   };
 
@@ -446,15 +432,6 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
-
-      {/* Modals */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={() => setAuthModalOpen(false)} 
-        defaultMode={authMode}
-        defaultUserType={authDefaultUserType}
-        userTypeFixed={authUserTypeFixed}
-      />
 
       <div className="fixed bottom-5 left-5 z-50 group flex items-center">
         <span className="mr-2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-medium text-[#111] shadow-md opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none">

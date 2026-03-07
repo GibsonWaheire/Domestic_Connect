@@ -2,10 +2,11 @@ import { useState, useEffect, createContext, useContext, ReactNode, useCallback 
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
 import { errorService } from '@/lib/errorService';
+import { ConfirmationResult } from 'firebase/auth';
 
 interface User {
   id: string;
-  email: string;
+  email: string | null;
   user_type: 'employer' | 'housegirl' | 'agency';
   first_name: string;
   last_name: string;
@@ -32,6 +33,13 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  authStep: 1 | 2;
+  phoneNumber: string;
+  formatKenyanPhone: (phone: string) => string;
+  handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency') => Promise<{ error: string | null }>;
+  handleVerifyOTP: (code: string) => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' }>;
+  resendOTP: () => Promise<{ error: string | null }>;
+  changePhoneNumber: () => void;
   signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
@@ -90,11 +98,25 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
   }
 }
 
+const formatKenyanPhone = (phone: string) => FirebaseAuthService.formatKenyanPhone(phone);
+
+const mapPhoneAuthError = (code?: string) => {
+  if (code === 'auth/invalid-phone-number') return 'Please enter a valid number e.g. 0712 345 678';
+  if (code === 'auth/too-many-requests') return 'Too many attempts. Try again later.';
+  if (code === 'auth/invalid-verification-code') return 'Wrong code. Check your SMS and try again.';
+  if (code === 'auth/code-expired') return 'Code expired. Tap resend to get a new one.';
+  return 'Something went wrong. Please try again.';
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFirebaseUser, setIsFirebaseUser] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [authStep, setAuthStep] = useState<1 | 2>(1);
+  const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency'>('employer');
 
   const checkSession = useCallback(async () => {
     try {
@@ -122,6 +144,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const handleFirebaseUser = useCallback(async (firebaseUser: FirebaseUser) => {
     try {
+      if (!firebaseUser.email) {
+        return;
+      }
       // Get or create user profile in backend
       const token = await FirebaseAuthService.getIdToken();
       const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
@@ -139,6 +164,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser({ ...response.user, is_firebase_user: true });
       setIsFirebaseUser(true);
     } catch (error) {
+      if (!firebaseUser.email) {
+        return;
+      }
       // Log the error for debugging
       const errorObj = error instanceof Error ? error : new Error(String(error));
       errorService.logError(errorObj, 'Firebase user sync', 'medium');
@@ -178,6 +206,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
         try {
           if (firebaseUser) {
+            if (!firebaseUser.email) {
+              setIsFirebaseUser(true);
+              setLoading(false);
+              clearTimeout(fallbackTimeout);
+              return;
+            }
             // Prevent duplicate sync calls right after successful login
             if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
               setLoading(false);
@@ -207,177 +241,96 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [handleFirebaseUser, isSigningOut, user]);
 
-  const signUp = async (
-    email: string, 
-    password: string, 
-    userType: 'employer' | 'housegirl' | 'agency', 
-    additionalData: Record<string, unknown>
-  ) => {
+  const handleSendOTP = async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency') => {
     try {
       setLoading(true);
+      const formattedPhone = formatKenyanPhone(rawPhone);
+      const otpResult = await FirebaseAuthService.sendOTP(formattedPhone);
+      if (!otpResult.success || !otpResult.confirmationResult) {
+        const errorMessage = mapPhoneAuthError(otpResult.code) || otpResult.error || 'Failed to send code.';
+        return { error: errorMessage };
+      }
+      setConfirmationResult(otpResult.confirmationResult);
+      setPhoneNumber(formattedPhone);
+      setSelectedUserType(userType);
+      setAuthStep(2);
+      return { error: null };
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      // Validate password strength
-      if (password.length < 8) {
-        return { error: 'Password must be at least 8 characters long' };
+  const handleVerifyOTP = async (code: string) => {
+    if (!confirmationResult) {
+      return { error: 'Please request a code first.' };
+    }
+
+    try {
+      setLoading(true);
+      const verified = await FirebaseAuthService.verifyOTP(confirmationResult, code);
+      if (!verified.success || !verified.userCredential) {
+        const errorMessage = mapPhoneAuthError(verified.code) || verified.error || 'Failed to verify code.';
+        return { error: errorMessage };
       }
 
-      // Use Firebase for new signups
-      const firebaseResult = await FirebaseAuthService.signUp(
-        email, 
-        password, 
-        `${additionalData.first_name} ${additionalData.last_name}`.trim()
-      );
-
-      if (!firebaseResult.success) {
-        return { error: firebaseResult.error || 'Failed to create account' };
-      }
-
-      // Create user profile in backend
-      const token = await FirebaseAuthService.getIdToken();
-      const signupData = {
-        firebase_uid: firebaseResult.user?.uid,
-        email,
-        user_type: userType,
-        first_name: additionalData.first_name || '',
-        last_name: additionalData.last_name || '',
-        phone_number: additionalData.phone_number || '',
-        is_firebase_user: true
-      };
-
-      const response = await apiRequest<{ message: string; user: User }>('/api/auth/firebase_signup', {
+      const token = await verified.userCredential.user.getIdToken();
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(signupData),
+        body: JSON.stringify({
+          user_type: selectedUserType
+        })
       });
 
-      setUser({ ...response.user, is_firebase_user: true });
-      setIsFirebaseUser(true);
-      await FirebaseAuthService.signOut();
-      setUser(null);
-      setIsFirebaseUser(false);
+      if (response.user) {
+        setUser(response.user);
+        setIsFirebaseUser(true);
+      }
 
-      toast({
-        title: "Account Created",
-        description: "Your account has been created successfully. Please login with your password.",
-      });
+      const resolvedUserType = response.user_type;
+      if (resolvedUserType === 'employer') {
+        window.location.href = '/employer-dashboard';
+      } else if (resolvedUserType === 'housegirl') {
+        window.location.href = '/housegirl-dashboard';
+      } else {
+        window.location.href = '/';
+      }
 
-      return { error: null };
-    } catch (error: unknown) {
-      console.error('Signup error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Failed to create account. Please try again.';
-      
-      toast({
-        title: "Signup Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-
-      return { error: errorMessage };
+      return { error: null, userType: resolvedUserType };
     } finally {
       setLoading(false);
     }
+  };
+
+  const resendOTP = async () => {
+    if (!phoneNumber) {
+      return { error: 'Please enter your number again.' };
+    }
+    return handleSendOTP(phoneNumber, selectedUserType);
+  };
+
+  const changePhoneNumber = useCallback(() => {
+    setAuthStep(1);
+    setConfirmationResult(null);
+  }, []);
+
+  const signUp = async (
+    email: string,
+    password: string,
+    userType: 'employer' | 'housegirl' | 'agency',
+    additionalData: Record<string, unknown>
+  ) => {
+    return { error: 'Email and password sign up is no longer supported.' };
   };
 
   const signIn = async (email: string, password: string) => {
-    try {
-      setLoading(true);
-
-      // Use Firebase for login
-      const firebaseResult = await FirebaseAuthService.signIn(email, password);
-
-      if (!firebaseResult.success) {
-        return { error: firebaseResult.error || 'Invalid email or password' };
-      }
-
-      const token = await FirebaseAuthService.getIdToken();
-      const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firebase_uid: firebaseResult.user?.uid,
-          email: firebaseResult.user?.email,
-          display_name: firebaseResult.user?.displayName
-        })
-      });
-      const signedInUser = { ...response.user, is_firebase_user: true };
-      setUser(signedInUser);
-      setIsFirebaseUser(true);
-
-      toast({
-        title: "Signed In",
-        description: "Welcome back!",
-      });
-
-      return { error: null, user: signedInUser };
-    } catch (error: unknown) {
-      console.error('Signin error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Invalid email or password.';
-      
-      toast({
-        title: "Sign In Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-
-      return { error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
+    return { error: 'Email and password sign in is no longer supported.' };
   };
 
   const signInWithGoogle = async () => {
-    try {
-      setLoading(true);
-
-      const firebaseResult = await FirebaseAuthService.signInWithGoogle();
-
-      if (!firebaseResult.success) {
-        return { error: firebaseResult.error || 'Failed to sign in with Google' };
-      }
-
-      const token = await FirebaseAuthService.getIdToken();
-      const response = await apiRequest<{ user: User }>('/api/auth/firebase_user', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          firebase_uid: firebaseResult.user?.uid,
-          email: firebaseResult.user?.email,
-          display_name: firebaseResult.user?.displayName
-        })
-      });
-      const signedInUser: User = { ...response.user, is_firebase_user: true };
-      setUser(signedInUser);
-      setIsFirebaseUser(true);
-
-      toast({
-        title: "Signed In",
-        description: "Welcome back!",
-      });
-
-      return { error: null, user: signedInUser };
-    } catch (error: unknown) {
-      console.error('Google signin error:', error);
-      
-      const errorMessage = error instanceof Error ? error.message : 'Failed to sign in with Google.';
-      
-      toast({
-        title: "Sign In Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-
-      return { error: errorMessage };
-    } finally {
-      setLoading(false);
-    }
+    return { error: 'Google sign in is no longer supported.' };
   };
 
   const signOut = async () => {
@@ -424,39 +377,19 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const resetPassword = async (email: string) => {
-    try {
-      const result = await FirebaseAuthService.resetPassword(email);
-      
-      if (result.success) {
-        toast({
-          title: "Password Reset",
-          description: "Password reset email sent! Check your inbox.",
-        });
-        return { error: null };
-      } else {
-        toast({
-          title: "Password Reset Failed",
-          description: result.error || "Failed to send password reset email.",
-          variant: "destructive"
-        });
-        return { error: result.error || "Failed to send password reset email." };
-      }
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send password reset email.';
-      
-      toast({
-        title: "Password Reset Failed",
-        description: errorMessage,
-        variant: "destructive"
-      });
-
-      return { error: errorMessage };
-    }
+    return { error: 'Password reset is no longer supported.' };
   };
 
   const value = {
     user,
     loading,
+    authStep,
+    phoneNumber,
+    formatKenyanPhone,
+    handleSendOTP,
+    handleVerifyOTP,
+    resendOTP,
+    changePhoneNumber,
     signUp,
     signIn,
     signInWithGoogle,

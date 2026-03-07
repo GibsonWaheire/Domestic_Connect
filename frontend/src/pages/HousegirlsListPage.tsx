@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
-import AuthModal from '@/components/AuthModal';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { MapPin, Menu, Phone, Search } from 'lucide-react';
 
@@ -156,10 +155,6 @@ const HousegirlsListPage = () => {
 
   const [selectedCategory, setSelectedCategory] = useState<RoleType | 'All'>('All');
   const [searchTerm, setSearchTerm] = useState('');
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [authDefaultUserType, setAuthDefaultUserType] = useState<'employer' | 'housegirl' | 'agency' | undefined>(undefined);
-  const [authUserTypeFixed, setAuthUserTypeFixed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -196,10 +191,7 @@ const HousegirlsListPage = () => {
   const handleGetContact = (profileId: string) => {
     if (!user) {
       localStorage.setItem('pendingContactId', profileId);
-      setAuthMode('signup');
-      setAuthDefaultUserType('employer');
-      setAuthUserTypeFixed(true);
-      setAuthModalOpen(true);
+      navigate('/login');
       return;
     }
     setSelectedProfileId(profileId);
@@ -209,10 +201,7 @@ const HousegirlsListPage = () => {
 
   const handlePricingClick = (pkg: PackageDetails) => {
     if (!user) {
-      setAuthMode('signup');
-      setAuthDefaultUserType('employer');
-      setAuthUserTypeFixed(true);
-      setAuthModalOpen(true);
+      navigate('/login');
       return;
     }
     setSelectedProfileId(null);
@@ -285,16 +274,6 @@ const HousegirlsListPage = () => {
       window.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isMenuOpen]);
-
-  const openAuth = (
-    mode: 'login' | 'signup',
-    options?: { defaultUserType?: 'employer' | 'housegirl' | 'agency'; userTypeFixed?: boolean }
-  ) => {
-    setAuthMode(mode);
-    setAuthDefaultUserType(options?.defaultUserType);
-    setAuthUserTypeFixed(options?.userTypeFixed ?? false);
-    setAuthModalOpen(true);
-  };
 
   useEffect(() => {
     const loadKenyaCities = async () => {
@@ -457,13 +436,13 @@ const HousegirlsListPage = () => {
                 <>
                   <button
                     type="button"
-                    onClick={() => openAuth('login')}
+                    onClick={() => navigate('/login')}
                     className="text-sm font-medium text-black border border-black hover:bg-gray-50 rounded-full px-5 py-2 transition-colors"
                   >
                     Login
                   </button>
                   <Button
-                    onClick={() => openAuth('signup')}
+                    onClick={() => navigate('/login')}
                     className="hidden md:inline-flex rounded-full px-6 bg-black hover:bg-[#333] text-white font-medium"
                   >
                     Join Today
@@ -522,7 +501,7 @@ const HousegirlsListPage = () => {
               <div className="bg-gray-50 rounded-xl p-4 mb-3">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
                 <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup', { defaultUserType: 'housegirl', userTypeFixed: true }); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
@@ -531,7 +510,7 @@ const HousegirlsListPage = () => {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
                 <div className="flex flex-col">
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
@@ -570,10 +549,10 @@ const HousegirlsListPage = () => {
                   </>
                 ) : (
                   <>
-                    <Button onClick={() => { setIsMenuOpen(false); openAuth('login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
                       Login
                     </Button>
-                    <Button onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
                       Join Today
                     </Button>
                   </>
@@ -839,14 +818,6 @@ const HousegirlsListPage = () => {
           </div>
         </div>
       </footer>
-
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        defaultMode={authMode}
-        defaultUserType={authDefaultUserType}
-        userTypeFixed={authUserTypeFixed}
-      />
 
       {showPaymentModal && (
         <PaymentModal
