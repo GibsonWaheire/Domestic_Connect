@@ -32,8 +32,8 @@ const LandingPage = () => {
 
   const openLogin = () => {
     setAuthMode('login');
-    setAuthDefaultUserType(undefined);
-    setAuthUserTypeFixed(false);
+    setAuthDefaultUserType('employer');
+    setAuthUserTypeFixed(true);
     setAuthModalOpen(true);
     setIsMenuOpen(false);
   };
