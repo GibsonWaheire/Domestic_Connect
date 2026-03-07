@@ -13,14 +13,23 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   defaultMode?: 'login' | 'signup';
+  defaultUserType?: 'employer' | 'housegirl' | 'agency';
+  userTypeFixed?: boolean;
 }
 
-const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) => {
+const AuthModal = ({
+  isOpen,
+  onClose,
+  defaultMode = 'login',
+  defaultUserType,
+  userTypeFixed = false,
+}: AuthModalProps) => {
+  const resolvedDefaultUserType = defaultUserType ?? 'employer';
   const [isLogin, setIsLogin] = useState(defaultMode === 'login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [signupIdentifier, setSignupIdentifier] = useState('');
-  const [userType, setUserType] = useState<'employer' | 'housegirl' | 'agency'>('housegirl');
+  const [userType, setUserType] = useState<'employer' | 'housegirl' | 'agency'>(resolvedDefaultUserType);
 
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -68,6 +77,12 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   useEffect(() => {
     setIsLogin(defaultMode === 'login');
   }, [defaultMode]);
+
+  useEffect(() => {
+    if (isOpen) {
+      setUserType(resolvedDefaultUserType);
+    }
+  }, [isOpen, resolvedDefaultUserType]);
 
   const handleGoogleSignIn = async () => {
     setLoading(true);
@@ -355,29 +370,31 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8 pt-4 max-w-3xl mx-auto">
-              <div className="space-y-2">
-                <Label className="text-gray-700 font-medium">I am a</Label>
-                <div className="grid grid-cols-3 gap-2">
-                  {[
-                    { value: 'employer', label: 'Employer', icon: Building2 },
-                    { value: 'housegirl', label: 'Housegirl', icon: User },
-                    { value: 'agency', label: 'Agency', icon: Heart },
-                  ].map((option) => (
-                    <Button
-                      key={option.value}
-                      type="button"
-                      variant="outline"
-                      onClick={() => setUserType(option.value as 'employer' | 'housegirl' | 'agency')}
-                      className={`justify-center gap-2 border-gray-300 ${
-                        userType === option.value ? 'bg-blue-50 border-blue-500 text-blue-700' : ''
-                      }`}
-                    >
-                      <option.icon className="h-4 w-4" />
-                      {option.label}
-                    </Button>
-                  ))}
+              {!userTypeFixed && (
+                <div className="space-y-2">
+                  <Label className="text-gray-700 font-medium">I am a</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { value: 'employer', label: 'Employer', icon: Building2 },
+                      { value: 'housegirl', label: 'Housegirl', icon: User },
+                      { value: 'agency', label: 'Agency', icon: Heart },
+                    ].map((option) => (
+                      <Button
+                        key={option.value}
+                        type="button"
+                        variant="outline"
+                        onClick={() => setUserType(option.value as 'employer' | 'housegirl' | 'agency')}
+                        className={`justify-center gap-2 border-gray-300 ${
+                          userType === option.value ? 'bg-blue-50 border-blue-500 text-blue-700' : ''
+                        }`}
+                      >
+                        <option.icon className="h-4 w-4" />
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {!isLogin && (
                 <>

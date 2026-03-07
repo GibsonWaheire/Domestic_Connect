@@ -158,6 +158,8 @@ const HousegirlsListPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authDefaultUserType, setAuthDefaultUserType] = useState<'employer' | 'housegirl' | 'agency' | undefined>(undefined);
+  const [authUserTypeFixed, setAuthUserTypeFixed] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
@@ -195,6 +197,8 @@ const HousegirlsListPage = () => {
     if (!user) {
       localStorage.setItem('pendingContactId', profileId);
       setAuthMode('signup');
+      setAuthDefaultUserType('employer');
+      setAuthUserTypeFixed(true);
       setAuthModalOpen(true);
       return;
     }
@@ -206,6 +210,8 @@ const HousegirlsListPage = () => {
   const handlePricingClick = (pkg: PackageDetails) => {
     if (!user) {
       setAuthMode('signup');
+      setAuthDefaultUserType('employer');
+      setAuthUserTypeFixed(true);
       setAuthModalOpen(true);
       return;
     }
@@ -280,8 +286,13 @@ const HousegirlsListPage = () => {
     };
   }, [isMenuOpen]);
 
-  const openAuth = (mode: 'login' | 'signup') => {
+  const openAuth = (
+    mode: 'login' | 'signup',
+    options?: { defaultUserType?: 'employer' | 'housegirl' | 'agency'; userTypeFixed?: boolean }
+  ) => {
     setAuthMode(mode);
+    setAuthDefaultUserType(options?.defaultUserType);
+    setAuthUserTypeFixed(options?.userTypeFixed ?? false);
     setAuthModalOpen(true);
   };
 
@@ -487,40 +498,86 @@ const HousegirlsListPage = () => {
           }`}
         >
           <div className="h-full overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Employers</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); handleFindHelp(); }} className="text-left text-gray-800 hover:text-black">Find a Housegirl</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="text-left text-gray-800 hover:text-black">How It Works</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="text-left text-gray-800 hover:text-black">Pricing & Packages</button>
+            <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
+              <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
+              <button
+                type="button"
+                aria-label="Close menu"
+                onClick={() => setIsMenuOpen(false)}
+                className="h-10 w-10 inline-flex items-center justify-center text-gray-500"
+              >
+                ×
+              </button>
+            </div>
+            <div>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Employers</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); handleFindHelp(); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find a Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Pricing & Packages</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
 
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Housegirls</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="text-left text-gray-800 hover:text-black">Register as Housegirl</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="text-left text-gray-800 hover:text-black">How to Get Listed</button>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup', { defaultUserType: 'housegirl', userTypeFixed: true }); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
 
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Agencies</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="text-left text-gray-800 hover:text-black">Agency Marketplace</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="text-left text-gray-800 hover:text-black">List Your Agency</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="text-left text-gray-800 hover:text-black">Agency Packages</button>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
 
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">General</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="text-left text-gray-800 hover:text-black">About Us</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="text-left text-gray-800 hover:text-black">Help Center</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="text-left text-gray-800 hover:text-black">Contact Us</button>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">General</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Help Center</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Contact Us</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
+              </div>
+
+              <div className="pt-2 flex flex-col gap-2">
+                {user ? (
+                  <>
+                    <Button
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        navigate(getDashboardRoute());
+                      }}
+                      className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]"
+                    >
+                      Dashboard
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        signOut();
+                      }}
+                      className="w-full rounded-xl py-3 text-center font-medium border border-black text-black"
+                    >
+                      Logout
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button onClick={() => { setIsMenuOpen(false); openAuth('login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
+                      Login
+                    </Button>
+                    <Button onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
+                      Join Today
+                    </Button>
+                  </>
+                )}
               </div>
             </div>
           </div>
@@ -529,9 +586,9 @@ const HousegirlsListPage = () => {
 
       <section className="relative md:sticky top-[73px] z-40 bg-[#111] w-full">
         <div className="px-4 md:px-12 py-4">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
-            <div className="flex flex-1 items-center gap-2 flex-wrap">
-              <div className="relative min-w-[220px] flex-1 max-w-md">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="flex flex-1 flex-col md:flex-row md:items-center gap-3">
+              <div className="relative w-full md:flex-1 md:max-w-md">
                 <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   value={searchTerm}
@@ -540,7 +597,7 @@ const HousegirlsListPage = () => {
                   className="h-9 rounded-[2px] pl-10 border-0 bg-[#222] text-white placeholder-white focus-visible:ring-0"
                 />
               </div>
-              <div className="min-w-[200px]">
+              <div className="w-full md:w-[220px]">
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
@@ -554,35 +611,37 @@ const HousegirlsListPage = () => {
                   ))}
                 </select>
               </div>
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  variant={selectedCategory === 'All' ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategory('All')}
-                  className={
-                    selectedCategory === 'All'
-                      ? 'h-9 rounded-[2px] bg-white text-black text-[13px] px-3 hover:bg-gray-100'
-                      : 'h-9 rounded-[2px] border border-[#444] bg-transparent text-white text-[13px] px-3 hover:bg-[#222]'
-                  }
-                >
-                  All
-                </Button>
-                {PROFILE_FILTERS.map((filter) => (
+              <div className="w-full md:w-auto overflow-x-auto md:overflow-visible [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <div className="flex flex-nowrap md:flex-wrap gap-2 min-w-max">
                   <Button
-                    key={filter}
-                    variant={selectedCategory === filter ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(filter as RoleType | 'All')}
+                    variant={selectedCategory === 'All' ? 'default' : 'outline'}
+                    onClick={() => setSelectedCategory('All')}
                     className={
-                      selectedCategory === filter
+                      selectedCategory === 'All'
                         ? 'h-9 rounded-[2px] bg-white text-black text-[13px] px-3 hover:bg-gray-100'
                         : 'h-9 rounded-[2px] border border-[#444] bg-transparent text-white text-[13px] px-3 hover:bg-[#222]'
                     }
                   >
-                    {filter}
+                    All
                   </Button>
-                ))}
+                  {PROFILE_FILTERS.map((filter) => (
+                    <Button
+                      key={filter}
+                      variant={selectedCategory === filter ? 'default' : 'outline'}
+                      onClick={() => setSelectedCategory(filter as RoleType | 'All')}
+                      className={
+                        selectedCategory === filter
+                          ? 'h-9 rounded-[2px] bg-white text-black text-[13px] px-3 hover:bg-gray-100'
+                          : 'h-9 rounded-[2px] border border-[#444] bg-transparent text-white text-[13px] px-3 hover:bg-[#222]'
+                      }
+                    >
+                      {filter}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
-            <p className="text-[13px] text-[#888]">{filteredProfiles.length} housegirls available</p>
+            <p className="text-[13px] text-[#888] text-left">{filteredProfiles.length} housegirls available</p>
           </div>
         </div>
       </section>
@@ -590,7 +649,7 @@ const HousegirlsListPage = () => {
       <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
 
       <main id="profiles-list" className="py-8">
-        <div className="w-full px-10">
+        <div className="w-full px-0 md:px-10">
           <div className="flex flex-col w-full relative">
             <div className="flex flex-col gap-[8px] w-full">
             {paginatedProfiles.map((profile) => {
@@ -600,16 +659,16 @@ const HousegirlsListPage = () => {
                   key={profile.id}
                   className={`bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 ${ROLE_BORDER[profile.role as RoleType]}`}
                 >
-                  <div className="flex flex-row gap-4 items-center">
-                    <div className="relative flex-shrink-0">
+                  <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
+                    <div className="relative flex-shrink-0 mx-auto md:mx-0">
                       {profile.avatar ? (
                         <img
                           src={profile.avatar}
                           alt={profile.name}
-                          className="w-[72px] h-[72px] rounded-full object-cover border border-gray-200"
+                          className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full object-cover border border-gray-200"
                         />
                       ) : (
-                        <div className="w-[72px] h-[72px] rounded-full bg-[#4b5563] text-white font-semibold text-2xl flex items-center justify-center text-center">
+                        <div className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full bg-[#4b5563] text-white font-semibold text-xl md:text-2xl flex items-center justify-center text-center">
                           {profile.name
                             .split(' ')
                             .filter(Boolean)
@@ -625,17 +684,17 @@ const HousegirlsListPage = () => {
                       />
                     </div>
 
-                    <div className="flex-1">
-                      <div className="flex flex-col gap-1">
+                    <div className="flex-1 w-full">
+                      <div className="flex flex-col gap-1 text-center md:text-left">
                         <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
-                        <Badge variant="secondary" className={`w-fit border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[profile.role as RoleType]}`}>
+                        <Badge variant="secondary" className={`w-fit mx-auto md:mx-0 border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[profile.role as RoleType]}`}>
                           {profile.role}
                         </Badge>
-                        <p className="text-[#555] text-[13px] flex items-center gap-1">
+                        <p className="text-[#555] text-[13px] flex items-center justify-center md:justify-start gap-1">
                           <MapPin className="h-4 w-4 text-[#555]" />
                           {profile.location}
                         </p>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap justify-center md:justify-start gap-2">
                           {profile.tags.slice(0, 3).map((tag) => (
                             <Badge key={tag} variant="secondary" className="border border-[#ddd] bg-transparent text-[#555] text-[12px] rounded-[2px] px-2 py-1">
                               {tag}
@@ -644,15 +703,15 @@ const HousegirlsListPage = () => {
                         </div>
                         <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
                         {isUnlocked && (
-                          <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit">
+                          <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit mx-auto md:mx-0">
                             Contact: {profile.phone} · {profile.exactLocation}
                           </div>
                         )}
                       </div>
                     </div>
 
-                    <div className="md:w-56 flex flex-col gap-2 md:items-end">
-                      <p className="text-[22px] font-bold text-[#111]">
+                    <div className="w-full md:w-56 flex flex-col gap-2 items-center md:items-end">
+                      <p className="text-[22px] font-bold text-[#111] text-center md:text-right">
                         KES {profile.monthlyRate.toLocaleString()}
                         <span className="text-sm font-medium text-gray-500">/mo</span>
                       </p>
@@ -674,7 +733,7 @@ const HousegirlsListPage = () => {
                 <button
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                   disabled={currentPage === 1}
-                  className={`text-[13px] mr-2 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
+                  className={`text-xs md:text-[13px] mr-1 md:mr-2 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
                 >
                   ← Previous
                 </button>
@@ -691,7 +750,7 @@ const HousegirlsListPage = () => {
                     <button
                       key={page}
                       onClick={() => setCurrentPage(page)}
-                      className={`h-8 min-w-[32px] px-2 text-[13px] ${
+                      className={`${Math.abs(page - currentPage) > 1 ? 'hidden md:inline-flex' : 'inline-flex'} items-center justify-center h-7 md:h-8 min-w-[28px] md:min-w-[32px] px-2 text-xs md:text-[13px] ${
                         currentPage === page
                           ? 'bg-black text-white border border-black'
                           : 'bg-white text-black border border-black hover:bg-gray-50'
@@ -705,7 +764,7 @@ const HousegirlsListPage = () => {
                 <button
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                   disabled={currentPage === totalPages}
-                  className={`text-[13px] ml-2 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
+                  className={`text-xs md:text-[13px] ml-1 md:ml-2 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
                 >
                   Next →
                 </button>
@@ -780,6 +839,8 @@ const HousegirlsListPage = () => {
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         defaultMode={authMode}
+        defaultUserType={authDefaultUserType}
+        userTypeFixed={authUserTypeFixed}
       />
 
       {showPaymentModal && (
