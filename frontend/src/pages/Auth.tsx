@@ -22,15 +22,15 @@ const Auth = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   
-  const { signUp, signIn, user } = useAuth();
+  const { signUp, signIn, signOut, user: authUser } = useAuth();
   const navigate = useNavigate();
 
   useEffect(() => {
     // Redirect if already authenticated
-    if (user) {
+    if (authUser) {
       navigate('/');
     }
-  }, [user, navigate]);
+  }, [authUser, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,13 +38,24 @@ const Auth = () => {
 
     try {
       if (isLogin) {
-        const { error } = await signIn(email, password);
+        const { error, user: loggedInUser } = await signIn(email, password);
         if (error) {
           toast({
             title: "Sign In Error",
-            description: error.message || "Failed to sign in. Please try again.",
+            description: error || "Failed to sign in. Please try again.",
             variant: "destructive"
           });
+        } else if (loggedInUser) {
+          if (loggedInUser.user_type !== userType && !loggedInUser.is_admin) {
+            toast({
+              title: "Invalid Role",
+              description: `This account belongs to a ${loggedInUser.user_type}. Please select the correct account type to sign in.`,
+              variant: "destructive"
+            });
+            await signOut();
+            setLoading(false);
+            return;
+          }
         }
       } else {
         // Sign up validation
@@ -100,15 +111,15 @@ const Auth = () => {
         if (error) {
           toast({
             title: "Sign Up Error",
-            description: error.message || "Failed to create account. Please try again.",
+            description: error || "Failed to create account. Please try again.",
             variant: "destructive"
           });
         }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "Error",
-        description: error.message || "An unexpected error occurred.",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
         variant: "destructive"
       });
     } finally {
@@ -155,40 +166,40 @@ const Auth = () => {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="userType">Account Type</Label>
+                <Select value={userType} onValueChange={(value: 'employer' | 'housegirl' | 'agency') => setUserType(value)}>
+                  <SelectTrigger>
+                    <div className="flex items-center gap-2">
+                      {getUserTypeIcon(userType)}
+                      <SelectValue placeholder="Select account type" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="employer">
+                      <div className="flex items-center gap-2">
+                        <Building2 className="h-4 w-4" />
+                        Employer
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="housegirl">
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Domestic Worker
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="agency">
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-4 w-4" />
+                        Agency
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {!isLogin && (
                 <>
-                  <div className="space-y-2">
-                    <Label htmlFor="userType">Account Type</Label>
-                    <Select value={userType} onValueChange={(value: 'employer' | 'housegirl' | 'agency') => setUserType(value)}>
-                      <SelectTrigger>
-                        <div className="flex items-center gap-2">
-                          {getUserTypeIcon(userType)}
-                          <SelectValue placeholder="Select account type" />
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="employer">
-                          <div className="flex items-center gap-2">
-                            <Building2 className="h-4 w-4" />
-                            Employer
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="housegirl">
-                          <div className="flex items-center gap-2">
-                            <User className="h-4 w-4" />
-                            Domestic Worker
-                          </div>
-                        </SelectItem>
-                        <SelectItem value="agency">
-                          <div className="flex items-center gap-2">
-                            <Heart className="h-4 w-4" />
-                            Agency
-                          </div>
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name</Label>

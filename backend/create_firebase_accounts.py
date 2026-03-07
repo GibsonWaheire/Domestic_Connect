@@ -11,10 +11,15 @@ from datetime import datetime
 
 # Firebase project configuration
 FIREBASE_PROJECT_ID = "domesticconnect-e1955"
-FIREBASE_API_KEY = "REDACTED_API_KEY"
+FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY")
 
 def create_firebase_accounts():
     """Create Firebase accounts for testing"""
+    if not FIREBASE_API_KEY:
+        print("❌ Error: FIREBASE_API_KEY environment variable is not set.")
+        print("Please set it before running this script.")
+        return
+    
     
     # Test accounts to create
     test_accounts = [

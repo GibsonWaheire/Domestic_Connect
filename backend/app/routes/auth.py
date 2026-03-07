@@ -18,7 +18,9 @@ def verify_firebase_token(token):
     try:
         # Firebase Admin SDK would be used here in production
         # For now, we'll make a simple verification request
-        firebase_api_key = os.getenv('FIREBASE_API_KEY', 'REDACTED_API_KEY')
+        firebase_api_key = os.getenv('FIREBASE_API_KEY')
+        if not firebase_api_key:
+            return jsonify({'error': 'Firebase API key not configured on server'}), 500
         
         # Verify token with Firebase REST API
         verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={firebase_api_key}"

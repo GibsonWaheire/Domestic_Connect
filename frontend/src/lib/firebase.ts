@@ -5,13 +5,13 @@ import { getFirestore, connectFirestoreEmulator } from 'firebase/firestore';
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "REDACTED_API_KEY",
-  authDomain: "domesticconnect-e1955.firebaseapp.com",
-  projectId: "domesticconnect-e1955",
-  storageBucket: "domesticconnect-e1955.firebasestorage.app",
-  messagingSenderId: "893320295714",
-  appId: "1:893320295714:web:8e439f859a8ad891d1617b",
-  measurementId: "G-S6Z7459TB2"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "REDACTED_API_KEY",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "domesticconnect-e1955.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "domesticconnect-e1955",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "domesticconnect-e1955.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "893320295714",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:893320295714:web:8e439f859a8ad891d1617b",
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-S6Z7459TB2"
 };
 
 // Initialize Firebase
