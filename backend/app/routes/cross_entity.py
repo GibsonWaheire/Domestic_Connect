@@ -1,12 +1,6 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import firebase_auth_required, get_current_user
-from app.models import (
-    User, Profile, EmployerProfile, HousegirlProfile, AgencyProfile, 
-    JobPosting, JobApplication, Agency, AgencyWorker, AgencyClient
-)
-from app import db
-from datetime import datetime
-from sqlalchemy.orm import joinedload
+from app.services.auth_service import firebase_auth_required
+from app.firebase_init import db
 
 cross_entity_bp = Blueprint('cross_entity', __name__)
 
@@ -18,19 +12,20 @@ def get_dashboard_data():
         current_user = request.current_user
         if not current_user:
             return jsonify({'error': 'User not found'}), 404
-        
-        user_type = current_user.user_type
-        is_admin = current_user.is_admin
+            
+        user_type = getattr(current_user, 'user_type', '')
+        is_admin = getattr(current_user, 'is_admin', False)
+        user_id = getattr(current_user, 'id', '')
         
         # Base data structure
         dashboard_data = {
             'user': {
-                'id': current_user.id,
-                'email': current_user.email,
-                'user_type': current_user.user_type,
-                'first_name': current_user.first_name,
-                'last_name': current_user.last_name,
-                'is_admin': current_user.is_admin
+                'id': user_id,
+                'email': getattr(current_user, 'email', ''),
+                'user_type': user_type,
+                'first_name': getattr(current_user, 'first_name', ''),
+                'last_name': getattr(current_user, 'last_name', ''),
+                'is_admin': is_admin
             },
             'stats': {},
             'recent_activity': [],
@@ -38,55 +33,47 @@ def get_dashboard_data():
         }
         
         if user_type == 'employer' or is_admin:
-            # Employers can see housegirls, job postings, and agencies
             dashboard_data['available_data']['housegirls'] = get_housegirls_for_employer()
-            dashboard_data['available_data']['job_postings'] = get_job_postings_for_employer(current_user.id)
+            dashboard_data['available_data']['job_postings'] = get_job_postings_for_employer(user_id)
             dashboard_data['available_data']['agencies'] = get_agencies_for_employer()
             
-            # Stats for employers
             dashboard_data['stats'] = {
                 'total_housegirls': len(dashboard_data['available_data']['housegirls']),
                 'my_job_postings': len(dashboard_data['available_data']['job_postings']),
-                'total_applications': get_total_applications_for_employer(current_user.id),
+                'total_applications': get_total_applications_for_employer(user_id),
                 'available_agencies': len(dashboard_data['available_data']['agencies'])
             }
             
-        elif user_type == 'housegirl' or is_admin:
-            # Housegirls can see job opportunities, employers, and agencies
+        if user_type == 'housegirl' or is_admin:
             dashboard_data['available_data']['job_opportunities'] = get_job_opportunities_for_housegirl()
             dashboard_data['available_data']['employers'] = get_employers_for_housegirl()
             dashboard_data['available_data']['agencies'] = get_agencies_for_housegirl()
             
-            # Stats for housegirls
-            dashboard_data['stats'] = {
+            dashboard_data['stats'].update({
                 'available_jobs': len(dashboard_data['available_data']['job_opportunities']),
-                'my_applications': get_my_applications_count(current_user.id),
+                'my_applications': get_my_applications_count(user_id),
                 'total_employers': len(dashboard_data['available_data']['employers']),
                 'available_agencies': len(dashboard_data['available_data']['agencies'])
-            }
+            })
             
-        elif user_type == 'agency' or is_admin:
-            # Agencies can see employers, housegirls, and their relationships
-            dashboard_data['available_data']['clients'] = get_clients_for_agency(current_user.id)
-            dashboard_data['available_data']['workers'] = get_workers_for_agency(current_user.id)
+        if user_type == 'agency' or is_admin:
+            dashboard_data['available_data']['clients'] = get_clients_for_agency(user_id)
+            dashboard_data['available_data']['workers'] = get_workers_for_agency(user_id)
             dashboard_data['available_data']['all_employers'] = get_all_employers_for_agency()
             dashboard_data['available_data']['all_housegirls'] = get_all_housegirls_for_agency()
             
-            # Stats for agencies
-            dashboard_data['stats'] = {
+            dashboard_data['stats'].update({
                 'total_clients': len(dashboard_data['available_data']['clients']),
                 'total_workers': len(dashboard_data['available_data']['workers']),
                 'available_employers': len(dashboard_data['available_data']['all_employers']),
                 'available_housegirls': len(dashboard_data['available_data']['all_housegirls'])
-            }
+            })
         
         if is_admin:
-            # Admins can see everything
             dashboard_data['available_data']['all_users'] = get_all_users_for_admin()
             dashboard_data['available_data']['all_job_postings'] = get_all_job_postings_for_admin()
             dashboard_data['available_data']['all_applications'] = get_all_applications_for_admin()
             
-            # Admin stats
             dashboard_data['stats'].update({
                 'total_users': len(dashboard_data['available_data']['all_users']),
                 'total_job_postings': len(dashboard_data['available_data']['all_job_postings']),
@@ -96,301 +83,350 @@ def get_dashboard_data():
         return jsonify(dashboard_data), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 def get_housegirls_for_employer():
     """Get available housegirls for employers to view"""
-    housegirls = HousegirlProfile.query.options(
-        joinedload(HousegirlProfile.profile).joinedload(Profile.user)
-    ).filter(HousegirlProfile.is_available == True).all()
+    hg_docs = db.collection('housegirl_profiles').where('is_available', '==', True).stream()
     
     result = []
-    for housegirl in housegirls:
+    for doc in hg_docs:
+        housegirl = doc.to_dict()
+        pid = housegirl.get('profile_id')
+        first_name = ""
+        last_name = ""
+        phone = ""
+        
+        if pid:
+            prof_doc = db.collection('profiles').document(pid).get()
+            if prof_doc.exists:
+                user_id = prof_doc.to_dict().get('user_id')
+                if user_id:
+                    user_doc = db.collection('users').document(user_id).get()
+                    if user_doc.exists:
+                        u = user_doc.to_dict()
+                        first_name = u.get('first_name', '')
+                        last_name = u.get('last_name', '')
+                        phone = u.get('phone_number', '')
+        
         result.append({
-            'id': housegirl.id,
-            'profile_id': housegirl.profile_id,
-            'age': housegirl.age,
-            'bio': housegirl.bio,
-            'current_location': housegirl.current_location,
-            'location': housegirl.location,
-            'education': housegirl.education,
-            'experience': housegirl.experience,
-            'expected_salary': housegirl.expected_salary,
-            'accommodation_type': housegirl.accommodation_type,
-            'tribe': housegirl.tribe,
-            'is_available': housegirl.is_available,
-            'profile_photo_url': housegirl.profile_photo_url,
-            'first_name': housegirl.profile.user.first_name,
-            'last_name': housegirl.profile.user.last_name,
-            'phone_number': housegirl.profile.user.phone_number,
-            'created_at': housegirl.created_at.isoformat(),
-            'updated_at': housegirl.updated_at.isoformat()
+            'id': housegirl.get('id'),
+            'profile_id': pid,
+            'age': housegirl.get('age'),
+            'bio': housegirl.get('bio'),
+            'current_location': housegirl.get('current_location'),
+            'location': housegirl.get('location'),
+            'education': housegirl.get('education'),
+            'experience': housegirl.get('experience'),
+            'expected_salary': housegirl.get('expected_salary'),
+            'accommodation_type': housegirl.get('accommodation_type'),
+            'tribe': housegirl.get('tribe'),
+            'is_available': housegirl.get('is_available'),
+            'profile_photo_url': housegirl.get('profile_photo_url'),
+            'first_name': first_name,
+            'last_name': last_name,
+            'phone_number': phone,
+            'created_at': housegirl.get('created_at'),
+            'updated_at': housegirl.get('updated_at')
         })
-    
     return result
 
 def get_job_postings_for_employer(employer_id):
     """Get job postings created by specific employer"""
-    job_postings = JobPosting.query.filter_by(employer_id=employer_id).all()
+    job_docs = db.collection('job_postings').where('employer_id', '==', employer_id).stream()
     
     result = []
-    for job in job_postings:
+    for doc in job_docs:
+        job = doc.to_dict()
+        apps_count = len(list(db.collection('job_applications').where('job_id', '==', job.get('id')).stream()))
+        
         result.append({
-            'id': job.id,
-            'employer_id': job.employer_id,
-            'title': job.title,
-            'description': job.description,
-            'location': job.location,
-            'salary_min': job.salary_min,
-            'salary_max': job.salary_max,
-            'accommodation_type': job.accommodation_type,
-            'required_experience': job.required_experience,
-            'required_education': job.required_education,
-            'skills_required': job.skills_required,
-            'languages_required': job.languages_required,
-            'status': job.status,
-            'application_deadline': job.application_deadline.isoformat() if job.application_deadline else None,
-            'applications_count': job.applications.count(),
-            'created_at': job.created_at.isoformat(),
-            'updated_at': job.updated_at.isoformat()
+            'id': job.get('id'),
+            'employer_id': job.get('employer_id'),
+            'title': job.get('title'),
+            'description': job.get('description'),
+            'location': job.get('location'),
+            'salary_min': job.get('salary_min'),
+            'salary_max': job.get('salary_max'),
+            'accommodation_type': job.get('accommodation_type'),
+            'required_experience': job.get('required_experience'),
+            'required_education': job.get('required_education'),
+            'skills_required': job.get('skills_required', []),
+            'languages_required': job.get('languages_required', []),
+            'status': job.get('status'),
+            'application_deadline': job.get('application_deadline'),
+            'applications_count': apps_count,
+            'created_at': job.get('created_at'),
+            'updated_at': job.get('updated_at')
         })
-    
     return result
 
 def get_agencies_for_employer():
     """Get available agencies for employers"""
-    agencies = Agency.query.filter_by(verification_status='verified').all()
+    agencies_docs = db.collection('agencies').where('verification_status', '==', 'verified').stream()
     
     result = []
-    for agency in agencies:
+    for doc in agencies_docs:
+        agency = doc.to_dict()
         result.append({
-            'id': agency.id,
-            'name': agency.name,
-            'license_number': agency.license_number,
-            'verification_status': agency.verification_status,
-            'subscription_tier': agency.subscription_tier,
-            'rating': agency.rating,
-            'services': agency.services,
-            'location': agency.location,
-            'monthly_fee': agency.monthly_fee,
-            'commission_rate': agency.commission_rate,
-            'verified_workers': agency.verified_workers,
-            'successful_placements': agency.successful_placements,
-            'description': agency.description,
-            'contact_email': agency.contact_email,
-            'contact_phone': agency.contact_phone,
-            'website': agency.website,
-            'created_at': agency.created_at.isoformat(),
-            'updated_at': agency.updated_at.isoformat()
+            'id': agency.get('id'),
+            'name': agency.get('name'),
+            'license_number': agency.get('license_number'),
+            'verification_status': agency.get('verification_status'),
+            'subscription_tier': agency.get('subscription_tier'),
+            'rating': agency.get('rating'),
+            'services': agency.get('services', []),
+            'location': agency.get('location'),
+            'monthly_fee': agency.get('monthly_fee'),
+            'commission_rate': agency.get('commission_rate'),
+            'verified_workers': agency.get('verified_workers'),
+            'successful_placements': agency.get('successful_placements'),
+            'description': agency.get('description'),
+            'contact_email': agency.get('contact_email'),
+            'contact_phone': agency.get('contact_phone'),
+            'website': agency.get('website'),
+            'created_at': agency.get('created_at'),
+            'updated_at': agency.get('updated_at')
         })
-    
     return result
 
 def get_job_opportunities_for_housegirl():
     """Get available job opportunities for housegirls"""
-    job_postings = JobPosting.query.filter_by(status='active').all()
+    job_docs = db.collection('job_postings').where('status', '==', 'active').stream()
     
     result = []
-    for job in job_postings:
-        # Get employer info
-        employer = User.query.get(job.employer_id)
-        employer_profile = None
-        if employer and employer.profile:
-            employer_profile = employer.profile.employer_profile
+    for doc in job_docs:
+        job = doc.to_dict()
+        emp_id = job.get('employer_id')
+        emp_name = "Unknown"
+        comp_name = None
+        comp_loc = None
         
+        if emp_id:
+            user_doc = db.collection('users').document(emp_id).get()
+            if user_doc.exists:
+                u = user_doc.to_dict()
+                emp_name = f"{u.get('first_name', '')} {u.get('last_name', '')}".strip()
+                
+            prof_docs = list(db.collection('profiles').where('user_id', '==', emp_id).limit(1).stream())
+            if prof_docs:
+                p_id = prof_docs[0].to_dict().get('id')
+                emp_prof_docs = list(db.collection('employer_profiles').where('profile_id', '==', p_id).limit(1).stream())
+                if emp_prof_docs:
+                    ep = emp_prof_docs[0].to_dict()
+                    comp_name = ep.get('company_name')
+                    comp_loc = ep.get('location')
+                    
         result.append({
-            'id': job.id,
-            'employer_id': job.employer_id,
-            'title': job.title,
-            'description': job.description,
-            'location': job.location,
-            'salary_min': job.salary_min,
-            'salary_max': job.salary_max,
-            'accommodation_type': job.accommodation_type,
-            'required_experience': job.required_experience,
-            'required_education': job.required_education,
-            'skills_required': job.skills_required,
-            'languages_required': job.languages_required,
-            'status': job.status,
-            'application_deadline': job.application_deadline.isoformat() if job.application_deadline else None,
+            'id': job.get('id'),
+            'employer_id': emp_id,
+            'title': job.get('title'),
+            'description': job.get('description'),
+            'location': job.get('location'),
+            'salary_min': job.get('salary_min'),
+            'salary_max': job.get('salary_max'),
+            'accommodation_type': job.get('accommodation_type'),
+            'required_experience': job.get('required_experience'),
+            'required_education': job.get('required_education'),
+            'skills_required': job.get('skills_required', []),
+            'languages_required': job.get('languages_required', []),
+            'status': job.get('status'),
+            'application_deadline': job.get('application_deadline'),
             'employer': {
-                'name': f"{employer.first_name} {employer.last_name}" if employer else "Unknown",
-                'company_name': employer_profile.company_name if employer_profile else None,
-                'location': employer_profile.location if employer_profile else None
+                'name': emp_name,
+                'company_name': comp_name,
+                'location': comp_loc
             },
-            'created_at': job.created_at.isoformat(),
-            'updated_at': job.updated_at.isoformat()
+            'created_at': job.get('created_at'),
+            'updated_at': job.get('updated_at')
         })
-    
     return result
 
 def get_employers_for_housegirl():
     """Get employers that housegirls can see"""
-    employers = EmployerProfile.query.options(
-        joinedload(EmployerProfile.profile).joinedload(Profile.user)
-    ).all()
+    emp_docs = db.collection('employer_profiles').stream()
     
     result = []
-    for employer in employers:
+    for doc in emp_docs:
+        emp = doc.to_dict()
+        pid = emp.get('profile_id')
+        first_name = ""
+        last_name = ""
+        email = ""
+        phone = ""
+        
+        if pid:
+            prof_doc = db.collection('profiles').document(pid).get()
+            if prof_doc.exists:
+                user_id = prof_doc.to_dict().get('user_id')
+                if user_id:
+                    user_doc = db.collection('users').document(user_id).get()
+                    if user_doc.exists:
+                        u = user_doc.to_dict()
+                        first_name = u.get('first_name', '')
+                        last_name = u.get('last_name', '')
+                        email = u.get('email', '')
+                        phone = u.get('phone_number', '')
+                        
         result.append({
-            'id': employer.id,
-            'profile_id': employer.profile_id,
-            'company_name': employer.company_name,
-            'location': employer.location,
-            'description': employer.description,
-            'first_name': employer.profile.user.first_name,
-            'last_name': employer.profile.user.last_name,
-            'email': employer.profile.user.email,
-            'phone_number': employer.profile.user.phone_number,
-            'created_at': employer.created_at.isoformat(),
-            'updated_at': employer.updated_at.isoformat()
+            'id': emp.get('id'),
+            'profile_id': pid,
+            'company_name': emp.get('company_name'),
+            'location': emp.get('location'),
+            'description': emp.get('description'),
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'phone_number': phone,
+            'created_at': emp.get('created_at'),
+            'updated_at': emp.get('updated_at')
         })
-    
     return result
 
 def get_agencies_for_housegirl():
-    """Get agencies that housegirls can see"""
-    return get_agencies_for_employer()  # Same data for both
+    return get_agencies_for_employer()
 
 def get_clients_for_agency(agency_id):
-    """Get clients (employers) for specific agency"""
-    clients = AgencyClient.query.filter_by(agency_id=agency_id).all()
+    clients_docs = db.collection('agency_clients').where('agency_id', '==', agency_id).stream()
     
     result = []
-    for client in clients:
-        employer_profile = EmployerProfile.query.get(client.client_id)
-        if employer_profile:
-            result.append({
-                'id': client.id,
-                'agency_id': client.agency_id,
-                'client_id': client.client_id,
-                'hiring_fee': client.hiring_fee,
-                'placement_status': client.placement_status,
-                'hire_date': client.hire_date.isoformat() if client.hire_date else None,
-                'worker_id': client.worker_id,
-                'commission_paid': client.commission_paid,
-                'dispute_resolution': client.dispute_resolution,
-                'employer': {
-                    'company_name': employer_profile.company_name,
-                    'location': employer_profile.location,
-                    'description': employer_profile.description
-                },
-                'created_at': client.created_at.isoformat(),
-                'updated_at': client.updated_at.isoformat()
-            })
-    
+    for doc in clients_docs:
+        client = doc.to_dict()
+        client_id = client.get('client_id')
+        comp_name = ""
+        comp_loc = ""
+        comp_desc = ""
+        
+        if client_id:
+            emp_prof_doc = db.collection('employer_profiles').document(client_id).get()
+            if emp_prof_doc.exists:
+                ep = emp_prof_doc.to_dict()
+                comp_name = ep.get('company_name', '')
+                comp_loc = ep.get('location', '')
+                comp_desc = ep.get('description', '')
+                
+        result.append({
+            'id': client.get('id'),
+            'agency_id': client.get('agency_id'),
+            'client_id': client_id,
+            'hiring_fee': client.get('hiring_fee'),
+            'placement_status': client.get('placement_status'),
+            'hire_date': client.get('hire_date'),
+            'worker_id': client.get('worker_id'),
+            'commission_paid': client.get('commission_paid'),
+            'dispute_resolution': client.get('dispute_resolution'),
+            'employer': {
+                'company_name': comp_name,
+                'location': comp_loc,
+                'description': comp_desc
+            },
+            'created_at': client.get('created_at'),
+            'updated_at': client.get('updated_at')
+        })
     return result
 
 def get_workers_for_agency(agency_id):
-    """Get workers (housegirls) for specific agency"""
-    workers = AgencyWorker.query.filter_by(agency_id=agency_id).all()
+    workers_docs = db.collection('agency_workers').where('agency_id', '==', agency_id).stream()
     
     result = []
-    for worker in workers:
-        housegirl_profile = HousegirlProfile.query.get(worker.worker_id)
-        if housegirl_profile:
-            result.append({
-                'id': worker.id,
-                'agency_id': worker.agency_id,
-                'worker_id': worker.worker_id,
-                'verification_status': worker.verification_status,
-                'training_certificates': worker.training_certificates,
-                'background_check_status': worker.background_check_status,
-                'membership_fee': worker.membership_fee,
-                'join_date': worker.join_date.isoformat() if worker.join_date else None,
-                'is_active': worker.is_active,
-                'housegirl': {
-                    'age': housegirl_profile.age,
-                    'bio': housegirl_profile.bio,
-                    'location': housegirl_profile.location,
-                    'education': housegirl_profile.education,
-                    'experience': housegirl_profile.experience,
-                    'expected_salary': housegirl_profile.expected_salary,
-                    'is_available': housegirl_profile.is_available
-                },
-                'created_at': worker.created_at.isoformat(),
-                'updated_at': worker.updated_at.isoformat()
-            })
-    
+    for doc in workers_docs:
+        worker = doc.to_dict()
+        worker_id = worker.get('worker_id')
+        hg_data = {}
+        
+        if worker_id:
+            hg_doc = db.collection('housegirl_profiles').document(worker_id).get()
+            if hg_doc.exists:
+                hg_data = hg_doc.to_dict()
+                
+        result.append({
+            'id': worker.get('id'),
+            'agency_id': worker.get('agency_id'),
+            'worker_id': worker_id,
+            'verification_status': worker.get('verification_status'),
+            'training_certificates': worker.get('training_certificates'),
+            'background_check_status': worker.get('background_check_status'),
+            'membership_fee': worker.get('membership_fee'),
+            'join_date': worker.get('join_date'),
+            'is_active': worker.get('is_active'),
+            'housegirl': {
+                'age': hg_data.get('age'),
+                'bio': hg_data.get('bio'),
+                'location': hg_data.get('location'),
+                'education': hg_data.get('education'),
+                'experience': hg_data.get('experience'),
+                'expected_salary': hg_data.get('expected_salary'),
+                'is_available': hg_data.get('is_available')
+            },
+            'created_at': worker.get('created_at'),
+            'updated_at': worker.get('updated_at')
+        })
     return result
 
 def get_all_employers_for_agency():
-    """Get all employers for agencies to see"""
-    return get_employers_for_housegirl()  # Same data
+    return get_employers_for_housegirl()
 
 def get_all_housegirls_for_agency():
-    """Get all housegirls for agencies to see"""
-    return get_housegirls_for_employer()  # Same data
+    return get_housegirls_for_employer()
 
 def get_all_users_for_admin():
-    """Get all users for admin dashboard"""
-    users = User.query.all()
-    
-    result = []
-    for user in users:
-        result.append({
-            'id': user.id,
-            'email': user.email,
-            'user_type': user.user_type,
-            'first_name': user.first_name,
-            'last_name': user.last_name,
-            'phone_number': user.phone_number,
-            'is_active': user.is_active,
-            'is_admin': user.is_admin,
-            'created_at': user.created_at.isoformat(),
-            'updated_at': user.updated_at.isoformat()
-        })
-    
-    return result
+    users_docs = db.collection('users').stream()
+    return [{
+        'id': u.to_dict().get('id'),
+        'email': u.to_dict().get('email'),
+        'user_type': u.to_dict().get('user_type'),
+        'first_name': u.to_dict().get('first_name'),
+        'last_name': u.to_dict().get('last_name'),
+        'phone_number': u.to_dict().get('phone_number'),
+        'is_active': u.to_dict().get('is_active', True),
+        'is_admin': u.to_dict().get('is_admin', False),
+        'created_at': u.to_dict().get('created_at'),
+        'updated_at': u.to_dict().get('updated_at')
+    } for u in users_docs]
 
 def get_all_job_postings_for_admin():
-    """Get all job postings for admin dashboard"""
-    job_postings = JobPosting.query.all()
-    
+    job_docs = db.collection('job_postings').stream()
     result = []
-    for job in job_postings:
+    for doc in job_docs:
+        job = doc.to_dict()
+        apps_count = len(list(db.collection('job_applications').where('job_id', '==', job.get('id')).stream()))
+        
         result.append({
-            'id': job.id,
-            'employer_id': job.employer_id,
-            'title': job.title,
-            'description': job.description,
-            'location': job.location,
-            'salary_min': job.salary_min,
-            'salary_max': job.salary_max,
-            'status': job.status,
-            'applications_count': job.applications.count(),
-            'created_at': job.created_at.isoformat(),
-            'updated_at': job.updated_at.isoformat()
+            'id': job.get('id'),
+            'employer_id': job.get('employer_id'),
+            'title': job.get('title'),
+            'description': job.get('description'),
+            'location': job.get('location'),
+            'salary_min': job.get('salary_min'),
+            'salary_max': job.get('salary_max'),
+            'status': job.get('status'),
+            'applications_count': apps_count,
+            'created_at': job.get('created_at'),
+            'updated_at': job.get('updated_at')
         })
-    
     return result
 
 def get_all_applications_for_admin():
-    """Get all job applications for admin dashboard"""
-    applications = JobApplication.query.all()
-    
-    result = []
-    for app in applications:
-        result.append({
-            'id': app.id,
-            'job_id': app.job_id,
-            'housegirl_id': app.housegirl_id,
-            'cover_letter': app.cover_letter,
-            'status': app.status,
-            'applied_at': app.applied_at.isoformat(),
-            'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None
-        })
-    
-    return result
+    app_docs = db.collection('job_applications').stream()
+    return [{
+        'id': a.to_dict().get('id'),
+        'job_id': a.to_dict().get('job_id'),
+        'housegirl_id': a.to_dict().get('housegirl_id'),
+        'cover_letter': a.to_dict().get('cover_letter'),
+        'status': a.to_dict().get('status'),
+        'applied_at': a.to_dict().get('applied_at'),
+        'reviewed_at': a.to_dict().get('reviewed_at')
+    } for a in app_docs]
 
 def get_total_applications_for_employer(employer_id):
-    """Get total applications for employer's job postings"""
-    job_postings = JobPosting.query.filter_by(employer_id=employer_id).all()
-    total_applications = 0
-    for job in job_postings:
-        total_applications += job.applications.count()
-    return total_applications
+    job_docs = db.collection('job_postings').where('employer_id', '==', employer_id).stream()
+    total = 0
+    for job in job_docs:
+        job_id = job.to_dict().get('id')
+        total += len(list(db.collection('job_applications').where('job_id', '==', job_id).stream()))
+    return total
 
 def get_my_applications_count(housegirl_id):
-    """Get count of applications by housegirl"""
-    return JobApplication.query.filter_by(housegirl_id=housegirl_id).count()
+    return len(list(db.collection('job_applications').where('housegirl_id', '==', housegirl_id).stream()))

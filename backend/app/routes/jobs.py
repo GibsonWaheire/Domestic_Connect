@@ -1,24 +1,21 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import login_required, get_current_user
-from app.models import JobPosting, JobApplication, User, EmployerProfile, Profile
-from app import db
-from app.middleware.security import rate_limit, validate_json_input, JOB_POSTING_SCHEMA
-from app.middleware.performance import cache_response, compress_response
-from app.middleware.logging import log_request, log_error, log_user_action
+from app.services.auth_service import firebase_auth_required
+from app.firebase_init import db
+# Commenting out middlewares that might rely on SQLAlchemy or need separate refactoring
+# from app.middleware.security import rate_limit, validate_json_input, JOB_POSTING_SCHEMA
+# from app.middleware.performance import cache_response, compress_response
+# from app.middleware.logging import log_request, log_error, log_user_action
 from datetime import datetime
 import uuid
 
 jobs_bp = Blueprint('jobs', __name__)
 
 @jobs_bp.route('/', methods=['GET'])
-@cache_response(timeout=300)  # Cache for 5 minutes
-@compress_response()
-@log_request()
 def get_jobs():
     """Get all job postings with filtering"""
     try:
         # Query parameters for filtering
-        location = request.args.get('location')
+        location = request.args.get('location', '').lower()
         salary_min = request.args.get('salary_min', type=int)
         salary_max = request.args.get('salary_max', type=int)
         accommodation_type = request.args.get('accommodation_type')
@@ -32,59 +29,87 @@ def get_jobs():
         if page < 1 or per_page < 1 or per_page > 100:
             return jsonify({'error': 'Invalid pagination parameters'}), 400
         
-        # Build query
-        query = JobPosting.query.join(User).filter(JobPosting.status == status)
+        query = db.collection('job_postings').where('status', '==', status)
         
-        if location:
-            query = query.filter(JobPosting.location.ilike(f'%{location}%'))
-        if salary_min:
-            query = query.filter(JobPosting.salary_min >= salary_min)
-        if salary_max:
-            query = query.filter(JobPosting.salary_max <= salary_max)
         if accommodation_type:
-            query = query.filter(JobPosting.accommodation_type == accommodation_type)
+            query = query.where('accommodation_type', '==', accommodation_type)
         if experience:
-            query = query.filter(JobPosting.required_experience == experience)
+            query = query.where('required_experience', '==', experience)
         if education:
-            query = query.filter(JobPosting.required_education == education)
+            query = query.where('required_education', '==', education)
+            
+        docs = list(query.stream())
+        all_jobs = [doc.to_dict() for doc in docs]
         
-        # Paginate results
-        jobs = query.paginate(
-            page=page,
-            per_page=per_page,
-            error_out=False
-        )
+        # In-memory filtering for ranges and ilike
+        filtered_jobs = []
+        for job in all_jobs:
+            if location and location not in job.get('location', '').lower():
+                continue
+            if salary_min and job.get('salary_min', 0) < salary_min:
+                continue
+            if salary_max and job.get('salary_max', float('inf')) > salary_max:
+                continue
+            filtered_jobs.append(job)
+            
+        # sort by created_at desc
+        filtered_jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+            
+        total = len(filtered_jobs)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated = filtered_jobs[start_idx:end_idx]
         
         result = []
-        for job in jobs.items:
-            # Get employer profile info
-            employer_profile = EmployerProfile.query.join(Profile).filter(Profile.user_id == job.employer_id).first()
+        for job in paginated:
+            # Get employer info
+            emp_id = job.get('employer_id')
+            emp_data = {}
+            comp_name = None
+            comp_loc = None
+            
+            if emp_id:
+                user_doc = db.collection('users').document(emp_id).get()
+                if user_doc.exists:
+                    emp_data = user_doc.to_dict()
+                    
+                prof_docs = list(db.collection('profiles').where('user_id', '==', emp_id).limit(1).stream())
+                if prof_docs:
+                    prof_id = prof_docs[0].to_dict().get('id')
+                    emp_prof_docs = list(db.collection('employer_profiles').where('profile_id', '==', prof_id).limit(1).stream())
+                    if emp_prof_docs:
+                        e_prof = emp_prof_docs[0].to_dict()
+                        comp_name = e_prof.get('company_name')
+                        comp_loc = e_prof.get('location')
+                        
+            # Get apps count
+            apps_count = len(list(db.collection('job_applications').where('job_id', '==', job.get('id')).stream()))
             
             result.append({
-                'id': job.id,
-                'title': job.title,
-                'description': job.description,
-                'location': job.location,
-                'salary_min': job.salary_min,
-                'salary_max': job.salary_max,
-                'accommodation_type': job.accommodation_type,
-                'required_experience': job.required_experience,
-                'required_education': job.required_education,
-                'skills_required': job.skills_required or [],
-                'languages_required': job.languages_required or [],
-                'status': job.status,
-                'application_deadline': job.application_deadline.isoformat() if job.application_deadline else None,
-                'created_at': job.created_at.isoformat(),
-                'updated_at': job.updated_at.isoformat(),
+                'id': job.get('id'),
+                'title': job.get('title'),
+                'description': job.get('description'),
+                'location': job.get('location'),
+                'salary_min': job.get('salary_min'),
+                'salary_max': job.get('salary_max'),
+                'accommodation_type': job.get('accommodation_type'),
+                'required_experience': job.get('required_experience'),
+                'required_education': job.get('required_education'),
+                'skills_required': job.get('skills_required', []),
+                'languages_required': job.get('languages_required', []),
+                'status': job.get('status'),
+                'application_deadline': job.get('application_deadline'),
+                'created_at': job.get('created_at'),
+                'updated_at': job.get('updated_at'),
                 'employer': {
-                    'id': job.employer_id,
-                    'name': f"{job.employer.first_name} {job.employer.last_name}",
-                    'email': job.employer.email,
-                    'phone_number': job.employer.phone_number,
-                    'company_name': employer_profile.company_name if employer_profile else None,
-                    'company_location': employer_profile.location if employer_profile else None
+                    'id': emp_id,
+                    'name': f"{emp_data.get('first_name', '')} {emp_data.get('last_name', '')}".strip(),
+                    'email': emp_data.get('email'),
+                    'phone_number': emp_data.get('phone_number'),
+                    'company_name': comp_name,
+                    'company_location': comp_loc
                 },
-                'applications_count': job.applications.count()
+                'applications_count': apps_count
             })
         
         return jsonify({
@@ -92,286 +117,314 @@ def get_jobs():
             'pagination': {
                 'page': page,
                 'per_page': per_page,
-                'total': jobs.total,
-                'pages': jobs.pages,
-                'has_next': jobs.has_next,
-                'has_prev': jobs.has_prev
+                'total': total,
+                'pages': (total + per_page - 1) // per_page if per_page else 0,
+                'has_next': end_idx < total,
+                'has_prev': page > 1
             }
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/<job_id>', methods=['GET'])
 def get_job(job_id):
     """Get specific job posting"""
     try:
-        job = JobPosting.query.get_or_404(job_id)
+        job_doc = db.collection('job_postings').document(job_id).get()
+        if not job_doc.exists:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = job_doc.to_dict()
         
-        # Get employer profile info
-        employer_profile = EmployerProfile.query.join(Profile).filter(Profile.user_id == job.employer_id).first()
+        # Get employer info
+        emp_id = job.get('employer_id')
+        emp_data = {}
+        comp_name = None
+        comp_loc = None
+        
+        if emp_id:
+            user_doc = db.collection('users').document(emp_id).get()
+            if user_doc.exists:
+                emp_data = user_doc.to_dict()
+                
+            prof_docs = list(db.collection('profiles').where('user_id', '==', emp_id).limit(1).stream())
+            if prof_docs:
+                prof_id = prof_docs[0].to_dict().get('id')
+                emp_prof_docs = list(db.collection('employer_profiles').where('profile_id', '==', prof_id).limit(1).stream())
+                if emp_prof_docs:
+                    e_prof = emp_prof_docs[0].to_dict()
+                    comp_name = e_prof.get('company_name')
+                    comp_loc = e_prof.get('location')
+                    
+        apps_count = len(list(db.collection('job_applications').where('job_id', '==', job_id).stream()))
         
         return jsonify({
-            'id': job.id,
-            'title': job.title,
-            'description': job.description,
-            'location': job.location,
-            'salary_min': job.salary_min,
-            'salary_max': job.salary_max,
-            'accommodation_type': job.accommodation_type,
-            'required_experience': job.required_experience,
-            'required_education': job.required_education,
-            'skills_required': job.skills_required or [],
-            'languages_required': job.languages_required or [],
-            'status': job.status,
-            'application_deadline': job.application_deadline.isoformat() if job.application_deadline else None,
-            'created_at': job.created_at.isoformat(),
-            'updated_at': job.updated_at.isoformat(),
+            'id': job.get('id'),
+            'title': job.get('title'),
+            'description': job.get('description'),
+            'location': job.get('location'),
+            'salary_min': job.get('salary_min'),
+            'salary_max': job.get('salary_max'),
+            'accommodation_type': job.get('accommodation_type'),
+            'required_experience': job.get('required_experience'),
+            'required_education': job.get('required_education'),
+            'skills_required': job.get('skills_required', []),
+            'languages_required': job.get('languages_required', []),
+            'status': job.get('status'),
+            'application_deadline': job.get('application_deadline'),
+            'created_at': job.get('created_at'),
+            'updated_at': job.get('updated_at'),
             'employer': {
-                'id': job.employer_id,
-                'name': f"{job.employer.first_name} {job.employer.last_name}",
-                'email': job.employer.email,
-                'phone_number': job.employer.phone_number,
-                'company_name': employer_profile.company_name if employer_profile else None,
-                'company_location': employer_profile.location if employer_profile else None
+                'id': emp_id,
+                'name': f"{emp_data.get('first_name', '')} {emp_data.get('last_name', '')}".strip(),
+                'email': emp_data.get('email'),
+                'phone_number': emp_data.get('phone_number'),
+                'company_name': comp_name,
+                'company_location': comp_loc
             },
-            'applications_count': job.applications.count()
+            'applications_count': apps_count
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/', methods=['POST'])
-@login_required
-@rate_limit(max_requests=10, window_seconds=3600)  # 10 job postings per hour
-@validate_json_input(JOB_POSTING_SCHEMA)
-@log_request()
-@log_error()
+@firebase_auth_required
 def create_job():
     """Create new job posting (employers only)"""
     try:
-        user = get_current_user()
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
         
         # Check if user is employer
-        if user.user_type != 'employer':
+        if getattr(user, 'user_type', '') != 'employer':
             return jsonify({'error': 'Only employers can create job postings'}), 403
         
         data = request.get_json()
         
         # Validate salary range
-        if data['salary_min'] > data['salary_max']:
+        if data.get('salary_min', 0) > data.get('salary_max', 0):
             return jsonify({'error': 'Minimum salary cannot be greater than maximum salary'}), 400
         
         # Create job posting
-        job = JobPosting(
-            id=f'job_{uuid.uuid4().hex[:12]}',
-            employer_id=user.id,
-            title=data['title'],
-            description=data['description'],
-            location=data['location'],
-            salary_min=data['salary_min'],
-            salary_max=data['salary_max'],
-            accommodation_type=data['accommodation_type'],
-            required_experience=data['required_experience'],
-            required_education=data['required_education'],
-            skills_required=data.get('skills_required', []),
-            languages_required=data.get('languages_required', []),
-            status=data.get('status', 'active'),
-            application_deadline=datetime.fromisoformat(data['application_deadline']) if data.get('application_deadline') else None
-        )
+        job_id = f'job_{uuid.uuid4().hex[:12]}'
+        job_data = {
+            'id': job_id,
+            'employer_id': getattr(user, 'id'),
+            'title': data['title'],
+            'description': data['description'],
+            'location': data['location'],
+            'salary_min': data['salary_min'],
+            'salary_max': data['salary_max'],
+            'accommodation_type': data.get('accommodation_type'),
+            'required_experience': data.get('required_experience'),
+            'required_education': data.get('required_education'),
+            'skills_required': data.get('skills_required', []),
+            'languages_required': data.get('languages_required', []),
+            'status': data.get('status', 'active'),
+            'application_deadline': data.get('application_deadline'),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        # Log user action
-        log_user_action(user.id, 'create_job', {'job_id': job.id, 'title': job.title})
+        db.collection('job_postings').document(job_id).set(job_data)
         
-        return jsonify({
-            'id': job.id,
-            'title': job.title,
-            'description': job.description,
-            'location': job.location,
-            'salary_min': job.salary_min,
-            'salary_max': job.salary_max,
-            'accommodation_type': job.accommodation_type,
-            'required_experience': job.required_experience,
-            'required_education': job.required_education,
-            'skills_required': job.skills_required or [],
-            'languages_required': job.languages_required or [],
-            'status': job.status,
-            'application_deadline': job.application_deadline.isoformat() if job.application_deadline else None,
-            'created_at': job.created_at.isoformat(),
-            'updated_at': job.updated_at.isoformat()
-        }), 201
+        return jsonify(job_data), 201
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/<job_id>', methods=['PUT'])
-@login_required
+@firebase_auth_required
 def update_job(job_id):
     """Update job posting (employer only)"""
     try:
-        job = JobPosting.query.get_or_404(job_id)
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        job_doc_ref = db.collection('job_postings').document(job_id)
+        job_doc = job_doc_ref.get()
+        if not job_doc.exists:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = job_doc.to_dict()
         
         # Check if user owns this job posting
-        if job.employer_id != request.current_user.id:
+        if job.get('employer_id') != getattr(user, 'id'):
             return jsonify({'error': 'You can only update your own job postings'}), 403
         
         data = request.get_json()
+        updates = {}
+        fields = [
+            'title', 'description', 'location', 'salary_min', 'salary_max',
+            'accommodation_type', 'required_experience', 'required_education',
+            'skills_required', 'languages_required', 'status', 'application_deadline'
+        ]
         
-        # Update fields
-        if 'title' in data:
-            job.title = data['title']
-        if 'description' in data:
-            job.description = data['description']
-        if 'location' in data:
-            job.location = data['location']
-        if 'salary_min' in data:
-            job.salary_min = data['salary_min']
-        if 'salary_max' in data:
-            job.salary_max = data['salary_max']
-        if 'accommodation_type' in data:
-            job.accommodation_type = data['accommodation_type']
-        if 'required_experience' in data:
-            job.required_experience = data['required_experience']
-        if 'required_education' in data:
-            job.required_education = data['required_education']
-        if 'skills_required' in data:
-            job.skills_required = data['skills_required']
-        if 'languages_required' in data:
-            job.languages_required = data['languages_required']
-        if 'status' in data:
-            job.status = data['status']
-        if 'application_deadline' in data:
-            job.application_deadline = datetime.fromisoformat(data['application_deadline']) if data.get('application_deadline') else None
-        
-        job.updated_at = datetime.utcnow()
-        db.session.commit()
-        
-        return jsonify({
-            'id': job.id,
-            'title': job.title,
-            'description': job.description,
-            'location': job.location,
-            'salary_min': job.salary_min,
-            'salary_max': job.salary_max,
-            'accommodation_type': job.accommodation_type,
-            'required_experience': job.required_experience,
-            'required_education': job.required_education,
-            'skills_required': job.skills_required or [],
-            'languages_required': job.languages_required or [],
-            'status': job.status,
-            'application_deadline': job.application_deadline.isoformat() if job.application_deadline else None,
-            'created_at': job.created_at.isoformat(),
-            'updated_at': job.updated_at.isoformat()
-        }), 200
+        for field in fields:
+            if field in data:
+                updates[field] = data[field]
+                
+        if updates:
+            updates['updated_at'] = datetime.utcnow().isoformat()
+            job_doc_ref.update(updates)
+            
+        updated_doc = job_doc_ref.get()
+        return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/<job_id>', methods=['DELETE'])
-@login_required
+@firebase_auth_required
 def delete_job(job_id):
     """Delete job posting (employer only)"""
     try:
-        job = JobPosting.query.get_or_404(job_id)
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        job_doc_ref = db.collection('job_postings').document(job_id)
+        job_doc = job_doc_ref.get()
+        if not job_doc.exists:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = job_doc.to_dict()
         
         # Check if user owns this job posting
-        if job.employer_id != request.current_user.id:
+        if job.get('employer_id') != getattr(user, 'id'):
             return jsonify({'error': 'You can only delete your own job postings'}), 403
         
-        db.session.delete(job)
-        db.session.commit()
+        job_doc_ref.delete()
         
         return jsonify({'message': 'Job posting deleted successfully'}), 200
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/<job_id>/apply', methods=['POST'])
-@login_required
+@firebase_auth_required
 def apply_to_job(job_id):
     """Apply to a job (housegirls only)"""
     try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
         # Check if user is housegirl
-        if request.current_user.user_type != 'housegirl':
+        if getattr(user, 'user_type', '') != 'housegirl':
             return jsonify({'error': 'Only housegirls can apply to jobs'}), 403
         
-        job = JobPosting.query.get_or_404(job_id)
+        job_doc = db.collection('job_postings').document(job_id).get()
+        if not job_doc.exists:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = job_doc.to_dict()
         
         # Check if job is still active
-        if job.status != 'active':
+        if job.get('status') != 'active':
             return jsonify({'error': 'This job is no longer accepting applications'}), 400
         
+        user_id = getattr(user, 'id')
         # Check if already applied
-        existing_application = JobApplication.query.filter_by(
-            job_id=job_id,
-            housegirl_id=request.current_user.id
-        ).first()
+        existing = list(db.collection('job_applications')
+                        .where('job_id', '==', job_id)
+                        .where('housegirl_id', '==', user_id).limit(1).stream())
         
-        if existing_application:
+        if existing:
             return jsonify({'error': 'You have already applied to this job'}), 400
         
         data = request.get_json()
         
         # Create job application
-        application = JobApplication(
-            id=f'app_{uuid.uuid4().hex[:12]}',
-            job_id=job_id,
-            housegirl_id=request.current_user.id,
-            cover_letter=data.get('cover_letter', ''),
-            status='pending'
-        )
+        app_id = f'app_{uuid.uuid4().hex[:12]}'
+        application_data = {
+            'id': app_id,
+            'job_id': job_id,
+            'housegirl_id': user_id,
+            'cover_letter': data.get('cover_letter', ''),
+            'status': 'pending',
+            'applied_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(application)
-        db.session.commit()
+        db.collection('job_applications').document(app_id).set(application_data)
         
-        return jsonify({
-            'id': application.id,
-            'job_id': application.job_id,
-            'housegirl_id': application.housegirl_id,
-            'cover_letter': application.cover_letter,
-            'status': application.status,
-            'applied_at': application.applied_at.isoformat()
-        }), 201
+        return jsonify(application_data), 201
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @jobs_bp.route('/<job_id>/applications', methods=['GET'])
-@login_required
+@firebase_auth_required
 def get_job_applications(job_id):
     """Get applications for a job (employer only)"""
     try:
-        job = JobPosting.query.get_or_404(job_id)
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        job_doc = db.collection('job_postings').document(job_id).get()
+        if not job_doc.exists:
+            return jsonify({'error': 'Job not found'}), 404
+            
+        job = job_doc.to_dict()
         
         # Check if user owns this job posting
-        if job.employer_id != request.current_user.id:
+        if job.get('employer_id') != getattr(user, 'id'):
             return jsonify({'error': 'You can only view applications for your own job postings'}), 403
         
-        applications = JobApplication.query.filter_by(job_id=job_id).all()
+        apps_docs = db.collection('job_applications').where('job_id', '==', job_id).stream()
         
         result = []
-        for app in applications:
+        for doc in apps_docs:
+            app = doc.to_dict()
+            hg_id = app.get('housegirl_id')
+            hg_name = ""
+            hg_email = ""
+            hg_phone = ""
+            
+            if hg_id:
+                hg_user_doc = db.collection('users').document(hg_id).get()
+                if hg_user_doc.exists:
+                    hg_u = hg_user_doc.to_dict()
+                    hg_name = f"{hg_u.get('first_name', '')} {hg_u.get('last_name', '')}".strip()
+                    hg_email = hg_u.get('email', '')
+                    hg_phone = hg_u.get('phone_number', '')
+                    
             result.append({
-                'id': app.id,
-                'job_id': app.job_id,
-                'housegirl_id': app.housegirl_id,
-                'cover_letter': app.cover_letter,
-                'status': app.status,
-                'applied_at': app.applied_at.isoformat(),
-                'reviewed_at': app.reviewed_at.isoformat() if app.reviewed_at else None,
+                'id': app.get('id'),
+                'job_id': app.get('job_id'),
+                'housegirl_id': app.get('housegirl_id'),
+                'cover_letter': app.get('cover_letter'),
+                'status': app.get('status'),
+                'applied_at': app.get('applied_at'),
+                'reviewed_at': app.get('reviewed_at'),
                 'housegirl': {
-                    'id': app.housegirl.id,
-                    'name': f"{app.housegirl.first_name} {app.housegirl.last_name}",
-                    'email': app.housegirl.email,
-                    'phone_number': app.housegirl.phone_number
+                    'id': hg_id,
+                    'name': hg_name,
+                    'email': hg_email,
+                    'phone_number': hg_phone
                 }
             })
         
         return jsonify({'applications': result}), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

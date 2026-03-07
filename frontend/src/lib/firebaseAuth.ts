@@ -8,9 +8,14 @@ import {
   sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithPopup,
-  sendEmailVerification
+  sendEmailVerification,
+  setPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { auth } from './firebase';
+
+// Ensure authentication state persists across page reloads
+setPersistence(auth, browserLocalPersistence).catch(console.error);
 
 // Google Auth Provider
 const googleProvider = new GoogleAuthProvider();

@@ -447,7 +447,7 @@ const HousegirlsListPage = () => {
                     onClick={() => navigate(getDashboardRoute())}
                     className="hidden md:inline-flex bg-black hover:bg-[#333] text-white rounded-full transition-opacity duration-150"
                   >
-                    Dashboard
+                    Dashboard →
                   </Button>
                   <Button variant="outline" onClick={signOut} className="hidden md:inline-flex border-gray-300 text-black bg-transparent hover:bg-gray-100 rounded-full">
                     Logout
@@ -555,7 +555,7 @@ const HousegirlsListPage = () => {
                       }}
                       className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]"
                     >
-                      Dashboard
+                      Dashboard →
                     </Button>
                     <Button
                       variant="outline"

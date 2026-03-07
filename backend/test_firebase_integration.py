@@ -7,7 +7,7 @@ import requests
 import json
 
 # Test configuration
-BASE_URL = "http://localhost:5000"
+BASE_URL = "http://localhost:5001"
 TEST_EMAIL = "test@employer.com"
 TEST_PASSWORD = "password123"
 
