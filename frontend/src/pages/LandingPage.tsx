@@ -412,6 +412,8 @@ const LandingPage = () => {
               <p className="text-white">📍 Nairobi, Kenya</p>
               <a href="https://wa.me/254700000000" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#aaa] transition-colors">📱 WhatsApp us</a>
               <p className="text-white">🌐 domesticconnect.co.ke</p>
+              <Link to="/privacy-policy" className="text-white hover:text-[#aaa] transition-colors">Privacy Policy</Link>
+              <Link to="/terms" className="text-white hover:text-[#aaa] transition-colors">Terms of Service</Link>
             </div>
           </div>
         </div>

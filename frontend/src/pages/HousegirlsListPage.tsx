@@ -832,6 +832,11 @@ const HousegirlsListPage = () => {
       <footer className="bg-black text-white py-8 mt-10">
         <div className="max-w-6xl mx-auto px-4 text-center">
           <p className="text-gray-300">© 2024 Domestic Connect. All rights reserved.</p>
+          <div className="mt-3 flex items-center justify-center gap-4 text-sm">
+            <a href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</a>
+            <span className="text-gray-500">·</span>
+            <a href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms of Service</a>
+          </div>
         </div>
       </footer>
 
