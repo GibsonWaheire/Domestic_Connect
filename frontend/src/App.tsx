@@ -24,6 +24,8 @@ import StatsPage from "./pages/StatsPage";
 import WhyChoosePage from "./pages/WhyChoosePage";
 import AgencyPackagesPage from "./pages/AgencyPackagesPage";
 import ContactUsPage from "./pages/ContactUsPage";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,6 +62,8 @@ const App = () => (
                 <Route path="/agency-packages" element={<AgencyPackagesPage />} />
                 <Route path="/contact-us" element={<ContactUsPage />} />
                 <Route path="/contact" element={<ContactUsPage />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/housegirls" element={<HousegirlsListPage />} />
                 <Route path="/agencies" element={<AgencyPage />} />
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
