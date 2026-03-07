@@ -1,6 +1,4 @@
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
 from flask_cors import CORS
 import os
 import sys
@@ -8,9 +6,8 @@ import sys
 # Add the backend directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# Initialize extensions
-db = SQLAlchemy()
-migrate = Migrate()
+# The global `db` handles Firebase. We don't initialize it via Flask extensions.
+from app.firebase_init import db
 
 def create_app(config_name=None):
     """Application factory pattern"""
@@ -21,23 +18,17 @@ def create_app(config_name=None):
     from config import config
     app.config.from_object(config[config_name])
     
-    # Initialize extensions with app
-    db.init_app(app)
-    migrate.init_app(app, db)
+    # Initialize extensions with app (none needed for FB right now)
     
-    # Configure CORS for both development and production
+    # Configure CORS using environment variables/config
+    # Call init_app on config if it exists (for ProductionConfig checks)
+    config_class = config[config_name]
+    if hasattr(config_class, 'init_app'):
+        config_class.init_app(app)
+        
     CORS(app, resources={
         r"/api/*": {
-            "origins": [
-                "http://localhost:5173", 
-                "http://127.0.0.1:5173",
-                "http://localhost:5174",
-                "http://127.0.0.1:5174",
-                "http://localhost:5175",
-                "http://127.0.0.1:5175",
-                "https://domestic-connect.co.ke",
-                "https://www.domestic-connect.co.ke"
-            ],
+            "origins": app.config.get('CORS_ORIGINS'),
             "supports_credentials": True,
             "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
             "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
@@ -91,7 +82,6 @@ def create_app(config_name=None):
     
     @app.errorhandler(500)
     def internal_error(error):
-        db.session.rollback()
         return {'error': 'Internal server error'}, 500
     
     return app

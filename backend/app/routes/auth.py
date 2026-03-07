@@ -1,63 +1,15 @@
 from flask import Blueprint, request, jsonify, session
-from app.services.auth_service import login_required, get_current_user
+from app.services.auth_service import login_required, get_current_user, firebase_auth_required
 from app.models import User, Profile
-from app import db
+from app.firebase_init import db
 from app.middleware.security import rate_limit, validate_json_input, USER_SCHEMA
 from app.middleware.performance import cache_response, compress_response
 from app.middleware.logging import log_request, log_error, log_user_action
 import uuid
 import bcrypt
-import os
-import requests
-from functools import wraps
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__)
-
-def verify_firebase_token(token):
-    """Verify Firebase ID token"""
-    try:
-        # Firebase Admin SDK would be used here in production
-        # For now, we'll make a simple verification request
-        firebase_api_key = os.getenv('FIREBASE_API_KEY')
-        if not firebase_api_key:
-            return jsonify({'error': 'Firebase API key not configured on server'}), 500
-        
-        # Verify token with Firebase REST API
-        verify_url = f"https://identitytoolkit.googleapis.com/v1/accounts:lookup?key={firebase_api_key}"
-        response = requests.post(verify_url, json={'idToken': token})
-        
-        if response.status_code == 200:
-            data = response.json()
-            if 'users' in data and len(data['users']) > 0:
-                return data['users'][0]
-        
-        return None
-    except Exception as e:
-        print(f"Firebase token verification error: {e}")
-        return None
-
-def firebase_auth_required(f):
-    """Decorator to require Firebase authentication"""
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        auth_header = request.headers.get('Authorization')
-        if not auth_header or not auth_header.startswith('Bearer '):
-            return jsonify({'error': 'Firebase token required'}), 401
-        
-        token = auth_header.split(' ')[1]
-        firebase_user = verify_firebase_token(token)
-        
-        if not firebase_user:
-            return jsonify({'error': 'Invalid Firebase token'}), 401
-        
-        # Attach firebase payload and existing user only.
-        # Endpoints decide whether to create/update a user to avoid silent role defaults.
-        user = User.query.filter_by(firebase_uid=firebase_user['localId']).first()
-        request.firebase_user = firebase_user
-        request.current_user = user
-        return f(*args, **kwargs)
-    
-    return decorated_function
 
 @auth_bp.route('/firebase_signup', methods=['POST'])
 @firebase_auth_required
@@ -75,40 +27,51 @@ def firebase_signup():
             return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
 
         if not user:
-            user = User(
-                id=str(uuid.uuid4()),
-                firebase_uid=firebase_user['localId'],
+            # Create the user using the model method
+            user = User.create_user(
+                firebase_uid=firebase_user.get('uid'),
                 email=data.get('email') or firebase_user.get('email', ''),
+                user_type=required_role,
                 first_name=data.get('first_name', ''),
                 last_name=data.get('last_name', ''),
-                phone_number=data.get('phone_number'),
-                user_type=required_role,
-                is_firebase_user=True
+                phone_number=data.get('phone_number')
             )
-            db.session.add(user)
-        elif user.user_type != required_role:
+        elif getattr(user, 'user_type', None) != required_role:
             return jsonify({'error': 'This account is already registered with a different role.'}), 409
         
         # Update user with additional profile information
-        user.user_type = required_role
-        user.first_name = data.get('first_name', user.first_name)
-        user.last_name = data.get('last_name', user.last_name)
-        user.phone_number = data.get('phone_number', user.phone_number)
+        updates = {}
+        if data.get('first_name'): updates['first_name'] = data['first_name']
+        if data.get('last_name'): updates['last_name'] = data['last_name']
+        if data.get('phone_number'): updates['phone_number'] = data['phone_number']
+        updates['user_type'] = required_role
         
-        # Create profile if it doesn't exist
-        if not hasattr(user, 'profile') or not user.profile:
-            profile = Profile(
-                user_id=user.id,
-                **{k: v for k, v in data.items() if k not in ['user_type', 'first_name', 'last_name', 'phone_number']}
-            )
-            db.session.add(profile)
+        if updates:
+            user.update_profile(**updates)
         
-        db.session.commit()
+        # Create profile if it doesn't exist by checking firestore manually
+        profiles_ref = db.collection('profiles').where('user_id', '==', user.id).limit(1).stream()
+        profile_exists = any(True for _ in profiles_ref)
+        
+        if not profile_exists:
+            profile_id = str(uuid.uuid4())
+            profile_data = {
+                'id': profile_id,
+                'user_id': user.id,
+                'created_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            # Add any extra fields from data not already handled
+            for k, v in data.items():
+                if k not in ['user_type', 'first_name', 'last_name', 'phone_number']:
+                    profile_data[k] = v
+            db.collection('profiles').document(profile_id).set(profile_data)
+        
         session['user_id'] = user.id
-        session['user_type'] = user.user_type
+        session['user_type'] = getattr(user, 'user_type', None)
         
         # Log user action
-        log_user_action(user.id, 'firebase_signup', {'user_type': data.get('user_type')})
+        log_user_action(user.id, 'firebase_signup', {'user_type': required_role})
         
         return jsonify({
             'message': 'User profile created successfully',
@@ -116,7 +79,8 @@ def firebase_signup():
         }), 201
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/firebase_user', methods=['POST'])
@@ -132,31 +96,37 @@ def firebase_user():
         if not user:
             lookup_email = data.get('email') or firebase_user.get('email')
             if lookup_email:
-                user = User.query.filter_by(email=lookup_email).first()
+                user = User.find_by_email(lookup_email)
                 if user:
-                    user.firebase_uid = firebase_user['localId']
-                    user.is_firebase_user = True
+                    user.update_profile(
+                        firebase_uid=firebase_user.get('uid'),
+                        is_firebase_user=True
+                    )
             if not user:
                 return jsonify({'error': 'User profile not found. Complete signup first.'}), 404
         
-        # Update user information if provided
+        updates = {}
         if data.get('display_name'):
             name_parts = data['display_name'].split(' ')
-            user.first_name = name_parts[0]
-            user.last_name = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
+            updates['first_name'] = name_parts[0]
+            updates['last_name'] = ' '.join(name_parts[1:]) if len(name_parts) > 1 else ''
         
         if data.get('email'):
-            user.email = data['email']
+            updates['email'] = data['email']
+            
+        if updates:
+            user.update_profile(**updates)
         
-        db.session.commit()
         session['user_id'] = user.id
-        session['user_type'] = user.user_type
+        session['user_type'] = getattr(user, 'user_type', None)
         
         return jsonify({
-            'user': user.to_dict()
+            'user': user.get_full_profile_data()
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/signup', methods=['POST'])
@@ -170,27 +140,33 @@ def signup():
         data = request.get_json()
         
         # Check if user already exists
-        existing_user = User.query.filter_by(email=data['email']).first()
+        existing_user = User.find_by_email(data['email'])
         if existing_user:
             return jsonify({'error': 'User already exists'}), 400
         
-        # Hash password
-        password_hash = bcrypt.hashpw(data['password'].encode('utf-8'), bcrypt.gensalt())
+        # Create user via BaseModel and set password
+        user_id = str(uuid.uuid4())
         
-        # Create user
-        user = User(
-            id=str(uuid.uuid4()),
-            email=data['email'],
-            password_hash=password_hash.decode('utf-8'),
-            first_name=data['first_name'],
-            last_name=data['last_name'],
-            phone_number=data.get('phone_number'),
-            user_type=data['user_type'],
-            is_firebase_user=False
-        )
+        user_info = {
+            'id': user_id,
+            'firebase_uid': None,
+            'email': data['email'],
+            'user_type': data['user_type'],
+            'first_name': data['first_name'],
+            'last_name': data['last_name'],
+            'phone_number': data.get('phone_number'),
+            'is_active': True,
+            'is_admin': False,
+            'is_firebase_user': False,
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(user)
-        db.session.commit()
+        user = User(**user_info)
+        user.set_password(data['password'])
+        user_info['password_hash'] = user.password_hash
+        
+        db.collection('users').document(user_id).set(user_info)
         
         # Log user action
         log_user_action(user.id, 'signup', {'user_type': data['user_type']})
@@ -201,7 +177,8 @@ def signup():
         }), 201
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/login', methods=['POST'])
@@ -215,27 +192,29 @@ def login():
         data = request.get_json()
         
         # Find user
-        user = User.query.filter_by(email=data['email']).first()
+        user = User.find_by_email(data['email'])
         if not user:
             return jsonify({'error': 'Invalid credentials'}), 401
         
-        # Verify password
-        if not bcrypt.checkpw(data['password'].encode('utf-8'), user.password_hash.encode('utf-8')):
+        # Verify password (model method assumes instance attributes)
+        if not user.check_password(data['password']):
             return jsonify({'error': 'Invalid credentials'}), 401
         
         # Create session
         session['user_id'] = user.id
-        session['user_type'] = user.user_type
+        session['user_type'] = getattr(user, 'user_type', None)
         
         # Log user action
         log_user_action(user.id, 'login')
         
         return jsonify({
             'message': 'Login successful',
-            'user': user.to_dict()
+            'user': user.get_full_profile_data()
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @auth_bp.route('/logout', methods=['DELETE'])
@@ -266,12 +245,13 @@ def check_session():
         if not user_id:
             return jsonify({'user': None}), 200
         
-        user = User.query.get(user_id)
+        # For session check, we bring along full profile data
+        user = User.get_user_with_profile(user_id)
         if not user:
             session.clear()
             return jsonify({'user': None}), 200
         
-        return jsonify({'user': user.to_dict()}), 200
+        return jsonify({'user': user.get_full_profile_data()}), 200
         
     except Exception as e:
         print(f"Check session error: {e}")
@@ -280,18 +260,20 @@ def check_session():
 @auth_bp.route('/update-profile', methods=['PUT'])
 @firebase_auth_required
 def update_user_profile():
-    """Update user profile information using SQLAlchemy ORM methods"""
+    """Update user profile information using Firestore methods"""
     try:
         user = request.current_user
         data = request.get_json()
         
-        # Use SQLAlchemy method to update profile
+        # Use BaseModel method to update profile
         user.update_profile(**data)
         
         return jsonify({
             'message': 'Profile updated successfully',
-            'user': user.to_dict()
+            'user': user.get_full_profile_data()
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500

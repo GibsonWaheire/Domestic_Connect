@@ -1,33 +1,18 @@
-from app import db
+from app.firebase_init import db
 from datetime import datetime
-from sqlalchemy import Index
 import bcrypt
 
-class User(db.Model):
+class BaseModel:
+    """Base class to allow keyword argument initialization similar to SQLAlchemy"""
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
+class User(BaseModel):
     """Base user model for authentication"""
-    __tablename__ = 'users'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    firebase_uid = db.Column(db.String(128), unique=True, nullable=True, index=True)
-    email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    password_hash = db.Column(db.String(128), nullable=True)  # For local auth
-    user_type = db.Column(db.Enum('employer', 'housegirl', 'agency', name='user_type'), nullable=False)
-    first_name = db.Column(db.String(50), nullable=False)
-    last_name = db.Column(db.String(50), nullable=False)
-    phone_number = db.Column(db.String(20))
-    is_active = db.Column(db.Boolean, default=True)
-    is_admin = db.Column(db.Boolean, default=False)
-    is_firebase_user = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    profile = db.relationship('Profile', backref='user', uselist=False, cascade='all, delete-orphan')
-    purchases = db.relationship('UserPurchase', backref='user', lazy='dynamic')
-    contact_access = db.relationship('ContactAccess', backref='user', lazy='dynamic')
     
     def __repr__(self):
-        return f'<User {self.email}>'
+        return f'<User {getattr(self, "email", "Unknown")}>'
     
     def set_password(self, password):
         """Hash and set password using bcrypt"""
@@ -44,7 +29,7 @@ class User(db.Model):
     
     def check_password(self, password):
         """Check if provided password matches the hash"""
-        if not self.password_hash or not password:
+        if not getattr(self, 'password_hash', None) or not password:
             return False
         
         try:
@@ -60,616 +45,427 @@ class User(db.Model):
     def to_dict(self):
         """Convert user to dictionary for JSON serialization"""
         return {
-            'id': self.id,
-            'firebase_uid': self.firebase_uid,
-            'email': self.email,
-            'user_type': self.user_type,
-            'first_name': self.first_name,
-            'last_name': self.last_name,
-            'phone_number': self.phone_number,
-            'is_active': self.is_active,
-            'is_admin': self.is_admin,
-            'is_firebase_user': self.is_firebase_user,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
+            'id': getattr(self, 'id', None),
+            'firebase_uid': getattr(self, 'firebase_uid', None),
+            'email': getattr(self, 'email', None),
+            'user_type': getattr(self, 'user_type', None),
+            'first_name': getattr(self, 'first_name', None),
+            'last_name': getattr(self, 'last_name', None),
+            'phone_number': getattr(self, 'phone_number', None),
+            'is_active': getattr(self, 'is_active', True),
+            'is_admin': getattr(self, 'is_admin', False),
+            'is_firebase_user': getattr(self, 'is_firebase_user', False),
+            'created_at': getattr(self, 'created_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'created_at', None), datetime) else getattr(self, 'created_at', datetime.utcnow().isoformat()),
+            'updated_at': getattr(self, 'updated_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'updated_at', None), datetime) else getattr(self, 'updated_at', datetime.utcnow().isoformat()),
+            'password_hash': getattr(self, 'password_hash', None)
         }
     
     def update_profile(self, **kwargs):
-        """Update user profile fields using SQLAlchemy ORM"""
-        from app import db
-        
+        """Update user profile fields using Firestore"""
         for field, value in kwargs.items():
-            if hasattr(self, field) and value is not None:
+            if value is not None:
                 setattr(self, field, value)
         
-        try:
-            db.session.commit()
-            return True
-        except Exception as e:
-            db.session.rollback()
-            raise e
+        if hasattr(self, 'id'):
+            self.updated_at = datetime.utcnow()
+            db.collection('users').document(self.id).update(kwargs)
+        return True
     
     def get_full_profile_data(self):
         """Get complete profile data including type-specific information"""
         profile_data = self.to_dict()
+        profile_data.pop('password_hash', None)
         
-        if self.profile:
+        if not hasattr(self, 'id'):
+            return profile_data
+            
+        profiles_ref = db.collection('profiles').where('user_id', '==', self.id).limit(1).stream()
+        profile_doc = None
+        for p in profiles_ref:
+            profile_doc = p.to_dict()
+            profile_doc['id'] = p.id
+            break
+            
+        if profile_doc:
             profile_data['profile'] = {
-                'id': self.profile.id,
-                'created_at': self.profile.created_at.isoformat(),
-                'updated_at': self.profile.updated_at.isoformat()
+                'id': profile_doc.get('id'),
+                'created_at': profile_doc.get('created_at'),
+                'updated_at': profile_doc.get('updated_at')
             }
             
-            # Add type-specific profile data using SQLAlchemy relationships
-            if self.user_type == 'employer' and self.profile.employer_profile:
-                profile_data['profile']['employer'] = {
-                    'company_name': self.profile.employer_profile.company_name,
-                    'location': self.profile.employer_profile.location,
-                    'description': self.profile.employer_profile.description
-                }
-            elif self.user_type == 'housegirl' and self.profile.housegirl_profile:
-                profile_data['profile']['housegirl'] = {
-                    'age': self.profile.housegirl_profile.age,
-                    'bio': self.profile.housegirl_profile.bio,
-                    'current_location': self.profile.housegirl_profile.current_location,
-                    'location': self.profile.housegirl_profile.location,
-                    'education': self.profile.housegirl_profile.education,
-                    'experience': self.profile.housegirl_profile.experience,
-                    'expected_salary': self.profile.housegirl_profile.expected_salary,
-                    'accommodation_type': self.profile.housegirl_profile.accommodation_type,
-                    'tribe': self.profile.housegirl_profile.tribe,
-                    'is_available': self.profile.housegirl_profile.is_available,
-                    'profile_photo_url': self.profile.housegirl_profile.profile_photo_url
-                }
-            elif self.user_type == 'agency' and self.profile.agency_profile:
-                profile_data['profile']['agency'] = {
-                    'agency_name': self.profile.agency_profile.agency_name,
-                    'location': self.profile.agency_profile.location,
-                    'description': self.profile.agency_profile.description,
-                    'license_number': self.profile.agency_profile.license_number
-                }
+            # Add type-specific profile data using Firestore docs
+            if self.user_type == 'employer':
+                emp_ref = db.collection('employer_profiles').where('profile_id', '==', profile_doc['id']).limit(1).stream()
+                for doc in emp_ref:
+                    p = doc.to_dict()
+                    profile_data['profile']['employer'] = {
+                        'company_name': p.get('company_name'),
+                        'location': p.get('location'),
+                        'description': p.get('description')
+                    }
+            elif self.user_type == 'housegirl':
+                hg_ref = db.collection('housegirl_profiles').where('profile_id', '==', profile_doc['id']).limit(1).stream()
+                for doc in hg_ref:
+                    p = doc.to_dict()
+                    profile_data['profile']['housegirl'] = {
+                        'age': p.get('age'),
+                        'bio': p.get('bio'),
+                        'current_location': p.get('current_location'),
+                        'location': p.get('location'),
+                        'education': p.get('education'),
+                        'experience': p.get('experience'),
+                        'expected_salary': p.get('expected_salary'),
+                        'accommodation_type': p.get('accommodation_type'),
+                        'tribe': p.get('tribe'),
+                        'is_available': p.get('is_available'),
+                        'profile_photo_url': p.get('profile_photo_url')
+                    }
+            elif self.user_type == 'agency':
+                ag_ref = db.collection('agency_profiles').where('profile_id', '==', profile_doc['id']).limit(1).stream()
+                for doc in ag_ref:
+                    p = doc.to_dict()
+                    profile_data['profile']['agency'] = {
+                        'agency_name': p.get('agency_name'),
+                        'location': p.get('location'),
+                        'description': p.get('description'),
+                        'license_number': p.get('license_number')
+                    }
         
         return profile_data
     
     @classmethod
     def find_by_firebase_uid(cls, firebase_uid):
-        """Class method to find user by Firebase UID using SQLAlchemy ORM"""
-        return cls.query.filter_by(firebase_uid=firebase_uid).first()
+        """Class method to find user by Firebase UID using Firestore"""
+        docs = db.collection('users').where('firebase_uid', '==', firebase_uid).limit(1).stream()
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            return cls(**data)
+        return None
     
     @classmethod
     def find_by_email(cls, email):
-        """Class method to find user by email using SQLAlchemy ORM"""
-        return cls.query.filter_by(email=email).first()
+        """Class method to find user by email using Firestore"""
+        docs = db.collection('users').where('email', '==', email).limit(1).stream()
+        for doc in docs:
+            data = doc.to_dict()
+            data['id'] = doc.id
+            return cls(**data)
+        return None
     
     @classmethod
     def create_user(cls, firebase_uid, email, user_type=None, **kwargs):
-        """Class method to create a new user using SQLAlchemy ORM"""
-        from app import db
+        """Class method to create a new user using Firestore"""
         if user_type not in ['employer', 'housegirl', 'agency']:
             raise ValueError('A valid user_type is required to create a user.')
         
-        user = cls(
-            id=f"user_{firebase_uid}",
-            firebase_uid=firebase_uid,
-            email=email,
-            user_type=user_type,
-            first_name=kwargs.get('first_name', ''),
-            last_name=kwargs.get('last_name', ''),
-            phone_number=kwargs.get('phone_number')
-        )
+        user_id = f"user_{firebase_uid}"
+        user_info = {
+            'id': user_id,
+            'firebase_uid': firebase_uid,
+            'email': email,
+            'user_type': user_type,
+            'first_name': kwargs.get('first_name', ''),
+            'last_name': kwargs.get('last_name', ''),
+            'phone_number': kwargs.get('phone_number'),
+            'is_active': True,
+            'is_admin': False,
+            'is_firebase_user': True,
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(user)
-        db.session.commit()
-        return user
+        db.collection('users').document(user_id).set(user_info)
+        return cls(**user_info)
     
     @classmethod
     def get_user_with_profile(cls, user_id):
-        """Get user with profile data using SQLAlchemy joinedload for optimization"""
-        from sqlalchemy.orm import joinedload
+        """Get user with profile data using Firestore"""
+        doc_ref = db.collection('users').document(user_id).get()
+        if not doc_ref.exists:
+            return None
+            
+        user = cls(**doc_ref.to_dict())
         
-        return cls.query.options(
-            joinedload(cls.profile).joinedload(Profile.employer_profile),
-            joinedload(cls.profile).joinedload(Profile.housegirl_profile),
-            joinedload(cls.profile).joinedload(Profile.agency_profile)
-        ).filter_by(id=user_id).first()
+        profile_ref = db.collection('profiles').where('user_id', '==', user_id).limit(1).stream()
+        user.profile = None
+        for p in profile_ref:
+            user.profile = Profile(**p.to_dict())
+            if user.user_type == 'employer':
+                emp_ref = db.collection('employer_profiles').where('profile_id', '==', user.profile.id).limit(1).stream()
+                user.profile.employer_profile = next((EmployerProfile(**doc.to_dict()) for doc in emp_ref), None)
+            elif user.user_type == 'housegirl':
+                hg_ref = db.collection('housegirl_profiles').where('profile_id', '==', user.profile.id).limit(1).stream()
+                user.profile.housegirl_profile = next((HousegirlProfile(**doc.to_dict()) for doc in hg_ref), None)
+            elif user.user_type == 'agency':
+                ag_ref = db.collection('agency_profiles').where('profile_id', '==', user.profile.id).limit(1).stream()
+                user.profile.agency_profile = next((AgencyProfile(**doc.to_dict()) for doc in ag_ref), None)
+            break
+            
+        return user
     
     @classmethod
     def get_users_by_type(cls, user_type):
-        """Get users by type with optimized relationship loading"""
-        from sqlalchemy.orm import joinedload
-        
-        return cls.query.options(
-            joinedload(cls.profile)
-        ).filter_by(user_type=user_type).all()
+        """Get users by type using Firestore"""
+        docs = db.collection('users').where('user_type', '==', user_type).stream()
+        users = []
+        for doc in docs:
+            u = cls(**doc.to_dict())
+            users.append(u)
+        return users
     
     @classmethod
     def search_users(cls, search_term):
-        """Search users by name or email using SQLAlchemy ORM with case-insensitive search"""
-        return cls.query.filter(
-            cls.first_name.ilike(f'%{search_term}%') |
-            cls.last_name.ilike(f'%{search_term}%') |
-            cls.email.ilike(f'%{search_term}%')
-        ).all()
+        """Search users by name or email using Firestore (Case sensitive simulation)"""
+        users = []
+        docs = db.collection('users').stream()
+        search_lower = search_term.lower()
+        for doc in docs:
+            d = doc.to_dict()
+            fn = d.get('first_name', '').lower()
+            ln = d.get('last_name', '').lower()
+            em = d.get('email', '').lower()
+            if search_lower in fn or search_lower in ln or search_lower in em:
+                users.append(cls(**d))
+        return users
 
-class Profile(db.Model):
+class Profile(BaseModel):
     """Extended profile information"""
-    __tablename__ = 'profiles'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    user_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False, unique=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    employer_profile = db.relationship('EmployerProfile', backref='profile', uselist=False, cascade='all, delete-orphan')
-    housegirl_profile = db.relationship('HousegirlProfile', backref='profile', uselist=False, cascade='all, delete-orphan')
-    agency_profile = db.relationship('AgencyProfile', backref='profile', uselist=False, cascade='all, delete-orphan')
-    photos = db.relationship('Photo', backref='profile', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
-        return f'<Profile {self.id}>'
+        return f'<Profile {getattr(self, "id", "Unknown")}>'
     
     def create_employer_profile(self, **kwargs):
-        """Create employer profile using SQLAlchemy ORM"""
-        from app import db
-        
-        if self.employer_profile:
+        """Create employer profile using Firestore"""
+        if getattr(self, 'employer_profile', None):
             raise ValueError("Employer profile already exists")
         
-        employer_profile = EmployerProfile(
-            id=f"emp_{self.id}",
-            profile_id=self.id,
-            company_name=kwargs.get('company_name'),
-            location=kwargs.get('location'),
-            description=kwargs.get('description')
-        )
+        emp_id = f"emp_{self.id}"
+        data = {
+            'id': emp_id,
+            'profile_id': self.id,
+            'company_name': kwargs.get('company_name'),
+            'location': kwargs.get('location'),
+            'description': kwargs.get('description'),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(employer_profile)
-        db.session.commit()
-        return employer_profile
+        db.collection('employer_profiles').document(emp_id).set(data)
+        emp_prof = EmployerProfile(**data)
+        self.employer_profile = emp_prof
+        return emp_prof
     
     def create_housegirl_profile(self, **kwargs):
-        """Create housegirl profile using SQLAlchemy ORM"""
-        from app import db
-        
-        if self.housegirl_profile:
+        """Create housegirl profile using Firestore"""
+        if getattr(self, 'housegirl_profile', None):
             raise ValueError("Housegirl profile already exists")
         
-        housegirl_profile = HousegirlProfile(
-            id=f"hg_{self.id}",
-            profile_id=self.id,
-            age=kwargs.get('age'),
-            bio=kwargs.get('bio'),
-            current_location=kwargs.get('current_location'),
-            location=kwargs.get('location'),
-            education=kwargs.get('education'),
-            experience=kwargs.get('experience'),
-            expected_salary=kwargs.get('expected_salary'),
-            accommodation_type=kwargs.get('accommodation_type'),
-            tribe=kwargs.get('tribe'),
-            is_available=kwargs.get('is_available', True),
-            profile_photo_url=kwargs.get('profile_photo_url')
-        )
+        hg_id = f"hg_{self.id}"
+        data = {
+            'id': hg_id,
+            'profile_id': self.id,
+            'age': kwargs.get('age'),
+            'bio': kwargs.get('bio'),
+            'current_location': kwargs.get('current_location'),
+            'location': kwargs.get('location'),
+            'education': kwargs.get('education'),
+            'experience': kwargs.get('experience'),
+            'expected_salary': kwargs.get('expected_salary'),
+            'accommodation_type': kwargs.get('accommodation_type'),
+            'tribe': kwargs.get('tribe'),
+            'is_available': kwargs.get('is_available', True),
+            'profile_photo_url': kwargs.get('profile_photo_url'),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(housegirl_profile)
-        db.session.commit()
-        return housegirl_profile
+        db.collection('housegirl_profiles').document(hg_id).set(data)
+        hg_prof = HousegirlProfile(**data)
+        self.housegirl_profile = hg_prof
+        return hg_prof
     
     def create_agency_profile(self, **kwargs):
-        """Create agency profile using SQLAlchemy ORM"""
-        from app import db
-        
-        if self.agency_profile:
+        """Create agency profile using Firestore"""
+        if getattr(self, 'agency_profile', None):
             raise ValueError("Agency profile already exists")
         
-        agency_profile = AgencyProfile(
-            id=f"ag_{self.id}",
-            profile_id=self.id,
-            agency_name=kwargs.get('agency_name'),
-            location=kwargs.get('location'),
-            description=kwargs.get('description'),
-            license_number=kwargs.get('license_number')
-        )
+        ag_id = f"ag_{self.id}"
+        data = {
+            'id': ag_id,
+            'profile_id': self.id,
+            'agency_name': kwargs.get('agency_name'),
+            'location': kwargs.get('location'),
+            'description': kwargs.get('description'),
+            'license_number': kwargs.get('license_number'),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(agency_profile)
-        db.session.commit()
-        return agency_profile
+        db.collection('agency_profiles').document(ag_id).set(data)
+        ag_prof = AgencyProfile(**data)
+        self.agency_profile = ag_prof
+        return ag_prof
 
-class EmployerProfile(db.Model):
+class EmployerProfile(BaseModel):
     """Employer-specific profile data"""
-    __tablename__ = 'employer_profiles'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    profile_id = db.Column(db.String(50), db.ForeignKey('profiles.id'), nullable=False, unique=True)
-    company_name = db.Column(db.String(100))
-    location = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    agency_clients = db.relationship('AgencyClient', backref='employer_profile', lazy='dynamic')
-    
     def __repr__(self):
-        return f'<EmployerProfile {self.company_name}>'
+        return f'<EmployerProfile {getattr(self, "company_name", "Unknown")}>'
 
-class HousegirlProfile(db.Model):
+class HousegirlProfile(BaseModel):
     """Housegirl-specific profile data"""
-    __tablename__ = 'housegirl_profiles'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    profile_id = db.Column(db.String(50), db.ForeignKey('profiles.id'), nullable=False, unique=True)
-    age = db.Column(db.Integer)
-    bio = db.Column(db.Text)
-    current_location = db.Column(db.String(100))
-    location = db.Column(db.String(100))
-    education = db.Column(db.String(50))
-    experience = db.Column(db.String(50))
-    expected_salary = db.Column(db.Integer)
-    accommodation_type = db.Column(db.String(20))
-    tribe = db.Column(db.String(50))
-    is_available = db.Column(db.Boolean, default=True)
-    profile_photo_url = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    agency_workers = db.relationship('AgencyWorker', backref='housegirl_profile', lazy='dynamic')
-    contact_access = db.relationship('ContactAccess', backref='housegirl_profile', lazy='dynamic')
-    
     def __repr__(self):
-        return f'<HousegirlProfile {self.id}>'
+        return f'<HousegirlProfile {getattr(self, "id", "Unknown")}>'
     
     def to_dict(self):
         """Convert housegirl profile to dictionary for JSON serialization"""
-        return {
-            'id': self.id,
-            'age': self.age,
-            'bio': self.bio,
-            'current_location': self.current_location,
-            'location': self.location,
-            'education': self.education,
-            'experience': self.experience,
-            'expected_salary': self.expected_salary,
-            'accommodation_type': self.accommodation_type,
-            'tribe': self.tribe,
-            'is_available': self.is_available,
-            'profile_photo_url': self.profile_photo_url,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
-        }
+        return dict(self.__dict__)
     
     @classmethod
     def find_available_workers(cls):
-        """Find all available housegirls using SQLAlchemy ORM"""
-        return cls.query.filter_by(is_available=True).all()
+        docs = db.collection('housegirl_profiles').where('is_available', '==', True).stream()
+        return [cls(**d.to_dict()) for d in docs]
     
     @classmethod
     def find_by_location(cls, location):
-        """Find housegirls by location using SQLAlchemy ORM with case-insensitive search"""
-        return cls.query.filter(
-            cls.location.ilike(f'%{location}%') |
-            cls.current_location.ilike(f'%{location}%')
-        ).all()
+        docs = db.collection('housegirl_profiles').stream()
+        workers = []
+        loc = location.lower()
+        for doc in docs:
+            d = doc.to_dict()
+            ll = d.get('location', '').lower()
+            cl = d.get('current_location', '').lower()
+            if loc in ll or loc in cl:
+                workers.append(cls(**d))
+        return workers
     
     @classmethod
     def find_by_salary_range(cls, min_salary, max_salary):
-        """Find housegirls within salary range using SQLAlchemy ORM"""
-        return cls.query.filter(
-            cls.expected_salary >= min_salary,
-            cls.expected_salary <= max_salary
-        ).all()
+        docs = db.collection('housegirl_profiles').where('expected_salary', '>=', min_salary).where('expected_salary', '<=', max_salary).stream()
+        return [cls(**d.to_dict()) for d in docs]
     
     @classmethod
     def find_by_experience(cls, experience_level):
-        """Find housegirls by experience level using SQLAlchemy ORM"""
-        return cls.query.filter(cls.experience.ilike(f'%{experience_level}%')).all()
+        docs = db.collection('housegirl_profiles').stream()
+        return [cls(**d.to_dict()) for d in docs if experience_level.lower() in d.to_dict().get('experience', '').lower()]
     
     @classmethod
     def find_by_education(cls, education_level):
-        """Find housegirls by education level using SQLAlchemy ORM"""
-        return cls.query.filter(cls.education.ilike(f'%{education_level}%')).all()
+        docs = db.collection('housegirl_profiles').stream()
+        return [cls(**d.to_dict()) for d in docs if education_level.lower() in d.to_dict().get('education', '').lower()]
     
     @classmethod
     def search_workers(cls, search_term):
-        """Search housegirls by bio, location, or experience using SQLAlchemy ORM"""
-        return cls.query.filter(
-            cls.bio.ilike(f'%{search_term}%') |
-            cls.location.ilike(f'%{search_term}%') |
-            cls.experience.ilike(f'%{search_term}%') |
-            cls.education.ilike(f'%{search_term}%')
-        ).all()
+        docs = db.collection('housegirl_profiles').stream()
+        workers = []
+        s = search_term.lower()
+        for doc in docs:
+            d = doc.to_dict()
+            if s in d.get('bio', '').lower() or s in d.get('location', '').lower() or s in d.get('experience', '').lower() or s in d.get('education', '').lower():
+                workers.append(cls(**d))
+        return workers
     
     @classmethod
     def get_workers_with_profile(cls):
-        """Get housegirls with their user profile using SQLAlchemy joinedload"""
-        from sqlalchemy.orm import joinedload
-        
-        return cls.query.options(
-            joinedload(cls.profile).joinedload(Profile.user)
-        ).all()
+        docs = db.collection('housegirl_profiles').stream()
+        workers = []
+        for doc in docs:
+            hg = cls(**doc.to_dict())
+            if hasattr(hg, 'profile_id'):
+                p_doc = db.collection('profiles').document(hg.profile_id).get()
+                if p_doc.exists:
+                    p = Profile(**p_doc.to_dict())
+                    if hasattr(p, 'user_id'):
+                        u_doc = db.collection('users').document(p.user_id).get()
+                        if u_doc.exists:
+                            p.user = User(**u_doc.to_dict())
+                    hg.profile = p
+            workers.append(hg)
+        return workers
 
-class AgencyProfile(db.Model):
+class AgencyProfile(BaseModel):
     """Agency-specific profile data"""
-    __tablename__ = 'agency_profiles'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    profile_id = db.Column(db.String(50), db.ForeignKey('profiles.id'), nullable=False, unique=True)
-    agency_name = db.Column(db.String(100))
-    location = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    license_number = db.Column(db.String(50))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
     def __repr__(self):
-        return f'<AgencyProfile {self.agency_name}>'
+        return f'<AgencyProfile {getattr(self, "agency_name", "Unknown")}>'
 
-class Agency(db.Model):
+class Agency(BaseModel):
     """Agency marketplace data"""
-    __tablename__ = 'agencies'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    license_number = db.Column(db.String(50), unique=True)
-    verification_status = db.Column(db.String(20), default='pending')
-    subscription_tier = db.Column(db.String(20), default='basic')
-    rating = db.Column(db.Float, default=0.0)
-    services = db.Column(db.JSON)  # List of services
-    location = db.Column(db.String(100))
-    monthly_fee = db.Column(db.Integer, default=0)
-    commission_rate = db.Column(db.Float, default=0.0)
-    verified_workers = db.Column(db.Integer, default=0)
-    successful_placements = db.Column(db.Integer, default=0)
-    description = db.Column(db.Text)
-    contact_email = db.Column(db.String(120))
-    contact_phone = db.Column(db.String(20))
-    website = db.Column(db.String(255))
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    agency_workers = db.relationship('AgencyWorker', backref='agency', lazy='dynamic')
-    agency_clients = db.relationship('AgencyClient', backref='agency', lazy='dynamic')
-    subscriptions = db.relationship('AgencySubscription', backref='agency', lazy='dynamic')
-    payments = db.relationship('AgencyPayment', backref='agency', lazy='dynamic')
-    
     def __repr__(self):
-        return f'<Agency {self.name}>'
+        return f'<Agency {getattr(self, "name", "Unknown")}>'
     
     def to_dict(self):
         """Convert agency to dictionary for JSON serialization"""
-        return {
-            'id': self.id,
-            'name': self.name,
-            'license_number': self.license_number,
-            'verification_status': self.verification_status,
-            'subscription_tier': self.subscription_tier,
-            'rating': self.rating,
-            'services': self.services,
-            'location': self.location,
-            'monthly_fee': self.monthly_fee,
-            'commission_rate': self.commission_rate,
-            'verified_workers': self.verified_workers,
-            'successful_placements': self.successful_placements,
-            'description': self.description,
-            'contact_email': self.contact_email,
-            'contact_phone': self.contact_phone,
-            'website': self.website,
-            'created_at': self.created_at.isoformat(),
-            'updated_at': self.updated_at.isoformat()
-        }
+        return dict(self.__dict__)
     
     @classmethod
     def find_verified_agencies(cls):
-        """Find all verified agencies using SQLAlchemy ORM"""
-        return cls.query.filter_by(verification_status='verified').all()
+        docs = db.collection('agencies').where('verification_status', '==', 'verified').stream()
+        return [cls(**d.to_dict()) for d in docs]
     
     @classmethod
     def find_by_location(cls, location):
-        """Find agencies by location using SQLAlchemy ORM"""
-        return cls.query.filter(cls.location.ilike(f'%{location}%')).all()
+        docs = db.collection('agencies').stream()
+        return [cls(**d.to_dict()) for d in docs if location.lower() in d.to_dict().get('location', '').lower()]
     
     @classmethod
     def find_by_rating(cls, min_rating=4.0):
-        """Find agencies with minimum rating using SQLAlchemy ORM"""
-        return cls.query.filter(cls.rating >= min_rating).order_by(cls.rating.desc()).all()
+        docs = db.collection('agencies').where('rating', '>=', min_rating).stream()
+        agencies = [cls(**d.to_dict()) for d in docs]
+        agencies.sort(key=lambda x: getattr(x, 'rating', 0), reverse=True)
+        return agencies
     
     @classmethod
     def find_by_subscription_tier(cls, tier):
-        """Find agencies by subscription tier using SQLAlchemy ORM"""
-        return cls.query.filter_by(subscription_tier=tier).all()
+        docs = db.collection('agencies').where('subscription_tier', '==', tier).stream()
+        return [cls(**d.to_dict()) for d in docs]
     
     @classmethod
     def search_agencies(cls, search_term):
-        """Search agencies by name or description using SQLAlchemy ORM"""
-        return cls.query.filter(
-            cls.name.ilike(f'%{search_term}%') | 
-            cls.description.ilike(f'%{search_term}%')
-        ).all()
+        docs = db.collection('agencies').stream()
+        agencies = []
+        s = search_term.lower()
+        for doc in docs:
+            d = doc.to_dict()
+            if s in d.get('name', '').lower() or s in d.get('description', '').lower():
+                agencies.append(cls(**d))
+        return agencies
 
-class AgencyWorker(db.Model):
-    """Agency-worker relationships"""
-    __tablename__ = 'agency_workers'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    agency_id = db.Column(db.String(50), db.ForeignKey('agencies.id'), nullable=False)
-    worker_id = db.Column(db.String(50), db.ForeignKey('housegirl_profiles.id'), nullable=False)
-    verification_status = db.Column(db.String(20), default='pending')
-    training_certificates = db.Column(db.JSON)  # List of certificates
-    background_check_status = db.Column(db.String(20), default='pending')
-    membership_fee = db.Column(db.Integer, default=500)
-    join_date = db.Column(db.DateTime, default=datetime.utcnow)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Indexes
-    __table_args__ = (
-        Index('idx_agency_worker', 'agency_id', 'worker_id'),
-    )
-    
+class AgencyWorker(BaseModel):
     def __repr__(self):
-        return f'<AgencyWorker {self.agency_id}-{self.worker_id}>'
+        return f'<AgencyWorker {getattr(self, "agency_id", "Unknown")}-{getattr(self, "worker_id", "Unknown")}>'
 
-class AgencyClient(db.Model):
-    """Agency-client relationships"""
-    __tablename__ = 'agency_clients'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    agency_id = db.Column(db.String(50), db.ForeignKey('agencies.id'), nullable=False)
-    client_id = db.Column(db.String(50), db.ForeignKey('employer_profiles.id'), nullable=False)
-    hiring_fee = db.Column(db.Integer, default=1500)
-    placement_status = db.Column(db.String(20), default='pending')
-    hire_date = db.Column(db.DateTime, default=datetime.utcnow)
-    worker_id = db.Column(db.String(50))
-    commission_paid = db.Column(db.Integer, default=0)
-    dispute_resolution = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+class AgencyClient(BaseModel):
     def __repr__(self):
-        return f'<AgencyClient {self.agency_id}-{self.client_id}>'
+        return f'<AgencyClient {getattr(self, "agency_id", "Unknown")}-{getattr(self, "client_id", "Unknown")}>'
 
-class AgencySubscription(db.Model):
-    """Agency subscription management"""
-    __tablename__ = 'agency_subscriptions'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    agency_id = db.Column(db.String(50), db.ForeignKey('agencies.id'), nullable=False)
-    tier = db.Column(db.String(20), nullable=False)
-    monthly_fee = db.Column(db.Integer, nullable=False)
-    features = db.Column(db.JSON)  # List of features
-    start_date = db.Column(db.DateTime, default=datetime.utcnow)
-    end_date = db.Column(db.DateTime)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+class AgencySubscription(BaseModel):
     def __repr__(self):
-        return f'<AgencySubscription {self.agency_id}-{self.tier}>'
+        return f'<AgencySubscription {getattr(self, "agency_id", "Unknown")}-{getattr(self, "tier", "Unknown")}>'
 
-class PaymentPackage(db.Model):
-    """Contact access packages"""
-    __tablename__ = 'payment_packages'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    name = db.Column(db.String(100), nullable=False)
-    description = db.Column(db.Text)
-    price = db.Column(db.Float, nullable=False)
-    contacts_included = db.Column(db.Integer, nullable=False)
-    is_active = db.Column(db.Boolean, default=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Relationships
-    purchases = db.relationship('UserPurchase', backref='payment_package', lazy='dynamic')
-    
+class PaymentPackage(BaseModel):
     def __repr__(self):
-        return f'<PaymentPackage {self.name}>'
+        return f'<PaymentPackage {getattr(self, "name", "Unknown")}>'
 
-class UserPurchase(db.Model):
-    """User payment tracking"""
-    __tablename__ = 'user_purchases'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    user_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
-    package_id = db.Column(db.String(50), db.ForeignKey('payment_packages.id'), nullable=False)
-    amount = db.Column(db.Float, nullable=False)
-    purchase_date = db.Column(db.DateTime, default=datetime.utcnow)
-    status = db.Column(db.String(20), default='completed')
-    payment_reference = db.Column(db.String(100))
-    
+class UserPurchase(BaseModel):
     def __repr__(self):
-        return f'<UserPurchase {self.user_id}-{self.package_id}>'
+        return f'<UserPurchase {getattr(self, "user_id", "Unknown")}-{getattr(self, "package_id", "Unknown")}>'
 
-class ContactAccess(db.Model):
-    """Contact unlocking tracking"""
-    __tablename__ = 'contact_access'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    user_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
-    target_profile_id = db.Column(db.String(50), db.ForeignKey('housegirl_profiles.id'), nullable=False)
-    accessed_at = db.Column(db.DateTime, default=datetime.utcnow)
-    
-    # Indexes
-    __table_args__ = (
-        Index('idx_user_target', 'user_id', 'target_profile_id'),
-    )
-    
+class ContactAccess(BaseModel):
     def __repr__(self):
-        return f'<ContactAccess {self.user_id}-{self.target_profile_id}>'
+        return f'<ContactAccess {getattr(self, "user_id", "Unknown")}-{getattr(self, "target_profile_id", "Unknown")}>'
 
-class Photo(db.Model):
-    """Photo management"""
-    __tablename__ = 'photos'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    profile_id = db.Column(db.String(50), db.ForeignKey('profiles.id'), nullable=False)
-    photo_url = db.Column(db.String(255), nullable=False)
-    upload_date = db.Column(db.DateTime, default=datetime.utcnow)
-    is_primary = db.Column(db.Boolean, default=False)
-    
+class Photo(BaseModel):
     def __repr__(self):
-        return f'<Photo {self.id}>'
+        return f'<Photo {getattr(self, "id", "Unknown")}>'
 
-class AgencyPayment(db.Model):
-    """Agency payment tracking"""
-    __tablename__ = 'agency_payments'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    agency_id = db.Column(db.String(50), db.ForeignKey('agencies.id'), nullable=False)
-    payment_type = db.Column(db.String(20), nullable=False)  # subscription, commission, etc.
-    amount = db.Column(db.Integer, nullable=False)
-    status = db.Column(db.String(20), default='pending')
-    payment_date = db.Column(db.DateTime, default=datetime.utcnow)
-    payment_reference = db.Column(db.String(100))
-    description = db.Column(db.Text)
-    
+class AgencyPayment(BaseModel):
     def __repr__(self):
-        return f'<AgencyPayment {self.agency_id}-{self.payment_type}>'
+        return f'<AgencyPayment {getattr(self, "agency_id", "Unknown")}-{getattr(self, "payment_type", "Unknown")}>'
 
-class JobPosting(db.Model):
-    """Job postings by employers"""
-    __tablename__ = 'job_postings'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    employer_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
-    title = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text, nullable=False)
-    location = db.Column(db.String(100), nullable=False)
-    salary_min = db.Column(db.Integer, nullable=False)
-    salary_max = db.Column(db.Integer, nullable=False)
-    accommodation_type = db.Column(db.Enum('live_in', 'live_out', 'both', name='accommodation_type'), nullable=False)
-    required_experience = db.Column(db.Enum('no_experience', '1_year', '2_years', '3_years', '4_years', '5_plus_years', name='required_experience'), nullable=False)
-    required_education = db.Column(db.Enum('primary', 'form_2', 'form_4', 'certificate', 'diploma', 'degree', name='required_education'), nullable=False)
-    skills_required = db.Column(db.JSON, nullable=True)  # List of required skills
-    languages_required = db.Column(db.JSON, nullable=True)  # List of required languages
-    status = db.Column(db.String(20), default='active')  # active, closed, filled
-    application_deadline = db.Column(db.DateTime, nullable=True)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
-    # Relationships
-    employer = db.relationship('User', backref='job_postings')
-    applications = db.relationship('JobApplication', backref='job_posting', lazy='dynamic', cascade='all, delete-orphan')
-    
+class JobPosting(BaseModel):
     def __repr__(self):
-        return f'<JobPosting {self.title} by {self.employer_id}>'
+        return f'<JobPosting {getattr(self, "title", "Unknown")} by {getattr(self, "employer_id", "Unknown")}>'
 
-class JobApplication(db.Model):
-    """Job applications by housegirls"""
-    __tablename__ = 'job_applications'
-    
-    id = db.Column(db.String(50), primary_key=True)
-    job_id = db.Column(db.String(50), db.ForeignKey('job_postings.id'), nullable=False)
-    housegirl_id = db.Column(db.String(50), db.ForeignKey('users.id'), nullable=False)
-    cover_letter = db.Column(db.Text, nullable=True)
-    status = db.Column(db.String(20), default='pending')  # pending, accepted, rejected
-    applied_at = db.Column(db.DateTime, default=datetime.utcnow)
-    reviewed_at = db.Column(db.DateTime, nullable=True)
-    
-    # Relationships
-    housegirl = db.relationship('User', backref='job_applications')
-    
+class JobApplication(BaseModel):
     def __repr__(self):
-        return f'<JobApplication {self.housegirl_id} for {self.job_id}>'
+        return f'<JobApplication {getattr(self, "housegirl_id", "Unknown")} for {getattr(self, "job_id", "Unknown")}>'

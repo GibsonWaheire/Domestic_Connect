@@ -1,8 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
-from app.models import EmployerProfile, Profile, User
-from app import db
+from app.firebase_init import db
 from datetime import datetime
+import uuid
 
 employers_bp = Blueprint('employers', __name__)
 
@@ -13,26 +13,51 @@ def get_employers():
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
         
-        employers = EmployerProfile.query.join(Profile).join(User).filter(User.user_type == 'employer').paginate(
-            page=page,
-            per_page=per_page,
-            error_out=False
-        )
+        # Fetch all employer profiles
+        emp_profiles_ref = db.collection('employer_profiles').stream()
+        all_employers = [doc.to_dict() for doc in emp_profiles_ref]
+        
+        # Pagination slice
+        total = len(all_employers)
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        paginated = all_employers[start_idx:end_idx]
         
         result = []
-        for employer in employers.items:
+        for emp in paginated:
+            # We need to stitch the Profile and User data back together
+            first_name = ""
+            last_name = ""
+            email = ""
+            phone_number = ""
+            
+            profile_id = emp.get('profile_id')
+            if profile_id:
+                prof_doc = db.collection('profiles').document(profile_id).get()
+                if prof_doc.exists:
+                    prof_data = prof_doc.to_dict()
+                    user_id = prof_data.get('user_id')
+                    if user_id:
+                        user_doc = db.collection('users').document(user_id).get()
+                        if user_doc.exists:
+                            user_data = user_doc.to_dict()
+                            first_name = user_data.get('first_name', '')
+                            last_name = user_data.get('last_name', '')
+                            email = user_data.get('email', '')
+                            phone_number = user_data.get('phone_number', '')
+
             result.append({
-                'id': employer.id,
-                'profile_id': employer.profile_id,
-                'company_name': employer.company_name,
-                'location': employer.location,
-                'description': employer.description,
-                'first_name': employer.profile.user.first_name,
-                'last_name': employer.profile.user.last_name,
-                'email': employer.profile.user.email,
-                'phone_number': employer.profile.user.phone_number,
-                'created_at': employer.created_at.isoformat(),
-                'updated_at': employer.updated_at.isoformat()
+                'id': emp.get('id'),
+                'profile_id': profile_id,
+                'company_name': emp.get('company_name'),
+                'location': emp.get('location'),
+                'description': emp.get('description'),
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'phone_number': phone_number,
+                'created_at': emp.get('created_at'),
+                'updated_at': emp.get('updated_at')
             })
         
         return jsonify({
@@ -40,37 +65,65 @@ def get_employers():
             'pagination': {
                 'page': page,
                 'per_page': per_page,
-                'total': employers.total,
-                'pages': employers.pages,
-                'has_next': employers.has_next,
-                'has_prev': employers.has_prev
+                'total': total,
+                'pages': (total + per_page - 1) // per_page if per_page else 0,
+                'has_next': end_idx < total,
+                'has_prev': page > 1
             }
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/<employer_id>', methods=['GET'])
 def get_employer(employer_id):
     """Get specific employer profile"""
     try:
-        employer = EmployerProfile.query.get_or_404(employer_id)
+        emp_doc = db.collection('employer_profiles').document(employer_id).get()
+        if not emp_doc.exists:
+            return jsonify({'error': 'Employer not found'}), 404
+            
+        emp = emp_doc.to_dict()
+        
+        first_name = ""
+        last_name = ""
+        email = ""
+        phone_number = ""
+        
+        profile_id = emp.get('profile_id')
+        if profile_id:
+            prof_doc = db.collection('profiles').document(profile_id).get()
+            if prof_doc.exists:
+                prof_data = prof_doc.to_dict()
+                user_id = prof_data.get('user_id')
+                if user_id:
+                    user_doc = db.collection('users').document(user_id).get()
+                    if user_doc.exists:
+                        u_data = user_doc.to_dict()
+                        first_name = u_data.get('first_name', '')
+                        last_name = u_data.get('last_name', '')
+                        email = u_data.get('email', '')
+                        phone_number = u_data.get('phone_number', '')
         
         return jsonify({
-            'id': employer.id,
-            'profile_id': employer.profile_id,
-            'company_name': employer.company_name,
-            'location': employer.location,
-            'description': employer.description,
-            'first_name': employer.profile.user.first_name,
-            'last_name': employer.profile.user.last_name,
-            'email': employer.profile.user.email,
-            'phone_number': employer.profile.user.phone_number,
-            'created_at': employer.created_at.isoformat(),
-            'updated_at': employer.updated_at.isoformat()
+            'id': emp.get('id'),
+            'profile_id': profile_id,
+            'company_name': emp.get('company_name'),
+            'location': emp.get('location'),
+            'description': emp.get('description'),
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': email,
+            'phone_number': phone_number,
+            'created_at': emp.get('created_at'),
+            'updated_at': emp.get('updated_at')
         }), 200
         
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/', methods=['POST'])
@@ -79,6 +132,9 @@ def create_employer():
     """Create new employer profile"""
     try:
         user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
         data = request.get_json()
         
         # Validate required fields
@@ -87,33 +143,34 @@ def create_employer():
             if not data.get(field):
                 return jsonify({'error': f'{field} is required'}), 400
         
-        profile = Profile.query.get_or_404(data['profile_id'])
-        if profile.user_id != user.id and not user.is_admin:
+        prof_doc = db.collection('profiles').document(data['profile_id']).get()
+        if not prof_doc.exists:
+            return jsonify({'error': 'Profile not found'}), 404
+            
+        prof_data = prof_doc.to_dict()
+        
+        if prof_data.get('user_id') != getattr(user, 'id') and not getattr(user, 'is_admin', False):
             return jsonify({'error': 'Unauthorized'}), 403
             
         # Create employer profile
-        employer = EmployerProfile(
-            profile_id=data['profile_id'],
-            company_name=data['company_name'],
-            location=data['location'],
-            description=data.get('description', '')
-        )
+        employer_id = str(uuid.uuid4())
+        employer_data = {
+            'id': employer_id,
+            'profile_id': data['profile_id'],
+            'company_name': data['company_name'],
+            'location': data['location'],
+            'description': data.get('description', ''),
+            'created_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        }
         
-        db.session.add(employer)
-        db.session.commit()
+        db.collection('employer_profiles').document(employer_id).set(employer_data)
         
-        return jsonify({
-            'id': employer.id,
-            'profile_id': employer.profile_id,
-            'company_name': employer.company_name,
-            'location': employer.location,
-            'description': employer.description,
-            'created_at': employer.created_at.isoformat(),
-            'updated_at': employer.updated_at.isoformat()
-        }), 201
+        return jsonify(employer_data), 201
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/<employer_id>', methods=['PUT'])
@@ -122,36 +179,47 @@ def update_employer(employer_id):
     """Update employer profile"""
     try:
         user = request.current_user
-        employer = EmployerProfile.query.get_or_404(employer_id)
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        emp_doc = db.collection('employer_profiles').document(employer_id).get()
+        if not emp_doc.exists:
+            return jsonify({'error': 'Employer not found'}), 404
+            
+        emp = emp_doc.to_dict()
         
-        if employer.profile.user_id != user.id and not user.is_admin:
+        # Check authorization
+        authorized = getattr(user, 'is_admin', False)
+        if not authorized:
+            prof_doc = db.collection('profiles').document(emp.get('profile_id')).get()
+            if prof_doc.exists and prof_doc.to_dict().get('user_id') == getattr(user, 'id'):
+                authorized = True
+                
+        if not authorized:
             return jsonify({'error': 'Unauthorized'}), 403
             
         data = request.get_json()
+        updates = {}
         
         # Update fields
         if 'company_name' in data:
-            employer.company_name = data['company_name']
+            updates['company_name'] = data['company_name']
         if 'location' in data:
-            employer.location = data['location']
+            updates['location'] = data['location']
         if 'description' in data:
-            employer.description = data['description']
-        
-        employer.updated_at = datetime.utcnow()
-        db.session.commit()
-        
-        return jsonify({
-            'id': employer.id,
-            'profile_id': employer.profile_id,
-            'company_name': employer.company_name,
-            'location': employer.location,
-            'description': employer.description,
-            'created_at': employer.created_at.isoformat(),
-            'updated_at': employer.updated_at.isoformat()
-        }), 200
+            updates['description'] = data['description']
+            
+        if updates:
+            updates['updated_at'] = datetime.utcnow().isoformat()
+            db.collection('employer_profiles').document(employer_id).update(updates)
+            
+        # Refetch updated
+        updated_doc = db.collection('employer_profiles').document(employer_id).get()
+        return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @employers_bp.route('/<employer_id>', methods=['DELETE'])
@@ -160,16 +228,28 @@ def delete_employer(employer_id):
     """Delete employer profile"""
     try:
         user = request.current_user
-        employer = EmployerProfile.query.get_or_404(employer_id)
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+            
+        emp_doc = db.collection('employer_profiles').document(employer_id).get()
+        if not emp_doc.exists:
+            return jsonify({'error': 'Employer not found'}), 404
+            
+        emp = emp_doc.to_dict()
         
-        if employer.profile.user_id != user.id and not user.is_admin:
+        authorized = getattr(user, 'is_admin', False)
+        if not authorized:
+            prof_doc = db.collection('profiles').document(emp.get('profile_id')).get()
+            if prof_doc.exists and prof_doc.to_dict().get('user_id') == getattr(user, 'id'):
+                authorized = True
+                
+        if not authorized:
             return jsonify({'error': 'Unauthorized'}), 403
             
-        db.session.delete(employer)
-        db.session.commit()
-        
+        db.collection('employer_profiles').document(employer_id).delete()
         return jsonify({'message': 'Employer profile deleted successfully'}), 200
         
     except Exception as e:
-        db.session.rollback()
+        import traceback
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
