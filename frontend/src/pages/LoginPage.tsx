@@ -163,11 +163,10 @@ const LoginPage = () => {
                   key={option.value}
                   type="button"
                   onClick={() => setUserType(option.value as 'employer' | 'housegirl')}
-                  className={`flex-1 cursor-pointer rounded-full py-2 text-center text-sm font-medium transition-all ${
-                    userType === option.value
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
-                  }`}
+                  className={`flex-1 cursor-pointer rounded-full py-2 text-center text-sm font-medium transition-all ${userType === option.value
+                    ? 'bg-white text-black shadow-sm'
+                    : 'text-gray-400 hover:text-gray-600'
+                    }`}
                 >
                   {option.label}
                 </button>
@@ -199,7 +198,12 @@ const LoginPage = () => {
           </form>
         ) : (
           <form onSubmit={handleVerifySubmit}>
-            <p className="text-center text-sm text-gray-500 mb-4">Code sent to {maskPhoneForDisplay(phoneNumber)}</p>
+            <p className="text-center text-sm font-medium text-gray-700 mb-1">
+              Code sent to {maskPhoneForDisplay(phoneNumber)}
+            </p>
+            <p className="text-center text-xs text-gray-400 mb-5">
+              Check your phone and type the 6-digit code below
+            </p>
             <Input
               id="otpCode"
               type="text"
@@ -241,9 +245,12 @@ const LoginPage = () => {
             </button>
           </form>
         )}
-      </main>
 
-      <div id="recaptcha-container"></div>
+        <div
+          id="recaptcha-container"
+          style={{ display: 'none' }}
+        ></div>
+      </main>
     </div>
   );
 };

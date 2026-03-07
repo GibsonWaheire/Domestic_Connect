@@ -10,9 +10,28 @@ import {
   browserLocalPersistence
 } from 'firebase/auth';
 import { auth } from './firebase';
+import app from './firebase';
+import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
+
+if (import.meta.env.DEV) {
+  // @ts-ignore
+  self.FIREBASE_APPCHECK_DEBUG_TOKEN = true;
+}
+
+initializeAppCheck(app, {
+  provider: new ReCaptchaV3Provider(
+    import.meta.env.VITE_RECAPTCHA_SITE_KEY
+  ),
+  isTokenAutoRefreshEnabled: true
+});
 
 // Ensure authentication state persists across page reloads
 setPersistence(auth, browserLocalPersistence).catch(console.error);
+
+if (import.meta.env.DEV) {
+  // Disable app verification for testing
+  auth.settings.appVerificationDisabledForTesting = true;
+}
 
 declare global {
   interface Window {
@@ -32,21 +51,38 @@ export class FirebaseAuthService {
   }
 
   static async setupRecaptcha() {
-    if (window.recaptchaVerifier) {
-      window.recaptchaVerifier.clear();
-      window.recaptchaVerifier = null;
+    try {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = undefined;
+      }
+
+      window.recaptchaVerifier =
+        new RecaptchaVerifier(
+          auth,
+          'recaptcha-container',
+          {
+            size: 'invisible',
+            callback: () => { },
+            'expired-callback': () => {
+              window.recaptchaVerifier = undefined;
+            }
+          }
+        );
+
+      await window.recaptchaVerifier.render();
+      return window.recaptchaVerifier;
+
+    } catch (error) {
+      window.recaptchaVerifier = undefined;
+      throw error;
     }
-    window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-      size: 'invisible'
-    });
-    await window.recaptchaVerifier.render();
-    return window.recaptchaVerifier;
   }
 
   static async sendOTP(phoneNumber: string) {
     try {
-      const recaptchaVerifier = await this.setupRecaptcha();
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+      const verifier = await this.setupRecaptcha();
+      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
       return {
         success: true,
         confirmationResult
