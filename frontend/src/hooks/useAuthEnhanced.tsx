@@ -57,13 +57,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
+  const { headers, ...restOptions } = options;
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    ...restOptions,
     headers: {
       'Content-Type': 'application/json',
-      ...options.headers,
+      ...headers,
     },
-    // Remove credentials for proxy compatibility
-    ...options,
   });
 
   if (!response.ok) {

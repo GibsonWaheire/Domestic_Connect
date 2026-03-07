@@ -27,7 +27,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  const { signUp, signIn, signInWithGoogle, resetPassword, user } = useAuth();
+  const { signUp, signIn, signInWithGoogle, resetPassword, signOut, user } = useAuth();
   const navigate = useNavigate();
 
   const formatPhoneNumber = (value: string) => {
@@ -171,9 +171,20 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             variant: "destructive"
           });
         } else {
+          const currentUser = result.user;
+          if (currentUser?.user_type !== userType && !currentUser?.is_admin) {
+            toast({
+              title: "Invalid Role",
+              description: `This account belongs to a ${currentUser?.user_type}. Please select the correct role to sign in.`,
+              variant: "destructive"
+            });
+            await signOut();
+            setLoading(false);
+            return;
+          }
+          
           onClose();
           localStorage.setItem('dc_auth_provider', 'password');
-          const currentUser = result.user;
           navigate(getPostAuthRoute(currentUser?.user_type, currentUser?.is_admin));
         }
       } else {
@@ -344,32 +355,32 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-8 pt-4 max-w-3xl mx-auto">
+              <div className="space-y-2">
+                <Label className="text-gray-700 font-medium">I am a</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { value: 'employer', label: 'Employer', icon: Building2 },
+                    { value: 'housegirl', label: 'Housegirl', icon: User },
+                    { value: 'agency', label: 'Agency', icon: Heart },
+                  ].map((option) => (
+                    <Button
+                      key={option.value}
+                      type="button"
+                      variant="outline"
+                      onClick={() => setUserType(option.value as 'employer' | 'housegirl' | 'agency')}
+                      className={`justify-center gap-2 border-gray-300 ${
+                        userType === option.value ? 'bg-blue-50 border-blue-500 text-blue-700' : ''
+                      }`}
+                    >
+                      <option.icon className="h-4 w-4" />
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
               {!isLogin && (
                 <>
-                  <div className="space-y-2">
-                    <Label className="text-gray-700 font-medium">I am a</Label>
-                    <div className="grid grid-cols-3 gap-2">
-                      {[
-                        { value: 'employer', label: 'Employer', icon: Building2 },
-                        { value: 'housegirl', label: 'Housegirl', icon: User },
-                        { value: 'agency', label: 'Agency', icon: Heart },
-                      ].map((option) => (
-                        <Button
-                          key={option.value}
-                          type="button"
-                          variant="outline"
-                          onClick={() => setUserType(option.value as 'employer' | 'housegirl' | 'agency')}
-                          className={`justify-center gap-2 border-gray-300 ${
-                            userType === option.value ? 'bg-blue-50 border-blue-500 text-blue-700' : ''
-                          }`}
-                        >
-                          <option.icon className="h-4 w-4" />
-                          {option.label}
-                        </Button>
-                      ))}
-                    </div>
-                  </div>
-
                   <div className="space-y-2">
                     <Label htmlFor="signupIdentifier" className="text-gray-700 font-medium">Phone number or email</Label>
                     <Input
@@ -396,7 +407,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   className="border-gray-300 focus:border-blue-500"
-                  placeholder="Enter your email or phone number"
+                  placeholder={`Enter your ${userType} email or phone number`}
                 />
               </div>
               )}
