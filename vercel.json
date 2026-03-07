@@ -6,6 +6,10 @@
     {
       "source": "/api/(.*)",
       "destination": "https://domestic-connect-backend-py-ad5d7f47d783.herokuapp.com/api/$1"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "env": {
