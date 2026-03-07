@@ -5,7 +5,7 @@ import json
 from datetime import datetime
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
-from app import db
+from app.firebase_init import db
 import uuid
 
 mpesa_bp = Blueprint('mpesa', __name__)
