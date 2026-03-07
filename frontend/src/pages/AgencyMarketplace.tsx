@@ -198,8 +198,8 @@ const AgencyMarketplace = () => {
                     navigate('/agency-dashboard');
                   } else if (user.user_type === 'housegirl') {
                     navigate('/housegirl-dashboard');
-                  } else {
-                    navigate('/dashboard');
+                  } else { // Assuming other user types (e.g., 'employer') go to employer-dashboard
+                    navigate('/employer-dashboard');
                   }
                 } else {
                   navigate('/home');
@@ -220,8 +220,8 @@ const AgencyMarketplace = () => {
                       navigate('/agency-dashboard');
                     } else if (user.user_type === 'housegirl') {
                       navigate('/housegirl-dashboard');
-                    } else {
-                      navigate('/dashboard');
+                    } else { // Assuming other user types (e.g., 'employer') go to employer-dashboard
+                      navigate('/employer-dashboard');
                     }
                   }}
                   className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"

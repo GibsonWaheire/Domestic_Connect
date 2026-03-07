@@ -164,12 +164,12 @@ const BrowseHousegirls = () => {
                 {user ? (
                   <div className="flex items-center space-x-6">
                     <Button onClick={() => {
-                      if (user.user_type === 'agency') {
-                        navigate('/agency-dashboard');
-                      } else if (user.user_type === 'housegirl') {
+                      if (user.user_type === 'employer') {
+                        navigate('/employer-dashboard');
+                      } else if (user.user_type === 'agency') {
                         navigate('/housegirl-dashboard');
                       } else {
-                        navigate('/dashboard');
+                        navigate('/employer-dashboard');
                       }
                     }} className="bg-gradient-to-r from-pink-500 to-orange-600 hover:from-pink-600 hover:to-orange-700 text-white rounded-full">
                       Go to Dashboard

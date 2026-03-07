@@ -359,6 +359,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         title: "Signed Out",
         description: "You have been signed out successfully.",
       });
+
+      // Force a hard redirect to home page and clear client router state completely
+      window.location.href = '/home';
     } catch (error) {
       console.error('Sign out error:', error);
       

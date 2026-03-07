@@ -46,7 +46,7 @@ const AuthModal = ({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) =
     if (isAdmin) return '/admin-dashboard';
     if (type === 'agency') return '/agency-dashboard';
     if (type === 'housegirl') return '/housegirl-dashboard';
-    if (type === 'employer') return '/dashboard';
+    if (type === 'employer') return '/employer-dashboard';
     return '/';
   };
 

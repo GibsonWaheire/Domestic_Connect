@@ -108,6 +108,17 @@ const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
   icon: Phone,
 };
 
+const BUNDLE_UNLOCK_PACKAGE: PackageDetails = {
+  id: 'bundle_unlock',
+  name: '3 Contacts Bundle',
+  price: 500,
+  agencyFee: 0,
+  platformFee: 500,
+  features: ['Unlock 3 contacts', 'Save KES 100', 'Instant profile access'],
+  color: 'blue',
+  icon: Phone,
+};
+
 const LandingPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
@@ -116,7 +127,7 @@ const LandingPage = () => {
     if (!user) return '/';
     if (user.user_type === 'agency') return '/agency-dashboard';
     if (user.user_type === 'housegirl') return '/housegirl-dashboard';
-    return '/dashboard';
+    return '/employer-dashboard';
   };
 
   const [selectedCategory, setSelectedCategory] = useState<typeof PROFILE_FILTERS[number]>('All');
@@ -124,12 +135,14 @@ const LandingPage = () => {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
   const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, boolean>>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
   const drawerRef = useRef<HTMLDivElement | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredProfiles = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -147,6 +160,13 @@ const LandingPage = () => {
     });
   }, [searchTerm, selectedCategory, selectedLocation]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, selectedCategory, selectedLocation]);
+
+  const totalPages = Math.ceil(filteredProfiles.length / 10);
+  const paginatedProfiles = filteredProfiles.slice((currentPage - 1) * 10, currentPage * 10);
+
   const handleGetContact = (profileId: string) => {
     if (!user) {
       localStorage.setItem('pendingContactId', profileId);
@@ -155,6 +175,18 @@ const LandingPage = () => {
       return;
     }
     setSelectedProfileId(profileId);
+    setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
+    setShowPaymentModal(true);
+  };
+
+  const handlePricingClick = (pkg: PackageDetails) => {
+    if (!user) {
+      setAuthMode('signup');
+      setAuthModalOpen(true);
+      return;
+    }
+    setSelectedProfileId(null);
+    setSelectedPaymentPackage(pkg);
     setShowPaymentModal(true);
   };
 
@@ -190,6 +222,7 @@ const LandingPage = () => {
     }
 
     setSelectedProfileId(matchingProfile.id);
+    setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
     setShowPaymentModal(true);
     localStorage.removeItem('pendingContactId');
 
@@ -335,7 +368,15 @@ const LandingPage = () => {
         <link rel="canonical" href="https://www.domesticconnect.co.ke" />
       </Helmet>
 
-      <header className="bg-white border-b border-gray-200 relative md:sticky top-0 z-50">
+      <div className="fixed inset-0 z-[-1]">
+        <img
+          src="/housegirls.webp"
+          alt="Background"
+          className="w-full h-full object-cover blur-[3px] saturate-[0.3] opacity-[0.08]"
+        />
+      </div>
+
+      <header className="bg-white border-b border-[#eee] relative md:sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="grid grid-cols-[1fr_auto] md:grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-6">
             <div
@@ -351,14 +392,14 @@ const LandingPage = () => {
               <button
                 type="button"
                 onClick={handleFindHelp}
-                className="text-sm font-medium text-gray-800 hover:text-black"
+                className="text-sm font-medium text-[#333] hover:text-black transition-opacity"
               >
                 Find Help
               </button>
               <button
                 type="button"
                 onClick={handlePricingScroll}
-                className="text-sm font-medium text-gray-800 hover:text-black"
+                className="text-sm font-medium text-[#333] hover:text-black transition-opacity"
               >
                 Pricing
               </button>
@@ -369,11 +410,11 @@ const LandingPage = () => {
                 <>
                   <Button
                     onClick={() => navigate(getDashboardRoute())}
-                    className="hidden md:inline-flex bg-black hover:bg-[#333333] text-white rounded-sm transition-opacity duration-150"
+                    className="hidden md:inline-flex bg-black hover:bg-[#333] text-white rounded-full transition-opacity duration-150"
                   >
                     Dashboard
                   </Button>
-                  <Button variant="outline" onClick={signOut} className="hidden md:inline-flex border-gray-300 hover:bg-gray-100 rounded-sm">
+                  <Button variant="outline" onClick={signOut} className="hidden md:inline-flex border-gray-300 text-black bg-transparent hover:bg-gray-100 rounded-full">
                     Logout
                   </Button>
                 </>
@@ -382,13 +423,13 @@ const LandingPage = () => {
                   <button
                     type="button"
                     onClick={() => openAuth('login')}
-                    className="text-sm font-medium text-gray-700 hover:text-black"
+                    className="text-sm font-medium text-black border border-black hover:bg-gray-50 rounded-full px-5 py-2 transition-colors"
                   >
                     Login
                   </button>
                   <Button
                     onClick={() => openAuth('signup')}
-                    className="hidden md:inline-flex rounded-sm px-5 bg-black hover:bg-[#333333] text-white"
+                    className="hidden md:inline-flex rounded-full px-6 bg-black hover:bg-[#333] text-white font-medium"
                   >
                     Join Today
                   </Button>
@@ -401,7 +442,7 @@ const LandingPage = () => {
                 aria-expanded={isMenuOpen}
                 aria-controls="landing-main-menu"
                 onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-sm border border-gray-200 text-gray-800 hover:text-black hover:border-gray-300"
+                className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors border-0"
               >
                 <Menu className="h-5 w-5" />
               </button>
@@ -409,7 +450,7 @@ const LandingPage = () => {
           </div>
         </div>
       </header>
-
+      
       <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'bg-black/0 opacity-0 pointer-events-none'}`}>
         <aside
           id="landing-main-menu"
@@ -462,24 +503,24 @@ const LandingPage = () => {
         </aside>
       </div>
 
-      <section className="relative md:sticky top-[73px] z-40 border-b border-gray-200 bg-white">
-        <div className="max-w-[900px] mx-auto px-4 py-3">
+      <section className="relative md:sticky top-[73px] z-40 bg-[#111] w-full">
+        <div className="px-4 md:px-12 py-4">
           <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
-            <div className="flex flex-1 items-center gap-2 flex-wrap border border-[#e5e5e5] bg-[#f7f7f7] p-2 text-[13px] tracking-[0.3px]">
+            <div className="flex flex-1 items-center gap-2 flex-wrap">
               <div className="relative min-w-[220px] flex-1 max-w-md">
                 <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <Input
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   placeholder="Search by name, location or skill..."
-                  className="h-9 rounded-[2px] pl-10 border border-[#d8d8d8] bg-white text-[13px] focus-visible:ring-0"
+                  className="h-9 rounded-[2px] pl-10 border-0 bg-[#222] text-white placeholder-white focus-visible:ring-0"
                 />
               </div>
               <div className="min-w-[200px]">
                 <select
                   value={selectedLocation}
                   onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="h-9 w-full rounded-[2px] border border-[#d8d8d8] bg-white px-3 text-[13px] text-[#555] focus:outline-none"
+                  className="h-9 w-full rounded-[2px] border-0 bg-[#222] px-3 text-[13px] text-white focus:outline-none"
                 >
                   <option value="All locations">All locations</option>
                   {kenyaCities.map((city) => (
@@ -497,8 +538,8 @@ const LandingPage = () => {
                     onClick={() => setSelectedCategory(filter)}
                     className={
                       selectedCategory === filter
-                        ? 'h-9 rounded-[2px] bg-black text-white text-[13px] px-3 hover:bg-black'
-                        : 'h-9 rounded-[2px] border border-[#d8d8d8] bg-white text-[#555] text-[13px] px-3 hover:bg-white'
+                        ? 'h-9 rounded-[2px] bg-white text-black text-[13px] px-3 hover:bg-gray-100'
+                        : 'h-9 rounded-[2px] border border-[#444] bg-transparent text-white text-[13px] px-3 hover:bg-[#222]'
                     }
                   >
                     {filter}
@@ -506,56 +547,53 @@ const LandingPage = () => {
                 ))}
               </div>
             </div>
-            <p className="text-[13px] text-[#666]">{filteredProfiles.length} housegirls available</p>
+            <p className="text-[13px] text-[#888]">{filteredProfiles.length} housegirls available</p>
           </div>
-          <p className="text-[13px] text-[#666] mt-3 text-left">
-            Verified profiles · KES 200 one-time M-Pesa fee · No subscription · Instant access
-          </p>
         </div>
       </section>
 
+      <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
+
       <main id="profiles-list" className="py-8">
         <div className="w-full px-10">
-          <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-            <div className="space-y-3">
-            {filteredProfiles.map((profile) => {
+          <div className="flex flex-col w-full relative">
+            <div className="flex flex-col gap-[8px] w-full">
+            {paginatedProfiles.map((profile) => {
               const isUnlocked = Boolean(unlockedProfiles[profile.id]);
               return (
                 <article
                   key={profile.id}
-                  className="bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-6"
+                  className="bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4"
                 >
-                  <div className="flex flex-col md:flex-row gap-5 md:items-center">
-                    <div className="md:w-[130px]">
-                      <div className="relative w-fit">
-                        {profile.avatar ? (
-                          <img
-                            src={profile.avatar}
-                            alt={profile.name}
-                            className="h-[110px] w-[110px] rounded-full object-cover border-2 border-gray-200"
-                          />
-                        ) : (
-                          <div className="h-[110px] w-[110px] rounded-full bg-[#4b5563] text-white font-semibold text-2xl leading-tight flex items-center justify-center text-center">
-                            {profile.name
-                              .split(' ')
-                              .filter(Boolean)
-                              .slice(0, 2)
-                              .map((namePart) => namePart[0]?.toUpperCase())
-                              .join('')}
-                          </div>
-                        )}
-                        <span
-                          className={`absolute bottom-1 right-1 h-2 w-2 rounded-full border border-white ${
-                            profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
-                          }`}
+                  <div className="flex flex-row gap-4 items-center">
+                    <div className="relative flex-shrink-0">
+                      {profile.avatar ? (
+                        <img
+                          src={profile.avatar}
+                          alt={profile.name}
+                          className="w-[64px] h-[64px] rounded-full object-cover border border-gray-200"
                         />
-                      </div>
+                      ) : (
+                        <div className="w-[64px] h-[64px] rounded-full bg-[#4b5563] text-white font-semibold text-xl flex items-center justify-center text-center">
+                          {profile.name
+                            .split(' ')
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((namePart) => namePart[0]?.toUpperCase())
+                            .join('')}
+                        </div>
+                      )}
+                      <span
+                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
+                          profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
+                        }`}
+                      />
                     </div>
 
                     <div className="flex-1">
-                      <div className="flex flex-col gap-2">
-                        <h3 className="text-[18px] font-semibold text-[#111]">{profile.name}</h3>
-                        <Badge variant="secondary" className="w-fit border border-black bg-transparent text-black text-[13px] px-3 py-1 rounded-[2px]">
+                      <div className="flex flex-col gap-1">
+                        <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
+                        <Badge variant="secondary" className="w-fit border border-blue-600 bg-transparent text-blue-600 text-[13px] px-3 py-1 rounded-[2px]">
                           {profile.role}
                         </Badge>
                         <p className="text-[#555] text-[13px] flex items-center gap-1">
@@ -578,23 +616,17 @@ const LandingPage = () => {
                       </div>
                     </div>
 
-                    <div className="md:w-56 flex flex-col gap-1 md:items-end">
+                    <div className="md:w-56 flex flex-col gap-2 md:items-end">
                       <p className="text-[22px] font-bold text-[#111]">
                         KES {profile.monthlyRate.toLocaleString()}
                         <span className="text-sm font-medium text-gray-500">/mo</span>
                       </p>
                       <Button
                         onClick={() => handleGetContact(profile.id)}
-                        className="w-full md:w-auto rounded-[4px] px-6 bg-black hover:bg-[#333333] text-white transition-opacity duration-150"
+                        className="w-full md:w-auto rounded-[4px] px-6 bg-blue-600 hover:bg-blue-700 text-white transition-opacity duration-150"
                       >
                         {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
                       </Button>
-                      {!isUnlocked && (
-                        <>
-                          <p className="text-[11px] text-[#888]">KES 200 via M-Pesa to unlock</p>
-                          <p className="text-[11px] text-[#888]">Or unlock 3 contacts for KES 500 — save KES 100</p>
-                        </>
-                      )}
                     </div>
                   </div>
                 </article>
@@ -602,26 +634,48 @@ const LandingPage = () => {
             })}
             </div>
 
-            <aside className="hidden lg:block sticky top-[80px]">
-              <div className="space-y-4 w-[320px]">
-                <div className="w-[320px]">
-                  <img
-                    src="/housegirls.webp"
-                    alt="Domestic workers in Kenya"
-                    loading="lazy"
-                    className="w-[320px] h-[280px] object-cover object-[center_26%] rounded-[6px]"
-                  />
-                </div>
-                <div className="w-[320px]">
-                  <img
-                    src="/woooies.avif"
-                    alt="Home support services in Kenya"
-                    loading="lazy"
-                    className="w-[320px] h-[280px] object-cover object-center rounded-[6px]"
-                  />
-                </div>
+            {totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 pt-6">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className={`text-[13px] mr-2 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
+                >
+                  ← Previous
+                </button>
+                
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                  if (totalPages > 5) {
+                     if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
+                       if (page === 2 && currentPage > 3) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
+                       if (page === totalPages - 1 && currentPage < totalPages - 2) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
+                       return null;
+                     }
+                  }
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => setCurrentPage(page)}
+                      className={`h-8 min-w-[32px] px-2 text-[13px] ${
+                        currentPage === page
+                          ? 'bg-black text-white border border-black'
+                          : 'bg-white text-black border border-black hover:bg-gray-50'
+                      }`}
+                    >
+                      {page}
+                    </button>
+                  );
+                })}
+
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className={`text-[13px] ml-2 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
+                >
+                  Next →
+                </button>
               </div>
-            </aside>
+            )}
           </div>
 
           {filteredProfiles.length === 0 && (
@@ -635,17 +689,26 @@ const LandingPage = () => {
       <section id="pricing-value" className="border-y border-gray-200 bg-[#f9f9f9]">
         <div className="max-w-[1100px] mx-auto px-4 py-10">
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+            <div 
+              className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+              onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
+            >
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Single Unlock</p>
               <p className="mt-2 text-2xl font-bold text-[#111]">KES 200</p>
               <p className="mt-2 text-[13px] text-[#555]">Unlock one profile contact instantly via M-Pesa.</p>
             </div>
-            <div className="border border-[#111] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+            <div 
+              className="border border-[#111] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-600 hover:shadow-md transition-all duration-200 relative"
+              onClick={() => handlePricingClick(BUNDLE_UNLOCK_PACKAGE)}
+            >
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-600">Best Value</p>
               <p className="mt-2 text-2xl font-bold text-[#111]">KES 500</p>
               <p className="mt-2 text-[13px] text-[#555]">Unlock 3 contacts and save KES 100.</p>
             </div>
-            <div className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)]">
+            <div 
+              className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+              onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
+            >
               <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">No Subscription</p>
               <p className="mt-2 text-2xl font-bold text-[#111]">Pay As You Hire</p>
               <p className="mt-2 text-[13px] text-[#555]">No monthly commitment. Only pay when you need contacts.</p>
@@ -670,6 +733,7 @@ const LandingPage = () => {
           </div>
         </div>
       </section>
+      </div>
 
       <footer className="bg-black text-white py-8 mt-10">
         <div className="max-w-6xl mx-auto px-4 text-center">
@@ -685,7 +749,7 @@ const LandingPage = () => {
 
       {showPaymentModal && (
         <PaymentModal
-          package={CONTACT_UNLOCK_PACKAGE}
+          package={selectedPaymentPackage}
           agency={{
             id: 'contact_unlock_bundle',
             name: 'Domestic Connect',

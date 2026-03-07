@@ -142,7 +142,7 @@ const AgencyDashboard = () => {
         if (user.user_type === 'housegirl') {
           navigate('/housegirl-dashboard');
         } else if (user.user_type === 'employer') {
-          navigate('/dashboard');
+          navigate('/employer-dashboard');
         } else {
           navigate('/');
         }
