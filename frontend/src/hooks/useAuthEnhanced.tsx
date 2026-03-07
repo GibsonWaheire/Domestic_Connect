@@ -105,7 +105,7 @@ const mapPhoneAuthError = (code?: string) => {
   if (code === 'auth/too-many-requests') return 'Too many attempts. Try again later.';
   if (code === 'auth/invalid-verification-code') return 'Wrong code. Check your SMS and try again.';
   if (code === 'auth/code-expired') return 'Code expired. Tap resend to get a new one.';
-  return 'Something went wrong. Please try again.';
+  return null;
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
@@ -246,8 +246,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const formattedPhone = formatKenyanPhone(rawPhone);
       const otpResult = await FirebaseAuthService.sendOTP(formattedPhone);
+      console.log('sendOTP confirmationResult exists:', Boolean(otpResult.confirmationResult));
       if (!otpResult.success || !otpResult.confirmationResult) {
-        const errorMessage = mapPhoneAuthError(otpResult.code) || otpResult.error || 'Failed to send code.';
+        const errorMessage = otpResult.error || mapPhoneAuthError(otpResult.code) || 'Failed to send code.';
         return { error: errorMessage };
       }
       setConfirmationResult(otpResult.confirmationResult);
@@ -261,6 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleVerifyOTP = async (code: string) => {
+    console.log('verifyOTP confirmationResult exists:', Boolean(confirmationResult));
     if (!confirmationResult) {
       return { error: 'Please request a code first.' };
     }
@@ -269,7 +271,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const verified = await FirebaseAuthService.verifyOTP(confirmationResult, code);
       if (!verified.success || !verified.userCredential) {
-        const errorMessage = mapPhoneAuthError(verified.code) || verified.error || 'Failed to verify code.';
+        const errorMessage = verified.error || mapPhoneAuthError(verified.code) || 'Failed to verify code.';
         return { error: errorMessage };
       }
 
@@ -299,6 +301,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       return { error: null, userType: resolvedUserType };
+    } catch (error: unknown) {
+      const exactError = error instanceof Error ? error.message : String(error);
+      return { error: exactError || 'Failed to verify code.' };
     } finally {
       setLoading(false);
     }

@@ -60,12 +60,19 @@ const LoginPage = () => {
     setIsVerifyingCode(true);
     setLastSubmittedCode(code);
     setError(null);
-    const result = await handleVerifyOTP(code);
-    if (result.error) {
-      setError(result.error);
+    try {
+      const result = await handleVerifyOTP(code);
+      if (result.error) {
+        setError(result.error);
+        setLastSubmittedCode('');
+      }
+    } catch (error: unknown) {
+      const exactError = error instanceof Error ? error.message : String(error);
+      setError(exactError || 'Failed to verify code.');
       setLastSubmittedCode('');
+    } finally {
+      setIsVerifyingCode(false);
     }
-    setIsVerifyingCode(false);
   };
 
   useEffect(() => {
