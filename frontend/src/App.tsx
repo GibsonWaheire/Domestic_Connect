@@ -8,6 +8,7 @@ import { AuthProvider } from "@/hooks/useAuthEnhanced";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AuthGuard } from "@/components/AuthGuard";
 import LandingPage from "./pages/LandingPage";
+import HousegirlsListPage from "./pages/HousegirlsListPage";
 import HousegirlPage from "./pages/HousegirlPage";
 import AgencyPage from "./pages/AgencyPage";
 import AgencyMarketplace from "./pages/AgencyMarketplace";
@@ -59,7 +60,7 @@ const App = () => (
                 <Route path="/agency-packages" element={<AgencyPackagesPage />} />
                 <Route path="/contact-us" element={<ContactUsPage />} />
                 <Route path="/contact" element={<ContactUsPage />} />
-                <Route path="/housegirls" element={<HousegirlPage />} />
+                <Route path="/housegirls" element={<HousegirlsListPage />} />
                 <Route path="/agencies" element={<AgencyPage />} />
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
                 <Route path="/browse-housegirls" element={<BrowseHousegirls />} />

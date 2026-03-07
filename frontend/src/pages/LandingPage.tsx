@@ -1,773 +1,210 @@
-import { Helmet } from 'react-helmet-async';
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Search, Lock, Phone, Menu, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import { useAuth } from '@/hooks/useAuthEnhanced';
 import AuthModal from '@/components/AuthModal';
-import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
-import { MapPin, Menu, Phone, Search } from 'lucide-react';
-
-type RoleType = 'House Help' | 'Nanny' | 'Cook' | 'Caregiver' | 'Cleaner';
-
-type Profile = {
-  id: string;
-  name: string;
-  role: RoleType;
-  location: string;
-  tags: string[];
-  experienceYears: number;
-  monthlyRate: number;
-  available: boolean;
-  phone: string;
-  exactLocation: string;
-  avatar: string | null;
-};
-
-const PROFILE_FILTERS = ['All', 'House Help', 'Nanny', 'Cook', 'Caregiver', 'Cleaner'] as const;
-const KENYA_CITIES_CACHE_KEY = 'dc_kenya_cities_cache_v1';
-const KENYA_CITIES_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
-const MOCK_PROFILES: Profile[] = [
-  {
-    id: 'mock-1',
-    name: 'Mary Wanjiku',
-    role: 'House Help',
-    location: 'Kasarani, Nairobi',
-    tags: ['Cleaning', 'Laundry', 'Ironing'],
-    experienceYears: 5,
-    monthlyRate: 15000,
-    available: true,
-    phone: '+254 712 334 110',
-    exactLocation: 'Kasarani, Nairobi',
-    avatar: null,
-  },
-  {
-    id: 'mock-2',
-    name: 'Grace Akinyi',
-    role: 'Nanny',
-    location: 'Nyali, Mombasa',
-    tags: ['Childcare', 'Meal Prep', 'Tutoring'],
-    experienceYears: 4,
-    monthlyRate: 18000,
-    available: true,
-    phone: '+254 701 992 803',
-    exactLocation: 'Nyali, Mombasa',
-    avatar: null,
-  },
-  {
-    id: 'mock-3',
-    name: 'Joyce Atieno',
-    role: 'Cook',
-    location: 'Milimani, Kisumu',
-    tags: ['Cooking', 'Baking', 'Meal Prep'],
-    experienceYears: 7,
-    monthlyRate: 20000,
-    available: false,
-    phone: '+254 722 883 094',
-    exactLocation: 'Milimani, Kisumu',
-    avatar: null,
-  },
-  {
-    id: 'mock-4',
-    name: 'Jane Njeri',
-    role: 'Caregiver',
-    location: 'Section 58, Nakuru',
-    tags: ['Elder Care', 'Medication', 'Companionship'],
-    experienceYears: 6,
-    monthlyRate: 22000,
-    available: true,
-    phone: '+254 734 918 725',
-    exactLocation: 'Section 58, Nakuru',
-    avatar: null,
-  },
-  {
-    id: 'mock-5',
-    name: 'Faith Chebet',
-    role: 'Cleaner',
-    location: 'Pioneer, Eldoret',
-    tags: ['Deep Cleaning', 'Laundry', 'Organization'],
-    experienceYears: 3,
-    monthlyRate: 14000,
-    available: true,
-    phone: '+254 746 113 302',
-    exactLocation: 'Pioneer, Eldoret',
-    avatar: null,
-  },
-];
-
-const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
-  id: 'contact_unlock',
-  name: 'Contact Unlock',
-  price: 200,
-  agencyFee: 0,
-  platformFee: 200,
-  features: ['Direct phone contact', 'Exact location details', 'Instant profile access'],
-  color: 'purple',
-  icon: Phone,
-};
-
-const BUNDLE_UNLOCK_PACKAGE: PackageDetails = {
-  id: 'bundle_unlock',
-  name: '3 Contacts Bundle',
-  price: 500,
-  agencyFee: 0,
-  platformFee: 500,
-  features: ['Unlock 3 contacts', 'Save KES 100', 'Instant profile access'],
-  color: 'blue',
-  icon: Phone,
-};
 
 const LandingPage = () => {
-  const { user, signOut } = useAuth();
   const navigate = useNavigate();
-
-  const getDashboardRoute = () => {
-    if (!user) return '/';
-    if (user.user_type === 'agency') return '/agency-dashboard';
-    if (user.user_type === 'housegirl') return '/housegirl-dashboard';
-    return '/employer-dashboard';
-  };
-
-  const [selectedCategory, setSelectedCategory] = useState<typeof PROFILE_FILTERS[number]>('All');
-  const [searchTerm, setSearchTerm] = useState('');
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, boolean>>({});
+  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [selectedLocation, setSelectedLocation] = useState('All locations');
-  const [kenyaCities, setKenyaCities] = useState<string[]>([]);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
 
-  const filteredProfiles = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
-    return MOCK_PROFILES.filter((profile) => {
-      const roleMatch = selectedCategory === 'All' || profile.role === selectedCategory;
-      const locationMatch =
-        selectedLocation === 'All locations' ||
-        profile.location.toLowerCase().includes(selectedLocation.toLowerCase());
-      const queryMatch =
-        query.length === 0 ||
-        profile.name.toLowerCase().includes(query) ||
-        profile.location.toLowerCase().includes(query) ||
-        profile.tags.some((tag) => tag.toLowerCase().includes(query));
-      return roleMatch && locationMatch && queryMatch;
-    });
-  }, [searchTerm, selectedCategory, selectedLocation]);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, selectedCategory, selectedLocation]);
-
-  const totalPages = Math.ceil(filteredProfiles.length / 10);
-  const paginatedProfiles = filteredProfiles.slice((currentPage - 1) * 10, currentPage * 10);
-
-  const handleGetContact = (profileId: string) => {
-    if (!user) {
-      localStorage.setItem('pendingContactId', profileId);
-      setAuthMode('signup');
-      setAuthModalOpen(true);
-      return;
-    }
-    setSelectedProfileId(profileId);
-    setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
-    setShowPaymentModal(true);
-  };
-
-  const handlePricingClick = (pkg: PackageDetails) => {
-    if (!user) {
-      setAuthMode('signup');
-      setAuthModalOpen(true);
-      return;
-    }
-    setSelectedProfileId(null);
-    setSelectedPaymentPackage(pkg);
-    setShowPaymentModal(true);
-  };
-
-  const handlePaymentSuccess = () => {
-    if (selectedProfileId) {
-      setUnlockedProfiles((prev) => ({ ...prev, [selectedProfileId]: true }));
-    }
-    setSelectedProfileId(null);
-    setShowPaymentModal(false);
-  };
-
-  useEffect(() => {
-    if (!user) {
-      return;
-    }
-
-    const searchParams = new URLSearchParams(window.location.search);
-    const pendingFromQuery = searchParams.get('pendingContactId');
-    const pendingContactId = pendingFromQuery || localStorage.getItem('pendingContactId');
-    if (!pendingContactId) {
-      return;
-    }
-
-    const matchingProfile = MOCK_PROFILES.find((profile) => profile.id === pendingContactId);
-    if (!matchingProfile) {
-      localStorage.removeItem('pendingContactId');
-      if (pendingFromQuery) {
-        searchParams.delete('pendingContactId');
-        const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
-        window.history.replaceState({}, '', nextUrl);
-      }
-      return;
-    }
-
-    setSelectedProfileId(matchingProfile.id);
-    setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
-    setShowPaymentModal(true);
-    localStorage.removeItem('pendingContactId');
-
-    if (pendingFromQuery) {
-      searchParams.delete('pendingContactId');
-      const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
-      window.history.replaceState({}, '', nextUrl);
-    }
-  }, [user]);
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        setIsMenuOpen(false);
-      }
-    };
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleEscape);
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
-
-  const openAuth = (mode: 'login' | 'signup') => {
-    setAuthMode(mode);
+  const openRegister = () => {
+    setAuthMode('signup');
     setAuthModalOpen(true);
+    setIsMenuOpen(false);
   };
 
-  useEffect(() => {
-    const loadKenyaCities = async () => {
-      try {
-        const cachedValue = localStorage.getItem(KENYA_CITIES_CACHE_KEY);
-        if (cachedValue) {
-          const parsed = JSON.parse(cachedValue) as { timestamp: number; cities: string[] };
-          if (
-            parsed?.timestamp &&
-            Array.isArray(parsed?.cities) &&
-            Date.now() - parsed.timestamp < KENYA_CITIES_CACHE_TTL_MS
-          ) {
-            setKenyaCities(parsed.cities);
-            return;
-          }
-        }
-      } catch {
-        // Ignore cache parse issues and fetch fresh data.
-      }
-
-      try {
-        const response = await fetch('https://countriesnow.space/api/v0.1/countries/cities', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ country: 'Kenya' }),
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to load Kenya cities: ${response.status}`);
-        }
-
-        const payload = (await response.json()) as { data?: string[] };
-        const cities = Array.isArray(payload?.data)
-          ? Array.from(new Set(payload.data))
-              .filter((city) => typeof city === 'string' && city.trim().length > 0)
-              .sort((a, b) => a.localeCompare(b))
-          : [];
-
-        if (cities.length > 0) {
-          setKenyaCities(cities);
-          localStorage.setItem(
-            KENYA_CITIES_CACHE_KEY,
-            JSON.stringify({
-              timestamp: Date.now(),
-              cities,
-            })
-          );
-        }
-      } catch {
-        const fallbackCities = Array.from(
-          new Set(
-            MOCK_PROFILES.map((profile) => profile.location.split(',').at(-1)?.trim()).filter(
-              (city): city is string => Boolean(city)
-            )
-          )
-        ).sort((a, b) => a.localeCompare(b));
-        setKenyaCities(fallbackCities);
-      }
-    };
-
-    loadKenyaCities();
-  }, []);
-
-  const handleFindHelp = () => {
-    const profilesSection = document.getElementById('profiles-list');
-    if (profilesSection) {
-      profilesSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    navigate('/browse-housegirls');
-  };
-
-  const handlePricingScroll = () => {
-    const pricingSection = document.getElementById('pricing-value');
-    if (pricingSection) {
-      pricingSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      return;
-    }
-    navigate('/agency-packages');
+  const openLogin = () => {
+    setAuthMode('login');
+    setAuthModalOpen(true);
+    setIsMenuOpen(false);
   };
 
   return (
-    <div
-      className="min-h-screen bg-white"
-      style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", lineHeight: 1.5 }}
-    >
-      <Helmet>
-        <title>Domestic Connect | Find a Housegirl, Nanny, Caregiver & House Manager in Kenya</title>
-        <meta
-          name="description"
-          content="Looking for a trusted housegirl, nanny, house manager, caregiver or cleaner in Nairobi, Mombasa, Kisumu, Nakuru or anywhere in Kenya? Browse verified profiles and connect today for just KES 200."
-        />
-        <meta
-          name="keywords"
-          content="housegirl kenya, nanny nairobi, caregiver kenya, house manager nairobi, ayah kenya, domestic worker kenya, house help nairobi, cleaner mombasa, nanny mombasa, caregiver nakuru, housegirl kisumu, domestic connect kenya, find housegirl online kenya, trusted nanny kenya, home helper nairobi, house aunty kenya, babysitter nairobi, elderly caregiver kenya, live-in house help, part time cleaner nairobi, domestic staff agency kenya"
-        />
-        <meta property="og:title" content="Domestic Connect | Find a Housegirl, Nanny, Caregiver & House Manager in Kenya" />
-        <meta
-          property="og:description"
-          content="Looking for a trusted housegirl, nanny, house manager, caregiver or cleaner in Nairobi, Mombasa, Kisumu, Nakuru or anywhere in Kenya? Browse verified profiles and connect today for just KES 200."
-        />
-        <meta property="og:url" content="https://www.domesticconnect.co.ke" />
-        <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://www.domesticconnect.co.ke" />
-      </Helmet>
+    <div className="min-h-screen bg-white text-[#111] font-sans">
+      {/* NAVBAR */}
+      <header className="border-b border-gray-100 bg-white">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
+          <Link to="/" className="text-xl font-bold tracking-tight">
+            Domestic Connect
+          </Link>
 
-      <div className="fixed inset-0 z-[-1]">
-        <img
-          src="/housegirls.webp"
-          alt="Background"
-          className="w-full h-full object-cover blur-[3px] saturate-[0.3] opacity-[0.08]"
-        />
-      </div>
-
-      <header className="bg-white border-b border-[#eee] relative md:sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="grid grid-cols-[1fr_auto] md:grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-6">
-            <div
-              className="flex items-center cursor-pointer"
-              onClick={() => {
-                navigate(getDashboardRoute());
-              }}
-            >
-              <h1 className="text-2xl font-bold text-black tracking-tight">Domestic Connect</h1>
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link to="/housegirls" className="text-sm font-medium hover:text-gray-600 transition-colors">
+              Find Help
+            </Link>
+            <Link to="/agency-packages" className="text-sm font-medium hover:text-gray-600 transition-colors">
+              Agencies
+            </Link>
+            <div className="flex items-center gap-3 ml-4">
+              <Button onClick={openLogin} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">
+                Login
+              </Button>
+              <Button onClick={openRegister} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
+                Join Today
+              </Button>
             </div>
+          </nav>
 
-            <nav className="hidden md:flex items-center justify-center gap-6">
-              <button
-                type="button"
-                onClick={handleFindHelp}
-                className="text-sm font-medium text-[#333] hover:text-black transition-opacity"
-              >
-                Find Help
-              </button>
-              <button
-                type="button"
-                onClick={handlePricingScroll}
-                className="text-sm font-medium text-[#333] hover:text-black transition-opacity"
-              >
-                Pricing
-              </button>
-            </nav>
+          {/* Mobile Menu Toggle */}
+          <button className="md:hidden p-2 -mr-2 text-[#111]" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
 
-            <div className="flex items-center justify-end gap-3">
-              {user ? (
-                <>
-                  <Button
-                    onClick={() => navigate(getDashboardRoute())}
-                    className="hidden md:inline-flex bg-black hover:bg-[#333] text-white rounded-full transition-opacity duration-150"
-                  >
-                    Dashboard
-                  </Button>
-                  <Button variant="outline" onClick={signOut} className="hidden md:inline-flex border-gray-300 text-black bg-transparent hover:bg-gray-100 rounded-full">
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => openAuth('login')}
-                    className="text-sm font-medium text-black border border-black hover:bg-gray-50 rounded-full px-5 py-2 transition-colors"
-                  >
-                    Login
-                  </button>
-                  <Button
-                    onClick={() => openAuth('signup')}
-                    className="hidden md:inline-flex rounded-full px-6 bg-black hover:bg-[#333] text-white font-medium"
-                  >
-                    Join Today
-                  </Button>
-                </>
-              )}
-
-              <button
-                type="button"
-                aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-                aria-expanded={isMenuOpen}
-                aria-controls="landing-main-menu"
-                onClick={() => setIsMenuOpen((prev) => !prev)}
-                className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors border-0"
-              >
-                <Menu className="h-5 w-5" />
-              </button>
+        {/* Mobile Nav Drawer */}
+        {isMenuOpen && (
+          <div className="md:hidden border-t border-gray-100 bg-white px-4 py-4 space-y-4">
+            <Link to="/housegirls" className="block py-2 text-[15px] font-medium" onClick={() => setIsMenuOpen(false)}>
+              Find Help
+            </Link>
+            <Link to="/agency-packages" className="block py-2 text-[15px] font-medium" onClick={() => setIsMenuOpen(false)}>
+              Agencies
+            </Link>
+            <div className="pt-2 flex flex-col gap-3">
+              <Button onClick={openLogin} variant="outline" className="w-full rounded-[4px] border-[#111] text-[#111]">
+                Login
+              </Button>
+              <Button onClick={openRegister} className="w-full rounded-[4px] bg-[#111] text-white">
+                Join Today
+              </Button>
             </div>
           </div>
-        </div>
+        )}
       </header>
-      
-      <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'bg-black/0 opacity-0 pointer-events-none'}`}>
-        <aside
-          id="landing-main-menu"
-          ref={drawerRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
-          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${
-            isMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
-        >
-          <div className="h-full overflow-y-auto p-6">
-            <div className="space-y-6">
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Employers</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); handleFindHelp(); }} className="text-left text-gray-800 hover:text-black">Find a Housegirl</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="text-left text-gray-800 hover:text-black">How It Works</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="text-left text-gray-800 hover:text-black">Pricing & Packages</button>
-                </div>
-              </div>
 
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Housegirls</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="text-left text-gray-800 hover:text-black">Register as Housegirl</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="text-left text-gray-800 hover:text-black">How to Get Listed</button>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">For Agencies</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="text-left text-gray-800 hover:text-black">Agency Marketplace</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openAuth('signup'); }} className="text-left text-gray-800 hover:text-black">List Your Agency</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="text-left text-gray-800 hover:text-black">Agency Packages</button>
-                </div>
-              </div>
-
-              <div>
-                <p className="text-[11px] font-bold uppercase tracking-wide text-gray-400 mb-2">General</p>
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="text-left text-gray-800 hover:text-black">About Us</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="text-left text-gray-800 hover:text-black">Help Center</button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="text-left text-gray-800 hover:text-black">Contact Us</button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      <section className="relative md:sticky top-[73px] z-40 bg-[#111] w-full">
-        <div className="px-4 md:px-12 py-4">
-          <div className="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-3">
-            <div className="flex flex-1 items-center gap-2 flex-wrap">
-              <div className="relative min-w-[220px] flex-1 max-w-md">
-                <Search className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <Input
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by name, location or skill..."
-                  className="h-9 rounded-[2px] pl-10 border-0 bg-[#222] text-white placeholder-white focus-visible:ring-0"
-                />
-              </div>
-              <div className="min-w-[200px]">
-                <select
-                  value={selectedLocation}
-                  onChange={(e) => setSelectedLocation(e.target.value)}
-                  className="h-9 w-full rounded-[2px] border-0 bg-[#222] px-3 text-[13px] text-white focus:outline-none"
-                >
-                  <option value="All locations">All locations</option>
-                  {kenyaCities.map((city) => (
-                    <option key={city} value={city}>
-                      {city}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {PROFILE_FILTERS.map((filter) => (
-                  <Button
-                    key={filter}
-                    variant={selectedCategory === filter ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategory(filter)}
-                    className={
-                      selectedCategory === filter
-                        ? 'h-9 rounded-[2px] bg-white text-black text-[13px] px-3 hover:bg-gray-100'
-                        : 'h-9 rounded-[2px] border border-[#444] bg-transparent text-white text-[13px] px-3 hover:bg-[#222]'
-                    }
-                  >
-                    {filter}
-                  </Button>
-                ))}
-              </div>
-            </div>
-            <p className="text-[13px] text-[#888]">{filteredProfiles.length} housegirls available</p>
-          </div>
-        </div>
-      </section>
-
-      <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
-
-      <main id="profiles-list" className="py-8">
-        <div className="w-full px-10">
-          <div className="flex flex-col w-full relative">
-            <div className="flex flex-col gap-[8px] w-full">
-            {paginatedProfiles.map((profile) => {
-              const isUnlocked = Boolean(unlockedProfiles[profile.id]);
-              return (
-                <article
-                  key={profile.id}
-                  className="bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-4"
-                >
-                  <div className="flex flex-row gap-4 items-center">
-                    <div className="relative flex-shrink-0">
-                      {profile.avatar ? (
-                        <img
-                          src={profile.avatar}
-                          alt={profile.name}
-                          className="w-[64px] h-[64px] rounded-full object-cover border border-gray-200"
-                        />
-                      ) : (
-                        <div className="w-[64px] h-[64px] rounded-full bg-[#4b5563] text-white font-semibold text-xl flex items-center justify-center text-center">
-                          {profile.name
-                            .split(' ')
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((namePart) => namePart[0]?.toUpperCase())
-                            .join('')}
-                        </div>
-                      )}
-                      <span
-                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
-                          profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex-1">
-                      <div className="flex flex-col gap-1">
-                        <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
-                        <Badge variant="secondary" className="w-fit border border-blue-600 bg-transparent text-blue-600 text-[13px] px-3 py-1 rounded-[2px]">
-                          {profile.role}
-                        </Badge>
-                        <p className="text-[#555] text-[13px] flex items-center gap-1">
-                          <MapPin className="h-4 w-4 text-[#555]" />
-                          {profile.location}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {profile.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="secondary" className="border border-[#ddd] bg-transparent text-[#555] text-[12px] rounded-[2px] px-2 py-1">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
-                        {isUnlocked && (
-                          <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit">
-                            Contact: {profile.phone} · {profile.exactLocation}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="md:w-56 flex flex-col gap-2 md:items-end">
-                      <p className="text-[22px] font-bold text-[#111]">
-                        KES {profile.monthlyRate.toLocaleString()}
-                        <span className="text-sm font-medium text-gray-500">/mo</span>
-                      </p>
-                      <Button
-                        onClick={() => handleGetContact(profile.id)}
-                        className="w-full md:w-auto rounded-[4px] px-6 bg-blue-600 hover:bg-blue-700 text-white transition-opacity duration-150"
-                      >
-                        {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
-                      </Button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-6">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className={`text-[13px] mr-2 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
-                >
-                  ← Previous
-                </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  if (totalPages > 5) {
-                     if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
-                       if (page === 2 && currentPage > 3) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
-                       if (page === totalPages - 1 && currentPage < totalPages - 2) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
-                       return null;
-                     }
-                  }
-                  return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`h-8 min-w-[32px] px-2 text-[13px] ${
-                        currentPage === page
-                          ? 'bg-black text-white border border-black'
-                          : 'bg-white text-black border border-black hover:bg-gray-50'
-                      }`}
-                    >
-                      {page}
-                    </button>
-                  );
-                })}
-
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`text-[13px] ml-2 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
-                >
-                  Next →
-                </button>
-              </div>
-            )}
-          </div>
-
-          {filteredProfiles.length === 0 && (
-            <div className="text-center py-14 bg-white rounded-2xl border border-gray-100 shadow-sm mt-4">
-              <p className="text-gray-600">No housegirls found. Try adjusting your filters.</p>
-            </div>
-          )}
-        </div>
-      </main>
-
-      <section id="pricing-value" className="border-y border-gray-200 bg-[#f9f9f9]">
-        <div className="max-w-[1100px] mx-auto px-4 py-10">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div 
-              className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
-              onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Single Unlock</p>
-              <p className="mt-2 text-2xl font-bold text-[#111]">KES 200</p>
-              <p className="mt-2 text-[13px] text-[#555]">Unlock one profile contact instantly via M-Pesa.</p>
-            </div>
-            <div 
-              className="border border-[#111] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-600 hover:shadow-md transition-all duration-200 relative"
-              onClick={() => handlePricingClick(BUNDLE_UNLOCK_PACKAGE)}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-600">Best Value</p>
-              <p className="mt-2 text-2xl font-bold text-[#111]">KES 500</p>
-              <p className="mt-2 text-[13px] text-[#555]">Unlock 3 contacts and save KES 100.</p>
-            </div>
-            <div 
-              className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
-              onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">No Subscription</p>
-              <p className="mt-2 text-2xl font-bold text-[#111]">Pay As You Hire</p>
-              <p className="mt-2 text-[13px] text-[#555]">No monthly commitment. Only pay when you need contacts.</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="bg-white">
-        <div className="max-w-[1100px] mx-auto px-4 py-10">
-          <div className="border border-[#e5e5e5] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#111]">Ready to hire safely and faster?</h2>
-              <p className="mt-1 text-[14px] text-[#555]">Browse profiles and unlock contact details when you find the right fit.</p>
-            </div>
-            <Button
-              onClick={handleFindHelp}
-              className="rounded-[4px] bg-black hover:bg-[#333333] text-white px-6 transition-opacity duration-150"
-            >
-              Start Browsing
+      {/* HERO SECTION */}
+      <section className="bg-white py-16 md:py-24 flex items-center min-h-[calc(100vh-64px)] md:min-h-0">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 w-full text-center md:text-left flex flex-col md:items-start items-center">
+          <h1 className="text-4xl md:text-6xl font-extrabold tracking-tight leading-[1.1] max-w-2xl mb-6">
+            Find trusted <br className="hidden md:block" /> house help <br className="hidden md:block" /> in Kenya
+          </h1>
+          <p className="text-gray-500 text-[16px] md:text-lg mb-8 max-w-xl leading-relaxed">
+            Browse verified housegirls, nannies, cooks and caregivers across Kenya. 
+            Pay KES 200 via M-Pesa to unlock any contact. No agency fees.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-10">
+            <Button onClick={() => navigate('/housegirls')} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-12 px-8 text-[15px] w-full sm:w-auto">
+              Browse Housegirls →
+            </Button>
+            <Button onClick={openRegister} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-12 px-8 text-[15px] w-full sm:w-auto">
+              Register as Housegirl
             </Button>
           </div>
+          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 md:gap-6 text-sm font-medium text-gray-600">
+            <span className="flex items-center gap-1.5"><span className="text-green-600">✓</span> Verified profiles</span>
+            <span className="flex items-center gap-1.5"><span className="text-green-600">✓</span> KES 200 one-time</span>
+            <span className="flex items-center gap-1.5"><span className="text-green-600">✓</span> No subscription</span>
+          </div>
         </div>
       </section>
-      </div>
 
-      <footer className="bg-black text-white py-8 mt-10">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-gray-300">© 2024 Domestic Connect. All rights reserved.</p>
+      {/* HOW IT WORKS */}
+      <section className="bg-white py-16 md:py-24 border-t border-gray-100">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
+          <h2 className="text-3xl font-bold text-center mb-16 tracking-tight">How it works</h2>
+          <div className="grid md:grid-cols-3 gap-12 md:gap-8">
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-6">
+                <Search size={28} className="text-[#111]" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Browse Profiles</h3>
+              <p className="text-gray-500 leading-relaxed">
+                See available housegirls near you filtered by role, location and skills.
+              </p>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-6">
+                <Lock size={28} className="text-[#111]" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Unlock Contact</h3>
+              <p className="text-gray-500 leading-relaxed">
+                Pay KES 200 via M-Pesa to reveal the phone number and location of your chosen housegirl.
+              </p>
+            </div>
+            <div className="flex flex-col items-center text-center">
+              <div className="w-16 h-16 rounded-full bg-gray-50 flex items-center justify-center mb-6">
+                <Phone size={28} className="text-[#111]" />
+              </div>
+              <h3 className="text-xl font-bold mb-3">Hire Directly</h3>
+              <p className="text-gray-500 leading-relaxed">
+                Call or WhatsApp them directly. No middleman. No commission.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* WHO IS THIS FOR */}
+      <section className="bg-gray-50 py-16 md:py-24">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
+          <div className="grid md:grid-cols-2 gap-6">
+            <div className="bg-white p-8 rounded-[4px] border border-gray-100 shadow-sm flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold mb-4 tracking-tight">Looking for house help?</h3>
+                <p className="text-gray-600 mb-8 leading-relaxed">
+                  Browse hundreds of verified profiles. Filter by location, role and experience. Pay only when you find the right person.
+                </p>
+              </div>
+              <Button onClick={() => navigate('/housegirls')} className="rounded-[4px] bg-[#111] hover:bg-[#333] text-white w-fit px-6">
+                Find Housegirls →
+              </Button>
+            </div>
+            
+            <div className="bg-white p-8 rounded-[4px] border border-gray-100 shadow-sm flex flex-col justify-between">
+              <div>
+                <h3 className="text-2xl font-bold mb-4 tracking-tight">Looking for work?</h3>
+                <p className="text-gray-600 mb-8 leading-relaxed">
+                  Create a free profile and get discovered by families across Kenya. No upfront fee to register.
+                </p>
+              </div>
+              <Button onClick={openRegister} variant="outline" className="rounded-[4px] border-[#111] text-[#111] hover:bg-gray-50 w-fit px-6">
+                Register Free →
+              </Button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* STATS BAR */}
+      <section className="bg-[#111] text-white py-12">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
+          <div className="flex flex-col md:flex-row items-center justify-center gap-6 md:gap-12 text-center md:text-left text-sm md:text-base font-medium">
+            <span>500+ Housegirls</span>
+            <span className="hidden md:inline text-gray-600">|</span>
+            <span>15+ Cities</span>
+            <span className="hidden md:inline text-gray-600">|</span>
+            <span>KES 200 fee</span>
+            <span className="hidden md:inline text-gray-600">|</span>
+            <span>Same day access</span>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-black text-white py-12 md:py-8 border-t border-[#222]">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-400">
+          <div>© {new Date().getFullYear()} Domestic Connect</div>
+          <div className="flex items-center gap-4">
+            <Link to="/housegirls" className="hover:text-white transition-colors">/housegirls</Link>
+            <span>·</span>
+            <Link to="/agency-packages" className="hover:text-white transition-colors">/agency-packages</Link>
+            <span>·</span>
+            <Link to="/how-it-works" className="hover:text-white transition-colors">/how-it-works</Link>
+          </div>
+          <div>domesticconnect.co.ke</div>
         </div>
       </footer>
 
-      <AuthModal
-        isOpen={authModalOpen}
-        onClose={() => setAuthModalOpen(false)}
-        defaultMode={authMode}
+      {/* Modals */}
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        initialMode={authMode} 
       />
-
-      {showPaymentModal && (
-        <PaymentModal
-          package={selectedPaymentPackage}
-          agency={{
-            id: 'contact_unlock_bundle',
-            name: 'Domestic Connect',
-            location: 'Kenya',
-            verification_status: 'verified',
-            subscription_tier: 'premium',
-            license_number: 'DC-2024-001',
-            rating: 5,
-            verified_workers: 0,
-            successful_placements: 0,
-          }}
-          onClose={() => {
-            setShowPaymentModal(false);
-            setSelectedProfileId(null);
-          }}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
     </div>
   );
 };
