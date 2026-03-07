@@ -3,7 +3,6 @@ import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNavigate } from 'react-router-dom';
 import { Housegirls } from '@/components/employer/Housegirls';
 import { UnlockModal } from '@/components/employer/UnlockModal';
-import AuthModal from '@/components/AuthModal';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
@@ -19,8 +18,6 @@ const BrowseHousegirls = () => {
   const navigate = useNavigate();
 
   // State
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
@@ -93,18 +90,13 @@ const BrowseHousegirls = () => {
     }
   }, [dataError]);
 
-  const openAuthModal = (mode: 'login' | 'signup') => {
-    setAuthMode(mode);
-    setAuthModalOpen(true);
-  };
-
   const handleShowUnlockModal = (housegirl: Housegirl | null) => {
     if (!user) {
         toast({
             title: "Authentication Required",
             description: "Please log in or create an account to unlock contacts.",
         });
-        openAuthModal('login');
+        navigate('/login');
     } else {
         setHousegirlToUnlock(housegirl);
         setShowUnlockModal(true);
@@ -177,10 +169,10 @@ const BrowseHousegirls = () => {
                   </div>
                 ) : (
                   <div className="flex items-center space-x-3">
-                    <Button variant="ghost" onClick={() => openAuthModal('login')} className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full">
+                    <Button variant="ghost" onClick={() => navigate('/login')} className="text-gray-700 hover:text-pink-600 hover:bg-pink-50 rounded-full">
                       Login
                     </Button>
-                    <Button onClick={() => openAuthModal('signup')} className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-full shadow-lg">
+                    <Button onClick={() => navigate('/login')} className="bg-gradient-to-r from-pink-500 to-orange-500 hover:from-pink-600 hover:to-orange-600 text-white rounded-full shadow-lg">
                       Join today!
                   </Button>
                   </div>
@@ -218,12 +210,6 @@ const BrowseHousegirls = () => {
 
         <Footer filteredHousegirlsCount={filteredHousegirls.length} />
 
-        <AuthModal 
-          isOpen={authModalOpen} 
-          onClose={() => setAuthModalOpen(false)} 
-          defaultMode={authMode}
-        />
-        
         <UnlockModal
           showUnlockModal={showUnlockModal}
           setShowUnlockModal={setShowUnlockModal}

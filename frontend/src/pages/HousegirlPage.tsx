@@ -5,7 +5,6 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import AuthModal from '@/components/AuthModal';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
 import AgencyRegistrationModal from '@/components/AgencyRegistrationModal';
@@ -34,8 +33,6 @@ import {
 const HousegirlPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
   const [agencyModalOpen, setAgencyModalOpen] = useState(false);
 
   // Redirect logged-in housegirls to their dashboard
@@ -44,15 +41,6 @@ const HousegirlPage = () => {
       navigate('/housegirl-dashboard');
     }
   }, [user, navigate]);
-
-  const openAuthModal = (mode: 'login' | 'signup') => {
-    setAuthMode(mode);
-    setAuthModalOpen(true);
-  };
-
-  const closeAuthModal = () => {
-    setAuthModalOpen(false);
-  };
 
   const openAgencyModal = () => {
     setAgencyModalOpen(true);
@@ -140,10 +128,10 @@ const HousegirlPage = () => {
                 </div>
               ) : (
                 <div className="flex items-center space-x-3">
-                  <Button variant="ghost" onClick={() => openAuthModal('login')} className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-full">
+                  <Button variant="ghost" onClick={() => navigate('/login')} className="text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-full">
                     Login
                   </Button>
-                  <Button onClick={() => openAuthModal('signup')} className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full shadow-lg">
+                  <Button onClick={() => navigate('/login')} className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white rounded-full shadow-lg">
                     Join today!
                   </Button>
                 </div>
@@ -176,7 +164,7 @@ const HousegirlPage = () => {
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
             <Button 
-              onClick={() => openAuthModal('signup')}
+              onClick={() => navigate('/login')}
               size="lg" 
               className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
             >
@@ -378,7 +366,7 @@ const HousegirlPage = () => {
               Join thousands of housegirls who found great jobs through Domestic Connect
             </p>
             <Button 
-              onClick={() => openAuthModal('signup')}
+              onClick={() => navigate('/login')}
               size="lg" 
               className="bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
             >
@@ -408,13 +396,6 @@ const HousegirlPage = () => {
           </div>
         </div>
       </footer>
-
-      {/* Auth Modal */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={closeAuthModal} 
-        defaultMode={authMode} 
-      />
 
       {/* Agency Registration Modal */}
       <AgencyRegistrationModal 

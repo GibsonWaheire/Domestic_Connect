@@ -19,6 +19,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import BrowseHousegirls from "./pages/BrowseHousegirls";
 import Auth from "./pages/Auth";
+import LoginPage from "./pages/LoginPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 import StatsPage from "./pages/StatsPage";
 import WhyChoosePage from "./pages/WhyChoosePage";
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/home" element={<LandingPage />} />
                 <Route path="/register" element={<Auth />} />
+                <Route path="/login" element={<LoginPage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/why-choose-us" element={<WhyChoosePage />} />

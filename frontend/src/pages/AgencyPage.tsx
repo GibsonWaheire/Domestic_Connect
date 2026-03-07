@@ -3,8 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import AuthModal from '@/components/AuthModal';
 import ReturnToHome from '@/components/ReturnToHome';
 import { 
   Heart, 
@@ -39,17 +37,6 @@ import {
 const AgencyPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('signup');
-
-  const openAuthModal = (mode: 'login' | 'signup') => {
-    setAuthMode(mode);
-    setAuthModalOpen(true);
-  };
-
-  const closeAuthModal = () => {
-    setAuthModalOpen(false);
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50 to-teal-50">
@@ -125,10 +112,10 @@ const AgencyPage = () => {
                 </div>
               ) : (
                 <div className="flex items-center space-x-3">
-                  <Button variant="ghost" onClick={() => openAuthModal('login')} className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-full">
+                  <Button variant="ghost" onClick={() => navigate('/login')} className="text-gray-700 hover:text-emerald-600 hover:bg-emerald-50 rounded-full">
                     Login
                   </Button>
-                  <Button onClick={() => openAuthModal('signup')} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-full shadow-lg">
+                  <Button onClick={() => navigate('/login')} className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-full shadow-lg">
                     Partner with us
                   </Button>
                 </div>
@@ -162,7 +149,7 @@ const AgencyPage = () => {
           
           <div className="flex flex-col sm:flex-row justify-center gap-4 mb-8">
             <Button 
-              onClick={() => openAuthModal('signup')}
+              onClick={() => navigate('/login')}
               size="lg" 
               className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
             >
@@ -582,7 +569,7 @@ const AgencyPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row justify-center gap-4">
               <Button 
-                onClick={() => openAuthModal('signup')}
+                onClick={() => navigate('/login')}
                 size="lg" 
                 className="bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white px-10 py-5 text-lg font-semibold rounded-full shadow-xl transform hover:scale-105 transition-all duration-300"
               >
@@ -668,12 +655,6 @@ const AgencyPage = () => {
         </div>
       </footer>
 
-      {/* Auth Modal */}
-      <AuthModal 
-        isOpen={authModalOpen} 
-        onClose={closeAuthModal} 
-        defaultMode={authMode} 
-      />
     </div>
   );
 };
