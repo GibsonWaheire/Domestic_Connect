@@ -21,9 +21,7 @@ const LoginPage = () => {
   } = useAuth();
 
   const [searchParams] = useSearchParams();
-  const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'login';
-
-  const [mode, setMode] = useState<'login' | 'signup'>(initialMode);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [userType, setUserType] = useState<'employer' | 'housegirl'>('employer');
   const [phoneInput, setPhoneInput] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -42,6 +40,15 @@ const LoginPage = () => {
     setOtpCode('');
     setError(null);
   }, [changePhoneNumber]);
+
+  useEffect(() => {
+    const urlMode = searchParams.get('mode');
+    if (urlMode === 'signup') {
+      setMode('signup');
+    } else {
+      setMode('login');
+    }
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -109,7 +116,7 @@ const LoginPage = () => {
     e.preventDefault();
     setError(null);
     const formattedPhone = formatKenyanPhone(phoneInput);
-    const result = await handleSendOTP(formattedPhone, userType);
+    const result = await handleSendOTP(formattedPhone, userType, mode);
     if (result.error) {
       setError(result.error);
       return;
@@ -226,7 +233,7 @@ const LoginPage = () => {
               className="bg-black text-white rounded-full w-full py-3 font-medium mt-4 hover:bg-black/90"
               disabled={loading}
             >
-              {loading ? 'Processing...' : 'Send Code →'}
+              {loading ? 'Processing...' : mode === 'login' ? 'Send Code →' : 'Create Account →'}
             </Button>
 
             <div className="relative my-6">
@@ -240,7 +247,7 @@ const LoginPage = () => {
 
             <Button
               type="button"
-              onClick={() => handleGoogleSignIn(mode === 'signup' ? userType : undefined, mode)}
+              onClick={() => handleGoogleSignIn(userType, mode)}
               className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white py-3 font-medium text-[#333] hover:bg-gray-50 mb-6"
               disabled={loading}
             >
@@ -255,12 +262,26 @@ const LoginPage = () => {
 
             <div className="text-center">
               {mode === 'login' ? (
-                <button type="button" onClick={() => setMode('signup')} className="text-sm text-gray-500 hover:text-black transition-colors">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('signup');
+                    navigate('/login?mode=signup');
+                  }}
+                  className="text-sm text-gray-500 hover:text-black transition-colors"
+                >
                   New here? Create account →
                 </button>
               ) : (
-                <button type="button" onClick={() => setMode('login')} className="text-sm text-gray-500 hover:text-black transition-colors">
-                  Already have account? Sign in →
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMode('login');
+                    navigate('/login');
+                  }}
+                  className="text-sm text-gray-500 hover:text-black transition-colors"
+                >
+                  Do you have an account? Sign/Log in →
                 </button>
               )}
             </div>
