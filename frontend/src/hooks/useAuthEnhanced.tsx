@@ -37,7 +37,7 @@ interface AuthContextType {
   authStep: 1 | 2;
   phoneNumber: string;
   formatKenyanPhone: (phone: string) => string;
-  handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency') => Promise<{ error: string | null }>;
+  handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null }>;
   handleVerifyOTP: (code: string, mode?: 'login' | 'signup') => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' }>;
   resendOTP: () => Promise<{ error: string | null }>;
   changePhoneNumber: () => void;
@@ -125,6 +125,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [phoneNumber, setPhoneNumber] = useState('');
   const [authStep, setAuthStep] = useState<1 | 2>(1);
   const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency'>('employer');
+  const [selectedMode, setSelectedMode] = useState<'login' | 'signup'>('login');
 
   const checkSession = useCallback(async () => {
     try {
@@ -178,13 +179,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Log the error for debugging
       const errorObj = error instanceof Error ? error : new Error(String(error));
       errorService.logError(errorObj, 'Firebase user sync', 'medium');
+
+      if (!user) return; // Don't show sync errors to logged out users
+
       toast({
         title: "Profile Sync Required",
         description: "We could not verify your account role right now. Please try logging in again.",
         variant: "destructive",
       });
     }
-  }, []);
+  }, [user]);
 
   // Initialize auth state
   useEffect(() => {
@@ -249,10 +253,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [handleFirebaseUser, isSigningOut, user]);
 
-  const handleSendOTP = async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency') => {
+  const handleSendOTP = async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency', mode: 'login' | 'signup' = 'login') => {
     try {
       setLoading(true);
       const formattedPhone = formatKenyanPhone(rawPhone);
+      await apiRequest('/api/otp/send', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: formattedPhone,
+          user_type: userType,
+          mode
+        })
+      });
       const otpResult = await FirebaseAuthService.sendOTP(formattedPhone);
       if (import.meta.env.DEV) {
         console.log('sendOTP confirmationResult exists:', Boolean(otpResult.confirmationResult));
@@ -264,6 +276,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setConfirmationResult(otpResult.confirmationResult);
       setPhoneNumber(formattedPhone);
       setSelectedUserType(userType);
+      setSelectedMode(mode);
       setAuthStep(2);
       return { error: null };
     } finally {
@@ -288,13 +301,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const token = await verified.userCredential.user.getIdToken();
+      await apiRequest('/api/otp/verify', {
+        method: 'POST',
+        body: JSON.stringify({
+          phone: phoneNumber,
+          code,
+          user_type: selectedUserType,
+          mode
+        })
+      });
+
       const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          user_type: mode === 'signup' ? selectedUserType : undefined,
+          user_type: selectedUserType,
           mode
         })
       });
@@ -326,7 +349,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!phoneNumber) {
       return { error: 'Please enter your number again.' };
     }
-    return handleSendOTP(phoneNumber, selectedUserType);
+    return handleSendOTP(phoneNumber, selectedUserType, selectedMode);
   };
 
   const changePhoneNumber = useCallback(() => {
@@ -364,7 +387,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          user_type: mode === 'signup' ? userType : undefined,
+          user_type: userType,
           mode,
           display_name: result.user.displayName,
           email: result.user.email,

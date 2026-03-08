@@ -26,16 +26,18 @@ def create_app(config_name=None):
     if hasattr(config_class, 'init_app'):
         config_class.init_app(app)
         
-    # Allow all origins temporarily to 
-    # diagnose the issue
-    CORS(app, 
-        resources={r"/api/*": {
-            "origins": "*",
-            "allow_headers": "*",
-            "methods": ["GET","POST","PUT",
-                        "DELETE","OPTIONS"],
-            "supports_credentials": False
-        }}
+    origins = os.environ.get(
+        'CORS_ORIGINS',
+        'http://localhost:5173'
+    ).split(',')
+
+    CORS(app,
+        origins=[o.strip() for o in origins],
+        supports_credentials=True,
+        allow_headers=['Content-Type', 
+                       'Authorization'],
+        methods=['GET','POST','PUT',
+                 'DELETE','OPTIONS']
     )
     
     # Create upload directory
