@@ -16,8 +16,8 @@ FIREBASE_API_KEY = os.getenv("FIREBASE_API_KEY")
 def create_firebase_accounts():
     """Create Firebase accounts for testing"""
     if not FIREBASE_API_KEY:
-        print("❌ Error: FIREBASE_API_KEY environment variable is not set.")
-        print("Please set it before running this script.")
+        print("❌ Error: issue with firebase.")
+        print("Please debug it.")
         return
     
     
@@ -61,6 +61,7 @@ def create_firebase_accounts():
         payload = {
             "email": account['email'],
             "password": account['password'],
+            "phoneNumber": account['phoneNumber'],
             "displayName": account['displayName'],
             "returnSecureToken": True
         }
