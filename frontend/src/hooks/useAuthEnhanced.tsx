@@ -37,12 +37,13 @@ interface AuthContextType {
   phoneNumber: string;
   formatKenyanPhone: (phone: string) => string;
   handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency') => Promise<{ error: string | null }>;
-  handleVerifyOTP: (code: string) => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' }>;
+  handleVerifyOTP: (code: string, mode?: 'login' | 'signup') => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' }>;
   resendOTP: () => Promise<{ error: string | null }>;
   changePhoneNumber: () => void;
   signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
+  handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -66,7 +67,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const { headers, ...restOptions } = options;
-  
+
   // Abort request if it takes longer than 10 seconds to respond
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 10000);
@@ -126,7 +127,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
       const response = await apiRequest<{ user: User | null }>('/api/auth/check_session');
-      
+
       if (response.user) {
         setUser(response.user);
         setIsFirebaseUser(response.user.is_firebase_user || false);
@@ -180,8 +181,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   // Initialize auth state
   useEffect(() => {
-    let unsubscribe: () => void = () => {};
-    
+    let unsubscribe: () => void = () => { };
+
     // Failsafe timeout: if auth takes longer than 5 seconds, forcefully clear loading
     const fallbackTimeout = setTimeout(() => {
       setLoading(false);
@@ -261,7 +262,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const handleVerifyOTP = async (code: string) => {
+  const handleVerifyOTP = async (code: string, mode?: 'login' | 'signup') => {
     console.log('verifyOTP confirmationResult exists:', Boolean(confirmationResult));
     if (!confirmationResult) {
       return { error: 'Please request a code first.' };
@@ -282,7 +283,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          user_type: selectedUserType
+          user_type: mode === 'signup' ? selectedUserType : undefined,
+          mode
         })
       });
 
@@ -338,6 +340,52 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error: 'Google sign in is no longer supported.' };
   };
 
+  const handleGoogleSignIn = async (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => {
+    try {
+      setLoading(true);
+      const { signInWithGoogle: firebaseSignInWithGoogle } = await import('@/lib/firebaseAuth');
+      const result = await firebaseSignInWithGoogle();
+      const token = await result.user.getIdToken();
+
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_type: mode === 'signup' ? userType : undefined,
+          mode
+        })
+      });
+
+      if (response.user) {
+        setUser(response.user);
+        setIsFirebaseUser(true);
+      }
+
+      const resolvedUserType = response.user_type;
+      if (resolvedUserType === 'employer') {
+        window.location.href = '/employer-dashboard';
+      } else if (resolvedUserType === 'housegirl') {
+        window.location.href = '/housegirl-dashboard';
+      } else {
+        window.location.href = '/';
+      }
+
+      return { error: null, user: response.user };
+    } catch (error: unknown) {
+      const exactError = error instanceof Error ? error.message : String(error);
+      toast({
+        title: 'Sign In Error',
+        description: exactError || 'Failed to sign in with Google.',
+        variant: 'destructive'
+      });
+      return { error: exactError || 'Failed to sign in with Google.' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const signOut = async () => {
     try {
       setLoading(true);
@@ -366,11 +414,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       window.location.href = '/home';
     } catch (error) {
       console.error('Sign out error:', error);
-      
+
       // Even if logout fails, clear local state
       setUser(null);
       setIsFirebaseUser(false);
-      
+
       toast({
         title: "Signed Out",
         description: "You have been signed out.",
@@ -398,6 +446,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signUp,
     signIn,
     signInWithGoogle,
+    handleGoogleSignIn,
     signOut,
     checkSession,
     resetPassword,

@@ -7,7 +7,9 @@ import {
   onAuthStateChanged,
   User,
   setPersistence,
-  browserLocalPersistence
+  browserLocalPersistence,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth';
 import { auth } from './firebase';
 import app from './firebase';
@@ -160,4 +162,13 @@ export type AuthResult = {
   success: boolean;
   user?: FirebaseUser;
   error?: string;
+};
+
+export const signInWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({
+    prompt: 'select_account'
+  });
+  const result = await signInWithPopup(auth, provider);
+  return result;
 };

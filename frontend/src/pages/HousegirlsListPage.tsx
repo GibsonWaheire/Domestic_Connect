@@ -191,7 +191,7 @@ const HousegirlsListPage = () => {
   const handleGetContact = (profileId: string) => {
     if (!user) {
       localStorage.setItem('pendingContactId', profileId);
-      navigate('/login');
+      navigate('/login?mode=signup');
       return;
     }
     setSelectedProfileId(profileId);
@@ -201,7 +201,7 @@ const HousegirlsListPage = () => {
 
   const handlePricingClick = (pkg: PackageDetails) => {
     if (!user) {
-      navigate('/login');
+      navigate('/login?mode=signup');
       return;
     }
     setSelectedProfileId(null);
@@ -310,8 +310,8 @@ const HousegirlsListPage = () => {
         const payload = (await response.json()) as { data?: string[] };
         const cities = Array.isArray(payload?.data)
           ? Array.from(new Set(payload.data))
-              .filter((city) => typeof city === 'string' && city.trim().length > 0)
-              .sort((a, b) => a.localeCompare(b))
+            .filter((city) => typeof city === 'string' && city.trim().length > 0)
+            .sort((a, b) => a.localeCompare(b))
           : [];
 
         if (cities.length > 0) {
@@ -434,15 +434,15 @@ const HousegirlsListPage = () => {
                 </>
               ) : (
                 <>
-                  <button
-                    type="button"
-                    onClick={() => navigate('/login')}
+                  <Button
+                    onClick={() => navigate('/login?mode=signup')}
+                    variant="outline"
                     className="text-sm font-medium text-black border border-black hover:bg-gray-50 rounded-full px-5 py-2 transition-colors"
                   >
-                    Login
-                  </button>
+                    Register as Housegirl
+                  </Button>
                   <Button
-                    onClick={() => navigate('/login')}
+                    onClick={() => navigate('/login?mode=signup')}
                     className="hidden md:inline-flex rounded-full px-6 bg-black hover:bg-[#333] text-white font-medium"
                   >
                     Join Today
@@ -464,7 +464,7 @@ const HousegirlsListPage = () => {
           </div>
         </div>
       </header>
-      
+
       <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'bg-black/0 opacity-0 pointer-events-none'}`}>
         <aside
           id="landing-main-menu"
@@ -472,9 +472,8 @@ const HousegirlsListPage = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
-          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${
-            isMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
         >
           <div className="h-full overflow-y-auto p-6">
             <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
@@ -501,7 +500,7 @@ const HousegirlsListPage = () => {
               <div className="bg-gray-50 rounded-xl p-4 mb-3">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
                 <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
@@ -510,7 +509,7 @@ const HousegirlsListPage = () => {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
                 <div className="flex flex-col">
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
@@ -549,8 +548,8 @@ const HousegirlsListPage = () => {
                   </>
                 ) : (
                   <>
-                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
-                      Login
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
+                      Sign Up
                     </Button>
                     <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
                       Join Today
@@ -627,185 +626,183 @@ const HousegirlsListPage = () => {
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
 
-      <main id="profiles-list" className="mt-4 py-8">
-        <div className="w-full px-0 md:px-10">
-          <div className="flex flex-col w-full relative">
-            <div className="flex flex-col gap-[8px] w-full">
-            {paginatedProfiles.map((profile) => {
-              const isUnlocked = Boolean(unlockedProfiles[profile.id]);
-              return (
-                <article
-                  key={profile.id}
-                  className={`bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 ${ROLE_BORDER[profile.role as RoleType]}`}
-                >
-                  <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
-                    <div className="relative flex-shrink-0 mx-auto md:mx-0">
-                      {profile.avatar ? (
-                        <img
-                          src={profile.avatar}
-                          alt={profile.name}
-                          className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full object-cover border border-gray-200"
-                        />
-                      ) : (
-                        <div className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full bg-[#4b5563] text-white font-semibold text-xl md:text-2xl flex items-center justify-center text-center">
-                          {profile.name
-                            .split(' ')
-                            .filter(Boolean)
-                            .slice(0, 2)
-                            .map((namePart) => namePart[0]?.toUpperCase())
-                            .join('')}
-                        </div>
-                      )}
-                      <span
-                        className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${
-                          profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
-                        }`}
-                      />
-                    </div>
-
-                    <div className="flex-1 w-full">
-                      <div className="flex flex-col gap-1 text-center md:text-left">
-                        <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
-                        <Badge variant="secondary" className={`w-fit mx-auto md:mx-0 border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[profile.role as RoleType]}`}>
-                          {profile.role}
-                        </Badge>
-                        <p className="text-[#555] text-[13px] flex items-center justify-center md:justify-start gap-1">
-                          <MapPin className="h-4 w-4 text-[#555]" />
-                          {profile.location}
-                        </p>
-                        <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                          {profile.tags.slice(0, 3).map((tag) => (
-                            <Badge key={tag} variant="secondary" className="border border-[#ddd] bg-transparent text-[#555] text-[12px] rounded-[2px] px-2 py-1">
-                              {tag}
-                            </Badge>
-                          ))}
-                        </div>
-                        <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
-                        {isUnlocked && (
-                          <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit mx-auto md:mx-0">
-                            Contact: {profile.phone} · {profile.exactLocation}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="w-full md:w-56 flex flex-col gap-2 items-center md:items-end">
-                      <p className="text-[22px] font-bold text-[#111] text-center md:text-right">
-                        KES {profile.monthlyRate.toLocaleString()}
-                        <span className="text-sm font-medium text-gray-500">/mo</span>
-                      </p>
-                      <Button
-                        onClick={() => handleGetContact(profile.id)}
-                        className="w-full md:w-auto rounded-[4px] px-6 bg-black hover:bg-[#333] text-white transition-opacity duration-150"
-                      >
-                        {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
-                      </Button>
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-            </div>
-
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 pt-6">
-                <button
-                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className={`text-xs md:text-[13px] mr-1 md:mr-2 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
-                >
-                  ← Previous
-                </button>
-                
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
-                  if (totalPages > 5) {
-                     if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
-                       if (page === 2 && currentPage > 3) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
-                       if (page === totalPages - 1 && currentPage < totalPages - 2) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
-                       return null;
-                     }
-                  }
+        <main id="profiles-list" className="mt-4 py-8">
+          <div className="w-full px-0 md:px-10">
+            <div className="flex flex-col w-full relative">
+              <div className="flex flex-col gap-[8px] w-full">
+                {paginatedProfiles.map((profile) => {
+                  const isUnlocked = Boolean(unlockedProfiles[profile.id]);
                   return (
-                    <button
-                      key={page}
-                      onClick={() => setCurrentPage(page)}
-                      className={`${Math.abs(page - currentPage) > 1 ? 'hidden md:inline-flex' : 'inline-flex'} items-center justify-center h-7 md:h-8 min-w-[28px] md:min-w-[32px] px-2 text-xs md:text-[13px] ${
-                        currentPage === page
-                          ? 'bg-black text-white border border-black'
-                          : 'bg-white text-black border border-black hover:bg-gray-50'
-                      }`}
+                    <article
+                      key={profile.id}
+                      className={`bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 ${ROLE_BORDER[profile.role as RoleType]}`}
                     >
-                      {page}
-                    </button>
+                      <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
+                        <div className="relative flex-shrink-0 mx-auto md:mx-0">
+                          {profile.avatar ? (
+                            <img
+                              src={profile.avatar}
+                              alt={profile.name}
+                              className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full object-cover border border-gray-200"
+                            />
+                          ) : (
+                            <div className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full bg-[#4b5563] text-white font-semibold text-xl md:text-2xl flex items-center justify-center text-center">
+                              {profile.name
+                                .split(' ')
+                                .filter(Boolean)
+                                .slice(0, 2)
+                                .map((namePart) => namePart[0]?.toUpperCase())
+                                .join('')}
+                            </div>
+                          )}
+                          <span
+                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
+                              }`}
+                          />
+                        </div>
+
+                        <div className="flex-1 w-full">
+                          <div className="flex flex-col gap-1 text-center md:text-left">
+                            <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
+                            <Badge variant="secondary" className={`w-fit mx-auto md:mx-0 border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[profile.role as RoleType]}`}>
+                              {profile.role}
+                            </Badge>
+                            <p className="text-[#555] text-[13px] flex items-center justify-center md:justify-start gap-1">
+                              <MapPin className="h-4 w-4 text-[#555]" />
+                              {profile.location}
+                            </p>
+                            <div className="flex flex-wrap justify-center md:justify-start gap-2">
+                              {profile.tags.slice(0, 3).map((tag) => (
+                                <Badge key={tag} variant="secondary" className="border border-[#ddd] bg-transparent text-[#555] text-[12px] rounded-[2px] px-2 py-1">
+                                  {tag}
+                                </Badge>
+                              ))}
+                            </div>
+                            <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
+                            {isUnlocked && (
+                              <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit mx-auto md:mx-0">
+                                Contact: {profile.phone} · {profile.exactLocation}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="w-full md:w-56 flex flex-col gap-2 items-center md:items-end">
+                          <p className="text-[22px] font-bold text-[#111] text-center md:text-right">
+                            KES {profile.monthlyRate.toLocaleString()}
+                            <span className="text-sm font-medium text-gray-500">/mo</span>
+                          </p>
+                          <Button
+                            onClick={() => handleGetContact(profile.id)}
+                            className="w-full md:w-auto rounded-[4px] px-6 bg-black hover:bg-[#333] text-white transition-opacity duration-150"
+                          >
+                            {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
+                          </Button>
+                        </div>
+                      </div>
+                    </article>
                   );
                 })}
+              </div>
 
-                <button
-                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className={`text-xs md:text-[13px] ml-1 md:ml-2 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
-                >
-                  Next →
-                </button>
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 pt-6">
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                    className={`text-xs md:text-[13px] mr-1 md:mr-2 ${currentPage === 1 ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
+                  >
+                    ← Previous
+                  </button>
+
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                    if (totalPages > 5) {
+                      if (page !== 1 && page !== totalPages && Math.abs(page - currentPage) > 1) {
+                        if (page === 2 && currentPage > 3) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
+                        if (page === totalPages - 1 && currentPage < totalPages - 2) return <span key={`ell-${page}`} className="text-[#888]">...</span>;
+                        return null;
+                      }
+                    }
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`${Math.abs(page - currentPage) > 1 ? 'hidden md:inline-flex' : 'inline-flex'} items-center justify-center h-7 md:h-8 min-w-[28px] md:min-w-[32px] px-2 text-xs md:text-[13px] ${currentPage === page
+                          ? 'bg-black text-white border border-black'
+                          : 'bg-white text-black border border-black hover:bg-gray-50'
+                          }`}
+                      >
+                        {page}
+                      </button>
+                    );
+                  })}
+
+                  <button
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                    className={`text-xs md:text-[13px] ml-1 md:ml-2 ${currentPage === totalPages ? 'text-gray-400 cursor-not-allowed' : 'text-black hover:text-[#555]'}`}
+                  >
+                    Next →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {filteredProfiles.length === 0 && (
+              <div className="text-center py-14 bg-white rounded-2xl border border-gray-100 shadow-sm mt-4">
+                <p className="text-gray-600">No housegirls found. Try adjusting your filters.</p>
               </div>
             )}
           </div>
+        </main>
 
-          {filteredProfiles.length === 0 && (
-            <div className="text-center py-14 bg-white rounded-2xl border border-gray-100 shadow-sm mt-4">
-              <p className="text-gray-600">No housegirls found. Try adjusting your filters.</p>
-            </div>
-          )}
-        </div>
-      </main>
-
-      <section id="pricing-value" className="border-y border-gray-200 bg-[#f9f9f9]">
-        <div className="max-w-[1100px] mx-auto px-4 py-10">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div 
-              className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
-              onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Single Unlock</p>
-              <p className="mt-2 text-2xl font-bold text-[#111]">KES 200</p>
-              <p className="mt-2 text-[13px] text-[#555]">Unlock one profile contact instantly via M-Pesa.</p>
-            </div>
-            <div 
-              className="border border-[#111] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-600 hover:shadow-md transition-all duration-200 relative"
-              onClick={() => handlePricingClick(BUNDLE_UNLOCK_PACKAGE)}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-600">Best Value</p>
-              <p className="mt-2 text-2xl font-bold text-[#111]">KES 500</p>
-              <p className="mt-2 text-[13px] text-[#555]">Unlock 3 contacts and save KES 100.</p>
-            </div>
-            <div 
-              className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
-              onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
-            >
-              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">No Subscription</p>
-              <p className="mt-2 text-2xl font-bold text-[#111]">Pay As You Hire</p>
-              <p className="mt-2 text-[13px] text-[#555]">No monthly commitment. Only pay when you need contacts.</p>
+        <section id="pricing-value" className="border-y border-gray-200 bg-[#f9f9f9]">
+          <div className="max-w-[1100px] mx-auto px-4 py-10">
+            <div className="grid gap-4 md:grid-cols-3">
+              <div
+                className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">Single Unlock</p>
+                <p className="mt-2 text-2xl font-bold text-[#111]">KES 200</p>
+                <p className="mt-2 text-[13px] text-[#555]">Unlock one profile contact instantly via M-Pesa.</p>
+              </div>
+              <div
+                className="border border-[#111] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-600 hover:shadow-md transition-all duration-200 relative"
+                onClick={() => handlePricingClick(BUNDLE_UNLOCK_PACKAGE)}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-600">Best Value</p>
+                <p className="mt-2 text-2xl font-bold text-[#111]">KES 500</p>
+                <p className="mt-2 text-[13px] text-[#555]">Unlock 3 contacts and save KES 100.</p>
+              </div>
+              <div
+                className="border border-[#e5e5e5] bg-white p-5 shadow-[0_1px_3px_rgba(0,0,0,0.08)] cursor-pointer hover:border-blue-300 hover:shadow-md transition-all duration-200"
+                onClick={() => handlePricingClick(CONTACT_UNLOCK_PACKAGE)}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-gray-500">No Subscription</p>
+                <p className="mt-2 text-2xl font-bold text-[#111]">Pay As You Hire</p>
+                <p className="mt-2 text-[13px] text-[#555]">No monthly commitment. Only pay when you need contacts.</p>
+              </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section className="bg-white">
-        <div className="max-w-[1100px] mx-auto px-4 py-10">
-          <div className="border border-[#e5e5e5] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <h2 className="text-2xl font-semibold text-[#111]">Ready to hire safely and faster?</h2>
-              <p className="mt-1 text-[14px] text-[#555]">Browse profiles and unlock contact details when you find the right fit.</p>
+        <section className="bg-white">
+          <div className="max-w-[1100px] mx-auto px-4 py-10">
+            <div className="border border-[#e5e5e5] p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold text-[#111]">Ready to hire safely and faster?</h2>
+                <p className="mt-1 text-[14px] text-[#555]">Browse profiles and unlock contact details when you find the right fit.</p>
+              </div>
+              <Button
+                onClick={handleFindHelp}
+                className="rounded-[4px] bg-black hover:bg-[#333333] text-white px-6 transition-opacity duration-150"
+              >
+                Start Browsing
+              </Button>
             </div>
-            <Button
-              onClick={handleFindHelp}
-              className="rounded-[4px] bg-black hover:bg-[#333333] text-white px-6 transition-opacity duration-150"
-            >
-              Start Browsing
-            </Button>
           </div>
-        </div>
-      </section>
+        </section>
       </div>
 
       <footer className="bg-black text-white py-8 mt-10">
