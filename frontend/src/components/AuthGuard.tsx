@@ -13,10 +13,10 @@ interface AuthGuardProps {
  * AuthGuard component that protects routes based on user type
  * Prevents unauthorized access to dashboards
  */
-export const AuthGuard = ({ 
-  children, 
-  allowedUserTypes, 
-  redirectTo = '/' 
+export const AuthGuard = ({
+  children,
+  allowedUserTypes,
+  redirectTo = '/'
 }: AuthGuardProps) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -25,14 +25,9 @@ export const AuthGuard = ({
     // Don't redirect while loading
     if (loading) return;
 
-    // If no user is logged in, redirect to home
+    // If no user is logged in, redirect to login silently
     if (!user) {
-      toast({
-        title: "Access Denied",
-        description: "Please sign in to access this page.",
-        variant: "destructive"
-      });
-      navigate('/');
+      navigate('/login');
       return;
     }
 
@@ -41,13 +36,7 @@ export const AuthGuard = ({
     const isAllowed = allowedUserTypes.includes(userType);
 
     if (!isAllowed) {
-      toast({
-        title: "Access Denied",
-        description: `You don't have permission to access this page. This area is for ${allowedUserTypes.join(' or ')} only.`,
-        variant: "destructive"
-      });
-      
-      // Redirect to appropriate dashboard based on user type
+      // Redirect to appropriate dashboard based on user type silently
       switch (userType) {
         case 'employer':
           navigate('/employer-dashboard');
@@ -71,14 +60,8 @@ export const AuthGuard = ({
   // Show loading while checking authentication
   if (loading) {
     return (
-      <div style={{
-        display:'flex',
-        alignItems:'center', 
-        justifyContent:'center',
-        height:'100vh'
-      }}>
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        <span className="sr-only">Loading...</span>
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-50">
+        <div className="animate-spin rounded-full h-12 w-12 border-4 border-gray-200 border-t-black"></div>
       </div>
     );
   }

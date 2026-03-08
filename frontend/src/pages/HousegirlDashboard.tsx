@@ -7,14 +7,14 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
-import { 
-  Heart, 
-  User, 
-  Search, 
-  MapPin, 
-  CheckCircle, 
-  Star, 
-  ArrowRight, 
+import {
+  Heart,
+  User,
+  Search,
+  MapPin,
+  CheckCircle,
+  Star,
+  ArrowRight,
   Briefcase,
   Clock,
   TrendingUp,
@@ -70,7 +70,7 @@ interface EditFormData {
 const HousegirlDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
-  
+
   // Additional auth check - ensure only housegirls can access this dashboard
   useEffect(() => {
     if (!loading && user) {
@@ -80,7 +80,7 @@ const HousegirlDashboard = () => {
           description: "This dashboard is only accessible to housegirls.",
           variant: "destructive"
         });
-        
+
         // Redirect based on user type
         if (user.user_type === 'employer') {
           navigate('/employer-dashboard');
@@ -93,7 +93,7 @@ const HousegirlDashboard = () => {
       }
     }
   }, [user, loading, navigate]);
-  
+
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'messages'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
     // Load photo from localStorage on component mount
@@ -134,16 +134,16 @@ const HousegirlDashboard = () => {
   }, [user]);
 
   // Use real-time data hook
-  const { 
-    dashboardData, 
-    loading: dataLoading, 
-    error: dataError, 
+  const {
+    dashboardData,
+    loading: dataLoading,
+    error: dataError,
     refreshing,
-    lastUpdated, 
-    refreshData 
-  } = useRealTimeData({ 
+    lastUpdated,
+    refreshData
+  } = useRealTimeData({
     refreshInterval: 30000, // 30 seconds
-    enabled: !!user 
+    enabled: !!user
   });
 
   // Transform dashboard data when it changes
@@ -331,10 +331,10 @@ const HousegirlDashboard = () => {
                   Domestic Connect
                 </h1>
               </div>
-              
+
               <ReturnToHome variant="outline" size="sm" className="border-blue-300 text-blue-600 hover:bg-blue-50 hidden sm:flex" />
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <Badge variant="secondary" className="bg-gray-100 text-gray-700 border border-gray-200 text-xs">
                 {user.user_type}
@@ -353,82 +353,78 @@ const HousegirlDashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
-        {showProfilePromptBanner && (
-          <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-start justify-between gap-3">
-            <p>Complete your profile to unlock all features. Profile completion: 20%</p>
-            <button
-              type="button"
-              className="text-blue-700 hover:text-blue-900 underline"
-              onClick={() => {
-                setShowProfilePromptBanner(false);
-                localStorage.removeItem('dc_profile_prompt_housegirl');
-              }}
-            >
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
-          <p className="text-sm font-semibold text-gray-900">Profile {housegirlProfileCompletion}% complete</p>
-          <div className="mt-2 h-2 w-full rounded bg-gray-200">
-            <div className="h-2 rounded bg-black" style={{ width: `${housegirlProfileCompletion}%` }} />
-          </div>
-          {missingHousegirlFields.length > 0 && (
-            <div className="mt-3 space-y-1">
-              {missingHousegirlFields.map((field) => (
-                <button
-                  key={field.key}
-                  type="button"
-                  onClick={() => jumpToHousegirlSection(field.key)}
-                  className="block text-left text-sm text-blue-700 hover:text-blue-900"
-                >
-                  {`→ ${field.label}`}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {housegirlProfileCompletion < 60 && (
-          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-            Your profile is not visible to employers yet. Complete at least 60% to go live. Currently at {housegirlProfileCompletion}%.
-          </div>
-        )}
-
         {/* Welcome Section */}
-        <div className="mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
-            <div>
-              <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-                Welcome back, {user.first_name}! 👋
+        <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-3 mb-1">
+              <h2 className="text-2xl font-bold text-gray-900">
+                {user?.first_name ? `Welcome, ${user.first_name}` : 'Welcome!'}
               </h2>
-              <p className="text-gray-600 text-sm sm:text-base">
-                Here's what's happening with your job search today
-              </p>
+              <span className="bg-green-50 text-green-700 rounded-full px-3 py-1 text-xs font-medium border border-green-200 shadow-sm flex items-center">
+                👩 Housegirl Account
+              </span>
             </div>
-            <div className="flex items-center space-x-4">
-              <Avatar className="h-12 w-12 sm:h-16 sm:w-16">
-                <AvatarImage src={profilePhoto || undefined} />
-                <AvatarFallback className="bg-gray-100 text-gray-700 text-lg sm:text-xl font-bold">
-                  {user.first_name.charAt(0).toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
-              <div className="text-right">
-                <p className="text-xs sm:text-sm text-gray-500">Profile Photo</p>
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="mt-1 text-xs"
-                  onClick={() => setActiveTab('profile')}
-                >
-                  <Edit className="h-3 w-3 sm:h-4 sm:w-4 mr-1 sm:mr-2" />
-                  Update
-                </Button>
+            <div className="flex items-center gap-2 mt-2">
+              <div
+                className="flex items-center gap-2 cursor-pointer bg-white border border-gray-200 rounded-full px-3 py-1 shadow-sm hover:bg-gray-50"
+                onClick={() => {
+                  toast({
+                    title: "Status Update",
+                    description: "Availability toggle will be connected to backend soon.",
+                    duration: 3000
+                  });
+                }}
+              >
+                <div className={`w-2 h-2 rounded-full ${true ? 'bg-green-500' : 'bg-gray-400'}`}></div>
+                <span className="text-sm font-medium text-gray-700">
+                  {true ? 'Available for work' : 'Not available'}
+                </span>
               </div>
             </div>
           </div>
+
+          <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+            <Avatar className="h-12 w-12 border-2 border-gray-100">
+              <AvatarImage src={profilePhoto || undefined} />
+              <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
+                {user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U'}
+              </AvatarFallback>
+            </Avatar>
+            <div className="text-left">
+              <p className="text-sm font-medium text-gray-900">My Profile</p>
+              <Button
+                variant="link"
+                size="sm"
+                className="h-auto p-0 text-blue-600 font-medium"
+                onClick={() => setActiveTab('profile')}
+              >
+                Edit Details
+              </Button>
+            </div>
+          </div>
         </div>
+
+        {/* Profile Completion Banner */}
+        {housegirlProfileCompletion < 60 && (
+          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+              <div>
+                <h3 className="text-sm font-semibold text-red-900">Profile Hidden ({housegirlProfileCompletion}% Complete)</h3>
+                <p className="text-sm text-red-800 mt-1">
+                  Your profile is hidden from employers. Complete it to get discovered.
+                </p>
+              </div>
+            </div>
+            <Button
+              onClick={() => setActiveTab('profile')}
+              className="bg-red-600 hover:bg-red-700 text-white shrink-0"
+              size="sm"
+            >
+              Complete Profile →
+            </Button>
+          </div>
+        )}
 
         {/* Navigation Tabs */}
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -488,64 +484,64 @@ const HousegirlDashboard = () => {
                       </div>
                     ) : (
                       jobOpportunities.map((job) => (
-                    <Card key={job.id} className="border border-gray-200 hover:border-blue-300 transition-colors">
-                      <CardContent className="p-4">
-                        <div className="flex flex-col space-y-3">
-                          <div className="flex items-center justify-between">
-                            <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
-                            <Badge variant="secondary" className="bg-green-100 text-green-800">
-                              {job.matchScore}% Match
-                            </Badge>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 gap-2 text-sm text-gray-600">
-                            <div className="flex items-center">
-                              <LocationIcon className="h-4 w-4 mr-2" />
-                              {job.location}
-                            </div>
-                            <div className="flex items-center">
-                              <DollarSign className="h-4 w-4 mr-2" />
-                              {job.salary}
-                            </div>
-                            <div className="flex items-center">
-                              <Clock className="h-4 w-4 mr-2" />
-                              Posted {job.postedDate}
-                            </div>
-                          </div>
-
-                          <p className="text-gray-700 text-sm">{job.description}</p>
-
-                          <div>
-                            <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
-                            <div className="flex flex-wrap gap-1">
-                              {job.requirements.slice(0, 3).map((req, index) => (
-                                <Badge key={index} variant="outline" className="text-xs">
-                                  {req}
+                        <Card key={job.id} className="border border-gray-200 hover:border-blue-300 transition-colors">
+                          <CardContent className="p-4">
+                            <div className="flex flex-col space-y-3">
+                              <div className="flex items-center justify-between">
+                                <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                                  {job.matchScore}% Match
                                 </Badge>
-                              ))}
-                              {job.requirements.length > 3 && (
-                                <Badge variant="outline" className="text-xs">
-                                  +{job.requirements.length - 3} more
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
+                              </div>
 
-                          <p className="text-sm text-gray-600">
-                            <strong>Employer:</strong> {job.employer}
-                          </p>
-                          
-                          <div className="flex space-x-2">
-                            <Button size="sm" className="bg-blue-600 hover:bg-blue-700 flex-1">
-                              Apply Now
-                            </Button>
-                            <Button variant="outline" size="sm">
-                              Save
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                              <div className="grid grid-cols-1 gap-2 text-sm text-gray-600">
+                                <div className="flex items-center">
+                                  <LocationIcon className="h-4 w-4 mr-2" />
+                                  {job.location}
+                                </div>
+                                <div className="flex items-center">
+                                  <DollarSign className="h-4 w-4 mr-2" />
+                                  {job.salary}
+                                </div>
+                                <div className="flex items-center">
+                                  <Clock className="h-4 w-4 mr-2" />
+                                  Posted {job.postedDate}
+                                </div>
+                              </div>
+
+                              <p className="text-gray-700 text-sm">{job.description}</p>
+
+                              <div>
+                                <p className="text-sm font-medium text-gray-900 mb-2">Requirements:</p>
+                                <div className="flex flex-wrap gap-1">
+                                  {job.requirements.slice(0, 3).map((req, index) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                      {req}
+                                    </Badge>
+                                  ))}
+                                  {job.requirements.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                      +{job.requirements.length - 3} more
+                                    </Badge>
+                                  )}
+                                </div>
+                              </div>
+
+                              <p className="text-sm text-gray-600">
+                                <strong>Employer:</strong> {job.employer}
+                              </p>
+
+                              <div className="flex space-x-2">
+                                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 flex-1">
+                                  Apply Now
+                                </Button>
+                                <Button variant="outline" size="sm">
+                                  Save
+                                </Button>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
                       ))
                     )}
                   </div>
@@ -561,23 +557,23 @@ const HousegirlDashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-16 sm:h-20 flex-col space-y-2 border-blue-200 hover:bg-blue-50"
                     onClick={() => setActiveTab('profile')}
                   >
                     <Edit className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
                     <span className="text-xs sm:text-sm">Update Profile</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-16 sm:h-20 flex-col space-y-2 border-green-200 hover:bg-green-50"
                   >
                     <Search className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
                     <span className="text-xs sm:text-sm">Search Jobs</span>
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="h-16 sm:h-20 flex-col space-y-2 border-purple-200 hover:bg-purple-50"
                   >
                     <Settings className="h-5 w-5 sm:h-6 sm:w-6 text-purple-600" />
@@ -598,7 +594,7 @@ const HousegirlDashboard = () => {
                     <CardTitle className="text-xl">Profile Information</CardTitle>
                     <CardDescription>Manage your profile details and preferences</CardDescription>
                   </div>
-                  <Button 
+                  <Button
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={() => setShowEditModal(true)}
                   >
@@ -612,7 +608,7 @@ const HousegirlDashboard = () => {
                   {/* Photo Upload */}
                   <div className="text-center" id="housegirl-photo">
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
-                    <PhotoUpload 
+                    <PhotoUpload
                       onPhotoUploaded={handlePhotoUpload}
                     />
                   </div>
@@ -714,7 +710,7 @@ const HousegirlDashboard = () => {
                   </div>
 
                   <div className="flex justify-center">
-                    <Button 
+                    <Button
                       className="bg-blue-600 hover:bg-blue-700"
                       onClick={() => setShowEditModal(true)}
                     >
@@ -759,22 +755,22 @@ const HousegirlDashboard = () => {
             <div className="p-6">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">Edit Profile</h3>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setShowEditModal(false)}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   <X className="h-4 w-4" />
                 </Button>
               </div>
-              
+
               <div className="space-y-6">
                 {/* Basic Information */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Location</label>
-                    <input 
+                    <input
                       type="text"
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       placeholder="e.g., Nairobi"
@@ -782,10 +778,10 @@ const HousegirlDashboard = () => {
                       onChange={(e) => handleFormChange('location', e.target.value)}
                     />
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-gray-700">Expected Salary</label>
-                    <input 
+                    <input
                       type="text"
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       placeholder="e.g., KSh 15,000"
@@ -799,7 +795,7 @@ const HousegirlDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Experience</label>
-                    <select 
+                    <select
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       value={editFormData.experience || ''}
                       onChange={(e) => handleFormChange('experience', e.target.value)}
@@ -813,10 +809,10 @@ const HousegirlDashboard = () => {
                       <option value="5+ Years">5+ Years</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-gray-700">Education</label>
-                    <select 
+                    <select
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       value={editFormData.education || ''}
                       onChange={(e) => handleFormChange('education', e.target.value)}
@@ -836,7 +832,7 @@ const HousegirlDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Accommodation Type</label>
-                    <select 
+                    <select
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       value={editFormData.accommodationType || ''}
                       onChange={(e) => handleFormChange('accommodationType', e.target.value)}
@@ -847,10 +843,10 @@ const HousegirlDashboard = () => {
                       <option value="Both">Both</option>
                     </select>
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-gray-700">Community</label>
-                    <select 
+                    <select
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       value={editFormData.community || ''}
                       onChange={(e) => handleFormChange('community', e.target.value)}
@@ -871,7 +867,7 @@ const HousegirlDashboard = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Skills (comma separated)</label>
-                    <input 
+                    <input
                       type="text"
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       placeholder="e.g., Cooking, Cleaning, Childcare"
@@ -879,10 +875,10 @@ const HousegirlDashboard = () => {
                       onChange={(e) => handleFormChange('skills', e.target.value)}
                     />
                   </div>
-                  
+
                   <div>
                     <label className="text-sm font-medium text-gray-700">Languages (comma separated)</label>
-                    <input 
+                    <input
                       type="text"
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       placeholder="e.g., English, Swahili"
@@ -895,7 +891,7 @@ const HousegirlDashboard = () => {
                 {/* Bio */}
                 <div>
                   <label className="text-sm font-medium text-gray-700">About You</label>
-                  <textarea 
+                  <textarea
                     className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                     rows={4}
                     placeholder="Tell employers about yourself..."
@@ -904,16 +900,16 @@ const HousegirlDashboard = () => {
                   />
                 </div>
               </div>
-              
+
               <div className="flex space-x-3 mt-6">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   onClick={() => setShowEditModal(false)}
                   className="flex-1"
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
                   onClick={handleSaveProfile}
                 >

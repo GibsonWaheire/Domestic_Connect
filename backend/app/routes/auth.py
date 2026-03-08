@@ -167,8 +167,22 @@ def verify_phone_auth():
                 'updated_at': timestamp,
                 'profile_complete': existing_data.get('profile_complete', False)
             }
+            # Add photo_url if provided and not already set
+            photo_url = data.get('photo_url')
+            if photo_url and not existing_data.get('photo_url'):
+                user_data['photo_url'] = photo_url
+                
             user_doc_ref.set(user_data, merge=True)
         else:
+            first_name = ''
+            last_name = ''
+            display_name = data.get('display_name')
+            if display_name:
+                name_parts = display_name.split(' ')
+                first_name = name_parts[0]
+                if len(name_parts) > 1:
+                    last_name = ' '.join(name_parts[1:])
+            
             user_data = {
                 'id': user_id,
                 'uid': uid,
@@ -177,8 +191,9 @@ def verify_phone_auth():
                 'phone_number': phone_number,
                 'email': email,
                 'user_type': user_type,
-                'first_name': '',
-                'last_name': '',
+                'first_name': first_name,
+                'last_name': last_name,
+                'photo_url': data.get('photo_url'),
                 'created_at': timestamp,
                 'updated_at': timestamp,
                 'profile_complete': False,
