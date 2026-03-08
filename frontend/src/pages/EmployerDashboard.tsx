@@ -89,7 +89,7 @@ const MOCK_HOUSEGIRLS: Housegirl[] = [
 const EmployerDashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
-  
+
   // Additional auth check - ensure only employers can access this dashboard
   useEffect(() => {
     if (!loading && user) {
@@ -99,7 +99,7 @@ const EmployerDashboard = () => {
           description: "This dashboard is only accessible to employers.",
           variant: "destructive"
         });
-        
+
         // Redirect based on user type
         if (user.user_type === 'housegirl') {
           navigate('/housegirl-dashboard');
@@ -112,14 +112,14 @@ const EmployerDashboard = () => {
       }
     }
   }, [user, loading, navigate]);
-  
+
   // State
   const [activeSection, setActiveSection] = useState('housegirls');
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  
+
   // Pagination and filtering state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
@@ -137,44 +137,44 @@ const EmployerDashboard = () => {
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
 
   // Use real-time data hook
-  const { 
-    dashboardData, 
-    loading: dataLoading, 
+  const {
+    dashboardData,
+    loading: dataLoading,
     error: dataError,
     refreshing,
     lastUpdated,
     refreshData
-  } = useRealTimeData({ 
+  } = useRealTimeData({
     refreshInterval: 30000, // 30 seconds
-    enabled: !!user 
+    enabled: !!user
   });
 
   // Transform dashboard data when it changes
   useEffect(() => {
     const apiHousegirls = dashboardData?.available_data.housegirls || [];
     const transformedHousegirls: Housegirl[] = apiHousegirls.map((hg, index) => ({
-        id: Number(hg.id) || (100000 + index),
-        name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
-        age: hg.age,
-        location: hg.location,
-        experience: hg.experience,
-        education: hg.education,
-        salary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
-        status: hg.is_available ? 'available' : 'unavailable',
-        bio: hg.bio,
-        skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
-        rating: 4.5, // Default rating since it's not in API yet
-        reviews: 12, // Default reviews
-        contactUnlocked: false, // Default to locked
-        unlockCount: 0, // Default unlock count
-        phone: hg.phone_number,
-        email: hg.email,
-        nationality: 'Kenyan', // Default nationality
-        community: hg.tribe,
-        workType: hg.accommodation_type,
-        livingArrangement: hg.accommodation_type,
-        profileImage: hg.profile_photo_url
-      }));
+      id: Number(hg.id) || (100000 + index),
+      name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
+      age: hg.age,
+      location: hg.location,
+      experience: hg.experience,
+      education: hg.education,
+      salary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
+      status: hg.is_available ? 'available' : 'unavailable',
+      bio: hg.bio,
+      skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
+      rating: 4.5, // Default rating since it's not in API yet
+      reviews: 12, // Default reviews
+      contactUnlocked: false, // Default to locked
+      unlockCount: 0, // Default unlock count
+      phone: hg.phone_number,
+      email: hg.email,
+      nationality: 'Kenyan', // Default nationality
+      community: hg.tribe,
+      workType: hg.accommodation_type,
+      livingArrangement: hg.accommodation_type,
+      profileImage: hg.profile_photo_url
+    }));
 
     const sortedRealHousegirls = transformedHousegirls.sort((a, b) => {
       const aMatch = apiHousegirls.find((hg) => (Number(hg.id) || 0) === a.id);
@@ -213,7 +213,7 @@ const EmployerDashboard = () => {
       setShowProfilePromptBanner(true);
     }
   }, []);
-  
+
   // Show loading state while auth is initializing or data is loading
   if (loading || dataLoading) {
     return (
@@ -228,7 +228,7 @@ const EmployerDashboard = () => {
       </div>
     );
   }
-  
+
   if (!user) {
     return null;
   }
@@ -247,7 +247,7 @@ const EmployerDashboard = () => {
   );
 
   // Real-time stats from dashboard data
-  const stats = dashboardData?.stats || {
+  const stats = dashboardData?.stats as any || {
     totalApplications: housegirls.length,
     activeJobs: 0,
     totalViews: 0,
@@ -472,81 +472,82 @@ const EmployerDashboard = () => {
 
           {/* Main Content Area */}
           <main className="flex-1 overflow-y-auto p-4 lg:p-6">
-            <div className="mb-4 flex flex-wrap gap-2 border border-gray-200 bg-white rounded-lg p-2">
-              {sidebarItems.map((item) => {
-                const Icon = item.icon;
-                const isActive = activeSection === item.id;
-                return (
-                  <Button
-                    key={item.id}
-                    type="button"
-                    variant="outline"
-                    onClick={() => setActiveSection(item.id)}
-                    className={isActive ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-gray-700'}
-                  >
-                    <Icon className="h-4 w-4 mr-2" />
-                    {item.label}
-                  </Button>
-                );
-              })}
-              <Button
-                type="button"
-                variant="outline"
-                className="ml-auto"
-                onClick={() => refreshData(false)}
-                disabled={refreshing}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-                Refresh
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4 mr-2" />
-                Log Out
-              </Button>
+
+            {/* Welcome Section */}
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {user?.first_name ? `Welcome back, ${user.first_name}` : 'Welcome, Employer'}
+                  </h1>
+                  <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-xs font-medium border border-gray-200 shadow-sm flex items-center">
+                    👔 Employer Account
+                  </span>
+                </div>
+                <p className="text-gray-500 text-sm">Find and manage the perfect domestic staff for your home.</p>
+              </div>
             </div>
-            {lastUpdated && (
-              <p className="mb-3 text-xs text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</p>
-            )}
-            {showProfilePromptBanner && (
-              <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex items-start justify-between gap-3">
-                <p>Complete your profile to unlock all features. Profile completion: {employerProfileCompletion}%</p>
-                <button
-                  type="button"
-                  className="text-blue-700 hover:text-blue-900 underline"
-                  onClick={() => {
-                    setShowProfilePromptBanner(false);
-                    localStorage.removeItem('dc_profile_prompt_employer');
-                  }}
+
+            {/* Profile Completion Banner */}
+            {employerProfileCompletion < 60 && (
+              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-semibold text-amber-900">Incomplete Profile ({employerProfileCompletion}%)</h3>
+                  <p className="text-sm text-amber-800 mt-1">
+                    Complete your profile to unlock all features, including viewing contact details.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setActiveSection('settings')}
+                  className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
+                  size="sm"
                 >
-                  Dismiss
-                </button>
+                  Complete Profile →
+                </Button>
               </div>
             )}
 
-            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4">
-              <p className="text-sm font-semibold text-gray-900">Profile {employerProfileCompletion}% complete</p>
-              <div className="mt-2 h-2 w-full rounded bg-gray-200">
-                <div className="h-2 rounded bg-black" style={{ width: `${employerProfileCompletion}%` }} />
-              </div>
-              {missingEmployerFields.length > 0 && (
-                <div className="mt-3 space-y-1">
-                  {missingEmployerFields.map((field) => (
-                    <button
-                      key={field.key}
+            <div className="mb-4 flex flex-wrap items-center gap-2 bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+              <div className="flex overflow-x-auto hide-scrollbar gap-2 w-full md:w-auto flex-1">
+                {sidebarItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeSection === item.id;
+                  return (
+                    <Button
+                      key={item.id}
                       type="button"
-                      onClick={() => jumpToEmployerProfileSection(field.key)}
-                      className="block text-left text-sm text-blue-700 hover:text-blue-900"
+                      variant="outline"
+                      onClick={() => setActiveSection(item.id)}
+                      className={isActive ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-gray-700'}
                     >
-                      {`→ ${field.label}`}
-                    </button>
-                  ))}
-                </div>
-              )}
+                      <Icon className="h-4 w-4 mr-2" />
+                      {item.label}
+                    </Button>
+                  );
+                })}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="ml-auto"
+                  onClick={() => refreshData(false)}
+                  disabled={refreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4 mr-2" />
+                  Log Out
+                </Button>
+              </div>
             </div>
+            {lastUpdated && (
+              <p className="mb-3 text-xs text-gray-500 mt-2 w-full">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+            )}
 
             {activeSection === 'housegirls' && unlockRestrictionMessage && (
               <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">

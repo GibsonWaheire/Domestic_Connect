@@ -1,4 +1,5 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
 import { errorService } from '@/lib/errorService';
@@ -102,14 +103,20 @@ async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promi
 const formatKenyanPhone = (phone: string) => FirebaseAuthService.formatKenyanPhone(phone);
 
 const mapPhoneAuthError = (code?: string) => {
+  if (code === 'auth/user-not-found') return 'No account found. Please sign up first.';
+  if (code === 'auth/wrong-password') return 'Incorrect password. Please try again.';
+  if (code === 'auth/too-many-requests') return 'Too many attempts. Please wait a few minutes and try again.';
+  if (code === 'auth/network-request-failed') return 'No internet connection. Please check your network.';
+  if (code === 'auth/invalid-verification-code') return 'Wrong code. Please check your SMS.';
   if (code === 'auth/invalid-phone-number') return 'Please enter a valid number e.g. 0712 345 678';
-  if (code === 'auth/too-many-requests') return 'Too many attempts. Try again later.';
-  if (code === 'auth/invalid-verification-code') return 'Wrong code. Check your SMS and try again.';
-  if (code === 'auth/code-expired') return 'Code expired. Tap resend to get a new one.';
-  return null;
+  if (code === 'auth/code-expired') return 'Code expired. Please request a new one.';
+  if (code === 'auth/popup-closed-by-user') return 'Sign in was cancelled.';
+  if (code === 'auth/cancelled-popup-request') return 'Only one sign in window allowed.';
+  return 'Something went wrong. Please try again.';
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isFirebaseUser, setIsFirebaseUser] = useState(false);
@@ -247,9 +254,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const formattedPhone = formatKenyanPhone(rawPhone);
       const otpResult = await FirebaseAuthService.sendOTP(formattedPhone);
-      console.log('sendOTP confirmationResult exists:', Boolean(otpResult.confirmationResult));
+      if (import.meta.env.DEV) {
+        console.log('sendOTP confirmationResult exists:', Boolean(otpResult.confirmationResult));
+      }
       if (!otpResult.success || !otpResult.confirmationResult) {
-        const errorMessage = otpResult.error || mapPhoneAuthError(otpResult.code) || 'Failed to send code.';
+        const errorMessage = otpResult.error || mapPhoneAuthError(otpResult.code);
         return { error: errorMessage };
       }
       setConfirmationResult(otpResult.confirmationResult);
@@ -263,7 +272,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const handleVerifyOTP = async (code: string, mode?: 'login' | 'signup') => {
-    console.log('verifyOTP confirmationResult exists:', Boolean(confirmationResult));
+    if (import.meta.env.DEV) {
+      console.log('verifyOTP confirmationResult exists:', Boolean(confirmationResult));
+    }
     if (!confirmationResult) {
       return { error: 'Please request a code first.' };
     }
@@ -272,7 +283,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       const verified = await FirebaseAuthService.verifyOTP(confirmationResult, code);
       if (!verified.success || !verified.userCredential) {
-        const errorMessage = verified.error || mapPhoneAuthError(verified.code) || 'Failed to verify code.';
+        const errorMessage = verified.error || mapPhoneAuthError(verified.code);
         return { error: errorMessage };
       }
 
@@ -295,17 +306,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const resolvedUserType = response.user_type;
       if (resolvedUserType === 'employer') {
-        window.location.href = '/employer-dashboard';
+        navigate('/employer-dashboard');
       } else if (resolvedUserType === 'housegirl') {
-        window.location.href = '/housegirl-dashboard';
+        navigate('/housegirl-dashboard');
       } else {
-        window.location.href = '/';
+        navigate('/');
       }
 
       return { error: null, userType: resolvedUserType };
     } catch (error: unknown) {
       const exactError = error instanceof Error ? error.message : String(error);
-      return { error: exactError || 'Failed to verify code.' };
+      return { error: exactError || 'Something went wrong. Please try again.' };
     } finally {
       setLoading(false);
     }
@@ -354,7 +365,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         },
         body: JSON.stringify({
           user_type: mode === 'signup' ? userType : undefined,
-          mode
+          mode,
+          display_name: result.user.displayName,
+          email: result.user.email,
+          photo_url: result.user.photoURL
         })
       });
 
@@ -365,11 +379,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const resolvedUserType = response.user_type;
       if (resolvedUserType === 'employer') {
-        window.location.href = '/employer-dashboard';
+        navigate('/employer-dashboard');
       } else if (resolvedUserType === 'housegirl') {
-        window.location.href = '/housegirl-dashboard';
+        navigate('/housegirl-dashboard');
       } else {
-        window.location.href = '/';
+        navigate('/');
       }
 
       return { error: null, user: response.user };
@@ -377,10 +391,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const exactError = error instanceof Error ? error.message : String(error);
       toast({
         title: 'Sign In Error',
-        description: exactError || 'Failed to sign in with Google.',
+        description: exactError || 'Something went wrong. Please try again.',
         variant: 'destructive'
       });
-      return { error: exactError || 'Failed to sign in with Google.' };
+      return { error: exactError || 'Something went wrong. Please try again.' };
     } finally {
       setLoading(false);
     }
@@ -411,9 +425,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       // Force a hard redirect to home page and clear client router state completely
-      window.location.href = '/home';
+      navigate('/home');
     } catch (error) {
-      console.error('Sign out error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Sign out error:', error);
+      }
 
       // Even if logout fails, clear local state
       setUser(null);
