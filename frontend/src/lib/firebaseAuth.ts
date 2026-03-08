@@ -13,20 +13,7 @@ import {
 } from 'firebase/auth';
 import { auth } from './firebase';
 import app from './firebase';
-import { initializeAppCheck, ReCaptchaV3Provider } from 'firebase/app-check';
 
-if (import.meta.env.DEV) {
-  (self as any).FIREBASE_APPCHECK_DEBUG_TOKEN = import.meta.env.VITE_FIREBASE_APPCHECK_DEBUG_TOKEN;
-}
-
-if (import.meta.env.VITE_RECAPTCHA_SITE_KEY) {
-  initializeAppCheck(app, {
-    provider: new ReCaptchaV3Provider(
-      import.meta.env.VITE_RECAPTCHA_SITE_KEY
-    ),
-    isTokenAutoRefreshEnabled: true
-  });
-}
 
 // Ensure authentication state persists across page reloads
 setPersistence(auth, browserLocalPersistence).catch(console.error);
