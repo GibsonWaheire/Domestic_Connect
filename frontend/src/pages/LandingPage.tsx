@@ -9,7 +9,7 @@ const LandingPage = () => {
   const heroImage = '/woooies.avif';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
-  
+
   const getDashboardRoute = () => {
     if (!user) return '/';
     if (user.user_type === 'agency') return '/agency-dashboard';
@@ -19,12 +19,12 @@ const LandingPage = () => {
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
   const openRegister = () => {
-    navigate('/login');
+    navigate('/login?mode=signup');
     setIsMenuOpen(false);
   };
 
   const openHousegirlRegister = () => {
-    navigate('/login');
+    navigate('/login?mode=signup');
     setIsMenuOpen(false);
   };
 
@@ -111,9 +111,8 @@ const LandingPage = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Navigation menu"
-          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${
-            isMenuOpen ? 'translate-x-0' : 'translate-x-full'
-          }`}
+          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+            }`}
         >
           <div className="h-full overflow-y-auto p-6">
             <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
@@ -150,7 +149,7 @@ const LandingPage = () => {
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
                 <div className="flex flex-col">
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openRegister(); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
@@ -189,7 +188,7 @@ const LandingPage = () => {
       <section className="bg-white py-16 md:py-24">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6 w-full grid md:grid-cols-2 gap-10 md:gap-8 items-center">
           <div className="text-center md:text-left">
-        
+
             <h1 className="text-[36px] md:text-[48px] font-extrabold tracking-tight leading-[1.1] max-w-xl mb-5">
               Find trusted house help — fast
             </h1>
@@ -319,7 +318,7 @@ const LandingPage = () => {
                 Find Housegirls →
               </Button>
             </div>
-            
+
             <div id="for-housegirls" className="bg-white p-8 rounded-[4px] border border-gray-200 shadow-sm flex flex-col justify-between">
               <div>
                 <h3 className="text-2xl font-bold mb-4 tracking-tight">💼 Looking for work?</h3>
