@@ -1,4 +1,4 @@
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 import os
 import sys
@@ -26,14 +26,22 @@ def create_app(config_name=None):
     if hasattr(config_class, 'init_app'):
         config_class.init_app(app)
         
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": app.config.get('CORS_ORIGINS'),
-            "supports_credentials": True,
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization", "X-Requested-With"]
-        }
-    })
+    origins = os.environ.get(
+        'CORS_ORIGINS', 
+        'http://localhost:5173'
+    ).split(',')
+
+    CORS(app, 
+        origins=origins,
+        supports_credentials=True,
+        allow_headers=['Content-Type', 'Authorization'],
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
+    )
+    
+    @app.before_request
+    def handle_options():
+        if request.method == 'OPTIONS':
+            return '', 200
     
     # Create upload directory
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
