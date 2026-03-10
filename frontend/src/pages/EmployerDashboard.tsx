@@ -14,78 +14,6 @@ import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { Button } from '@/components/ui/button';
 import { Building2, LogOut, Phone, RefreshCw, Settings as SettingsIcon, Users } from 'lucide-react';
 
-const MOCK_HOUSEGIRLS: Housegirl[] = [
-  {
-    id: 900001,
-    name: 'Mary Wanjiku',
-    age: 24,
-    location: 'Kasarani, Nairobi',
-    experience: '5 years',
-    education: 'Form 4 and Above',
-    salary: 'KES 15,000',
-    status: 'available',
-    bio: 'Reliable house help with strong cleaning and laundry skills.',
-    skills: ['Cleaning', 'Laundry', 'Ironing'],
-    rating: 4.8,
-    reviews: 18,
-    contactUnlocked: false,
-    unlockCount: 0,
-    phone: '',
-    email: '',
-    nationality: 'Kenyan',
-    community: 'Kikuyu',
-    workType: 'Live-in',
-    livingArrangement: 'Live-in',
-    profileImage: ''
-  },
-  {
-    id: 900002,
-    name: 'Grace Akinyi',
-    age: 29,
-    location: 'Nyali, Mombasa',
-    experience: '4 years',
-    education: 'Form 4 and Above',
-    salary: 'KES 18,000',
-    status: 'available',
-    bio: 'Professional nanny with childcare and tutoring experience.',
-    skills: ['Childcare', 'Meal Prep', 'Tutoring'],
-    rating: 4.5,
-    reviews: 11,
-    contactUnlocked: false,
-    unlockCount: 0,
-    phone: '',
-    email: '',
-    nationality: 'Kenyan',
-    community: 'Luo',
-    workType: 'Live-in',
-    livingArrangement: 'Live-in',
-    profileImage: ''
-  },
-  {
-    id: 900003,
-    name: 'Teresa Otsieno',
-    age: 28,
-    location: 'Milimani, Kisumu',
-    experience: '4 years',
-    education: 'Form 4 and Above',
-    salary: 'KES 18,000',
-    status: 'available',
-    bio: 'Strong background in childcare and elderly support.',
-    skills: ['Childcare', 'Elderly Care', 'Cleaning'],
-    rating: 4.7,
-    reviews: 23,
-    contactUnlocked: false,
-    unlockCount: 0,
-    phone: '',
-    email: '',
-    nationality: 'Kenyan',
-    community: 'Luo',
-    workType: 'Live-out',
-    livingArrangement: 'Live-out',
-    profileImage: ''
-  }
-];
-
 const EmployerDashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
@@ -130,7 +58,6 @@ const EmployerDashboard = () => {
   const [selectedWorkType, setSelectedWorkType] = useState('');
   const [selectedExperience, setSelectedExperience] = useState('');
   const [selectedLivingArrangement, setSelectedLivingArrangement] = useState('');
-  const [showProfilePromptBanner, setShowProfilePromptBanner] = useState(false);
   const [unlockRestrictionMessage, setUnlockRestrictionMessage] = useState<string | null>(null);
 
   // State for real data
@@ -186,8 +113,7 @@ const EmployerDashboard = () => {
       }
       return b.id - a.id;
     });
-    const mergedHousegirls = [...sortedRealHousegirls, ...MOCK_HOUSEGIRLS];
-    setHousegirls(mergedHousegirls);
+    setHousegirls(sortedRealHousegirls);
   }, [dashboardData]);
 
   // Show error if data fetching fails
@@ -207,12 +133,6 @@ const EmployerDashboard = () => {
       navigate('/');
     }
   }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (localStorage.getItem('dc_profile_prompt_employer') === 'true') {
-      setShowProfilePromptBanner(true);
-    }
-  }, []);
 
   // Show loading state while auth is initializing or data is loading
   if (loading || dataLoading) {
@@ -259,25 +179,25 @@ const EmployerDashboard = () => {
       key: 'first-name',
       label: 'Add your first name',
       weight: 25,
-      completed: Boolean((localStorage.getItem('employer_first_name') || user?.first_name || '').trim()),
+      completed: Boolean((user?.first_name || '').trim()),
     },
     {
       key: 'last-name',
       label: 'Add your last name',
       weight: 25,
-      completed: Boolean((localStorage.getItem('employer_last_name') || user?.last_name || '').trim()),
+      completed: Boolean((user?.last_name || '').trim()),
     },
     {
       key: 'location',
       label: 'Add your location',
       weight: 25,
-      completed: Boolean((localStorage.getItem('employer_location') || (user as { location?: string } | null)?.location || '').trim()),
+      completed: Boolean(((user as { location?: string } | null)?.location || '').trim()),
     },
     {
       key: 'photo',
       label: 'Upload a profile photo',
       weight: 25,
-      completed: Boolean(localStorage.getItem('employer_profile_photo')),
+      completed: Boolean((user as { profile_photo_url?: string } | null)?.profile_photo_url),
     },
   ] as const;
 
@@ -331,6 +251,18 @@ const EmployerDashboard = () => {
   const renderSection = () => {
     switch (activeSection) {
       case 'housegirls':
+        if (housegirls.length === 0) {
+          return (
+            <div className="text-center py-12">
+              <p className="text-gray-500 text-sm">
+                No profiles available yet.
+              </p>
+              <a href="/housegirls" className="text-amber-600 text-sm underline mt-2 block">
+                Browse all profiles →
+              </a>
+            </div>
+          );
+        }
         return (
           <Housegirls
             housegirls={housegirls}
