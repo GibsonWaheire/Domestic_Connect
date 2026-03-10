@@ -74,13 +74,31 @@ export class FirebaseAuthService {
 
   static async sendOTP(phoneNumber: string) {
     try {
-      const verifier = await this.setupRecaptcha();
-      const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
+      const recaptchaVerifier = await this.setupRecaptcha();
+      const otpPromise = signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('OTP_TIMEOUT')), 15000)
+      );
+      const confirmationResult = await Promise.race([
+        otpPromise,
+        timeoutPromise
+      ]) as ConfirmationResult;
       return {
         success: true,
         confirmationResult
       };
     } catch (error: unknown) {
+      console.error(error);
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+      if (error instanceof Error && error.message === 'OTP_TIMEOUT') {
+        return {
+          success: false,
+          error: 'Could not send code. Check your number and try again.'
+        };
+      }
       const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code.';
       const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
       return {
