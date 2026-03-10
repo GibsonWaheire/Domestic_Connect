@@ -3,7 +3,10 @@ from app.services.auth_service import firebase_auth_required, admin_required
 from app.firebase_init import db
 from datetime import datetime, timedelta
 import json
+import logging
 
+
+logger = logging.getLogger(__name__)
 admin_bp = Blueprint('admin', __name__)
 
 @admin_bp.route('/dashboard', methods=['GET'])
@@ -87,9 +90,10 @@ def get_dashboard_stats():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/users', methods=['GET'])
 @firebase_auth_required
@@ -157,9 +161,40 @@ def get_all_users():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
+
+@admin_bp.route('/users-without-roles', methods=['GET'])
+@firebase_auth_required
+@admin_required
+def get_users_without_roles():
+    try:
+        users = [u.to_dict() for u in db.collection('users').stream()]
+        users_without_roles = []
+        for user in users:
+            user_type = user.get('user_type')
+            if not user_type or str(user_type).strip() == '':
+                users_without_roles.append({
+                    'id': user.get('id'),
+                    'uid': user.get('uid'),
+                    'firebase_uid': user.get('firebase_uid'),
+                    'email': user.get('email'),
+                    'phone_number': user.get('phone_number'),
+                    'first_name': user.get('first_name'),
+                    'last_name': user.get('last_name'),
+                    'created_at': user.get('created_at'),
+                    'updated_at': user.get('updated_at')
+                })
+        return jsonify({
+            'users': users_without_roles
+        }), 200
+    except Exception as e:
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/users/<user_id>', methods=['GET'])
 @firebase_auth_required
@@ -249,9 +284,10 @@ def get_user_details(user_id):
         return jsonify(user_data), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/users/<user_id>/toggle-status', methods=['PUT'])
 @firebase_auth_required
@@ -279,9 +315,10 @@ def toggle_user_status(user_id):
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/agencies', methods=['GET'])
 @firebase_auth_required
@@ -346,9 +383,10 @@ def get_all_agencies():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/agencies/<agency_id>/verify', methods=['PUT'])
 @firebase_auth_required
@@ -378,9 +416,10 @@ def verify_agency(agency_id):
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/sync', methods=['POST'])
 @firebase_auth_required
@@ -401,7 +440,10 @@ def sync_data():
             return jsonify({'error': 'Invalid sync type'}), 400
             
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @admin_bp.route('/analytics', methods=['GET'])
 @firebase_auth_required
@@ -459,6 +501,7 @@ def get_analytics():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500

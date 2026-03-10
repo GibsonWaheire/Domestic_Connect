@@ -328,6 +328,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       });
 
+      if ((response as { status?: string; uid?: string }).status === 'role_required') {
+        const responseUid = (response as { uid?: string }).uid || verified.userCredential.user.uid;
+        navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+        return { error: null };
+      }
+
       if (response.user) {
         setUser(response.user);
         setIsFirebaseUser(true);
@@ -388,6 +394,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       });
 
+      if ((response as { status?: string; uid?: string }).status === 'role_required') {
+        const responseUid = (response as { uid?: string }).uid || result.user.uid;
+        navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+        return { error: null };
+      }
+
       if (response.user) {
         setUser(response.user);
         setIsFirebaseUser(true);
@@ -429,6 +441,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           mode: 'login'
         })
       });
+
+      if ((response as { status?: string; uid?: string }).status === 'role_required') {
+        const responseUid = (response as { uid?: string }).uid || result.user.uid;
+        navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+        return { error: null, user: response.user };
+      }
 
       if (response.user) {
         setUser(response.user);
@@ -480,6 +498,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           photo_url: result.user.photoURL
         })
       });
+
+      if ((response as { status?: string; uid?: string }).status === 'role_required') {
+        const responseUid = (response as { uid?: string }).uid || result.user.uid;
+        navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+        return { error: null, user: response.user };
+      }
 
       if (response.user) {
         setUser(response.user);
