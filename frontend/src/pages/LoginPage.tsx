@@ -140,207 +140,222 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
-      <header className="border-b border-gray-100 bg-white">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-          <Link to="/" className="flex flex-col leading-none">
-            <span className="text-xl font-bold tracking-tight text-[#111]">Domestic Connect</span>
+    <div className="flex min-h-screen bg-[#FDF6F0] font-sans text-[#111]">
+      {/* Left Panel - Hidden on Mobile */}
+      <div className="hidden md:flex flex-col justify-between w-[45%] bg-[#111] text-white p-12 relative overflow-hidden">
+        {/* Subtle CSS Pattern */}
+        <div
+          className="absolute inset-0 opacity-5 pointer-events-none"
+          style={{
+            backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
+            backgroundSize: '24px 24px'
+          }}
+        />
+
+        <div className="relative z-10 flex flex-col items-start gap-6">
+          <Link to="/" className="text-2xl font-bold tracking-tight text-white hover:opacity-90 transition-all duration-200">
+            Domestic Connect
           </Link>
-          <nav className="hidden md:flex items-center gap-3">
-            <Link to="/housegirls" className="bg-black text-white rounded-full px-4 py-1.5 text-sm font-medium hover:bg-[#333] transition-colors">
-              Find Househelp
-            </Link>
-          </nav>
-        </div>
-      </header>
-
-      <main className="max-w-sm mx-auto pt-16 px-4">
-        <div className="flex mb-8 bg-gray-100 p-1 rounded-full">
-          <button
-            onClick={() => setMode('login')}
-            className={`flex-1 py-2 text-sm font-medium rounded-full transition-all ${mode === 'login' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
-          >
-            Sign In
-          </button>
-          <button
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2 text-sm font-medium rounded-full transition-all ${mode === 'signup' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
-          >
-            Create Account
-          </button>
-        </div>
-
-        {mode === 'login' ? (
-          <>
-            <h1 className="text-center text-[22px] font-bold text-black">Welcome back</h1>
-            <p className="text-center text-sm text-gray-500 mb-6">Sign in to continue</p>
-          </>
-        ) : (
-          <>
-            <h1 className="text-center text-[22px] font-bold text-black">Join Domestic Connect</h1>
-            <p className="text-center text-sm text-gray-500 mb-6">
-              {userType === 'employer' ? 'Find trusted house help in Kenya' : 'Get discovered by families across Kenya'}
-            </p>
-          </>
-        )}
-
-        {error && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-            {error}
+          <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mt-12 w-full max-w-sm">
+            Find trusted house help across Kenya
+          </h1>
+          <div className="flex flex-col gap-6 mt-12">
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-white/10 p-1.5 shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span className="font-medium text-lg text-white/90">Verified profiles</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-white/10 p-1.5 shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span className="font-medium text-lg text-white/90">Trusted by 1,000+ families</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="rounded-full bg-white/10 p-1.5 shrink-0">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+              </div>
+              <span className="font-medium text-lg text-white/90">Safe & secure</span>
+            </div>
           </div>
-        )}
+        </div>
 
-        {authStep === 1 ? (
-          <form onSubmit={handleSendCode}>
-            {mode === 'signup' && (
-              <div className="mx-auto mb-4 flex w-full max-w-xs rounded-full bg-gray-100 p-1">
-                {[
-                  { value: 'employer', label: '👔 Employer' },
-                  { value: 'housegirl', label: '👩 Housegirl' },
-                ].map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setUserType(option.value as 'employer' | 'housegirl')}
-                    className={`flex-1 cursor-pointer rounded-full py-2 text-center text-sm font-medium transition-all ${userType === option.value
-                      ? 'bg-white text-black shadow-sm'
-                      : 'text-gray-400 hover:text-gray-600'
-                      }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+        <div className="relative z-10 mt-auto pt-16">
+          <Link to="/" className="text-white/60 hover:text-white transition-all duration-200 text-sm font-medium">
+            ← Back to Home
+          </Link>
+        </div>
+      </div>
+
+      {/* Right Panel - Form */}
+      <div className="flex-1 flex flex-col w-full md:w-[55%] min-h-screen">
+        {/* Mobile Header */}
+        <div className="md:hidden p-5 text-center bg-[#111] border-b border-gray-800 shadow-sm flex items-center mb-6">
+          <Link to="/" className="text-xl font-bold tracking-tight text-white mx-auto">
+            Domestic Connect
+          </Link>
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center items-center px-6 py-8 md:p-12 relative w-full">
+          <div className="w-full max-w-[400px] mx-auto">
+            {/* Top Pill Tab Toggle */}
+            <div className="flex p-1 bg-white/60 backdrop-blur-sm border border-gray-200 rounded-full mb-10 shadow-sm">
+              <button
+                type="button"
+                onClick={() => { setMode('login'); navigate('/login'); }}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'login' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
+              >
+                Sign In
+              </button>
+              <button
+                type="button"
+                onClick={() => { setMode('signup'); navigate('/login?mode=signup'); }}
+                className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'signup' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
+              >
+                Create Account
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium text-center shadow-sm">
+                {error}
               </div>
             )}
 
-            <div>
-              <Label htmlFor="phoneInput">Phone number</Label>
-              <Input
-                id="phoneInput"
-                type="tel"
-                value={phoneInput}
-                onChange={(e) => setPhoneInput(e.target.value)}
-                placeholder="0712 345 678"
-                inputMode="numeric"
-                className="w-full border border-gray-200 rounded-xl py-3 px-4 text-[15px] mt-2"
-                required
-              />
-              <p className="text-gray-400 text-xs mt-1">We'll send you a verification code</p>
-            </div>
+            {authStep === 1 ? (
+              <form onSubmit={handleSendCode} className="flex flex-col animate-in fade-in duration-300">
+                {mode === 'signup' && (
+                  <div className="flex w-full rounded-[14px] bg-white border border-gray-200 p-1.5 mb-6 shadow-sm">
+                    {[
+                      { value: 'employer', label: 'Employer' },
+                      { value: 'housegirl', label: 'Housegirl' },
+                    ].map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setUserType(option.value as 'employer' | 'housegirl')}
+                        className={`flex-1 rounded-[10px] py-2.5 text-center text-sm font-semibold transition-all duration-200 ${userType === option.value
+                          ? 'bg-[#111] text-white shadow-md'
+                          : 'text-gray-500 hover:text-[#111] hover:bg-gray-50'
+                          }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
 
-            <Button
-              type="submit"
-              className="bg-black text-white rounded-full w-full py-3 font-medium mt-4 hover:bg-black/90"
-              disabled={loading}
-            >
-              {loading ? 'Processing...' : mode === 'login' ? 'Send Code →' : 'Create Account →'}
-            </Button>
+                <div className="mb-6">
+                  <Label htmlFor="phoneInput" className="block text-sm font-semibold text-[#111] mb-2">Phone Number</Label>
+                  <div className="relative flex items-center">
+                    <div className="absolute left-0 pl-4 py-3 flex items-center pr-3 border-r border-gray-200 pointer-events-none z-10">
+                      <span className="text-lg leading-none mr-2">🇰🇪</span>
+                      <span className="text-gray-600 font-medium">+254</span>
+                    </div>
+                    <Input
+                      id="phoneInput"
+                      type="tel"
+                      value={phoneInput}
+                      onChange={(e) => setPhoneInput(e.target.value)}
+                      placeholder="712 345 678"
+                      inputMode="numeric"
+                      className="pl-[112px] w-full border border-gray-200 bg-white rounded-xl h-14 pr-4 shadow-sm text-lg tracking-wide focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
+                      required
+                    />
+                  </div>
+                </div>
 
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="bg-[#FDF6F0] px-2 text-gray-500">or</span>
-              </div>
-            </div>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#111] text-white rounded-xl h-14 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md mb-2"
+                >
+                  {loading ? 'Processing...' : (mode === 'login' ? 'Send Code' : 'Save & Continue')}
+                </Button>
 
-            <Button
-              type="button"
-              onClick={() => handleGoogleSignIn(userType, mode)}
-              className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-200 bg-white py-3 font-medium text-[#333] hover:bg-gray-50 mb-6"
-              disabled={loading}
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-              </svg>
-              {mode === 'login' ? 'Continue with Google' : 'Sign up with Google'}
-            </Button>
+                <div className="relative my-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm font-medium">
+                    <span className="bg-[#FDF6F0] px-4 text-gray-400">OR</span>
+                  </div>
+                </div>
 
-            <div className="text-center">
-              {mode === 'login' ? (
+                <Button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => handleGoogleSignIn(userType, mode)}
+                  className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#111] rounded-xl h-14 text-base font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                  </svg>
+                  {mode === 'login' ? 'Sign In with Google' : 'Sign Up with Google'}
+                </Button>
+
+                <div className="mt-8 text-center text-sm font-medium">
+                  {mode === 'login' ? (
+                    <p className="text-gray-500">Don't have an account? <button type="button" onClick={() => { setMode('signup'); navigate('/login?mode=signup'); }} className="text-[#F59E0B] font-bold hover:text-amber-600 transition-all duration-200 ml-1">Join Today</button></p>
+                  ) : (
+                    <p className="text-gray-500">Already have an account? <button type="button" onClick={() => { setMode('login'); navigate('/login'); }} className="text-[#F59E0B] font-bold hover:text-amber-600 transition-all duration-200 ml-1">Sign In</button></p>
+                  )}
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleVerifySubmit} className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
+                <div className="bg-amber-50 text-amber-900 border border-amber-200 rounded-xl px-4 py-3 text-sm font-medium mb-8 flex flex-col md:flex-row items-center gap-2 shadow-sm w-full justify-center text-center">
+                  <span>Code sent to {maskPhoneForDisplay(phoneNumber)}</span>
+                  <button type="button" onClick={() => { changePhoneNumber(); setOtpCode(''); setLastSubmittedCode(''); }} className="underline hover:text-amber-700 decoration-amber-300">Change number</button>
+                </div>
+
+                <h3 className="text-2xl font-bold text-[#111] mb-2">Check your phone</h3>
+                <p className="text-gray-500 mb-8 text-center font-medium">Enter the 6-digit verification code below</p>
+
+                <Input
+                  id="otpCode"
+                  type="text"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  maxLength={6}
+                  autoComplete="one-time-code"
+                  className="w-full text-center text-4xl tracking-[0.5em] font-bold border border-gray-200 bg-white rounded-2xl h-20 mb-8 shadow-sm focus-visible:ring-2 focus-visible:ring-[#111] transition-all duration-200"
+                  required
+                />
+
+                <Button
+                  type="submit"
+                  disabled={loading || isVerifyingCode}
+                  className="w-full bg-[#111] text-white rounded-xl h-14 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md mb-6"
+                >
+                  {loading || isVerifyingCode ? 'Verifying...' : 'Verify & Continue'}
+                </Button>
+
                 <button
                   type="button"
-                  onClick={() => {
-                    setMode('signup');
-                    navigate('/login?mode=signup');
-                  }}
-                  className="text-sm text-gray-500 hover:text-black transition-colors"
+                  onClick={handleResendCode}
+                  className="text-gray-500 font-semibold hover:text-[#111] transition-all duration-200"
                 >
-                  New here? Create account →
+                  Didn't receive the code? <span className="underline decoration-2 underline-offset-4">Resend</span>
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setMode('login');
-                    navigate('/login');
-                  }}
-                  className="text-sm text-gray-500 hover:text-black transition-colors"
-                >
-                  Do you have an account? Sign/Log in →
-                </button>
-              )}
-            </div>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifySubmit}>
-            <p className="text-center text-sm font-medium text-gray-700 mb-1">
-              Code sent to {maskPhoneForDisplay(phoneNumber)}
-            </p>
-            <p className="text-center text-xs text-gray-400 mb-5">
-              Check your phone and type the 6-digit code below
-            </p>
-            <Input
-              id="otpCode"
-              type="text"
-              value={otpCode}
-              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              inputMode="numeric"
-              maxLength={6}
-              autoComplete="one-time-code"
-              pattern="[0-9]*"
-              className="text-center text-3xl tracking-widest border border-gray-200 rounded-xl py-4 px-4 w-full"
-              required
-            />
+              </form>
+            )}
 
-            <Button
-              type="submit"
-              className="bg-black text-white rounded-full w-full py-3 font-medium mt-4 hover:bg-black/90"
-              disabled={loading || isVerifyingCode}
-            >
-              {loading || isVerifyingCode ? 'Processing...' : 'Verify Code →'}
-            </Button>
-
-            <button
-              type="button"
-              onClick={handleResendCode}
-              className="text-sm text-gray-400 text-center mt-3 cursor-pointer w-full"
-            >
-              Resend code
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                changePhoneNumber();
-                setOtpCode('');
-                setLastSubmittedCode('');
-              }}
-              className="text-sm text-gray-400 text-center mt-2 cursor-pointer w-full"
-            >
-              ← Change number
-            </button>
-          </form>
-        )}
-
-        <div
-          id="recaptcha-container"
-          style={{ display: 'none' }}
-        ></div>
-      </main>
+            <div id="recaptcha-container" style={{ display: 'none' }}></div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
