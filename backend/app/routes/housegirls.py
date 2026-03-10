@@ -43,6 +43,29 @@ def has_contact_access(current_user_id, housegirl_id):
     )
     return len(access_docs) > 0
 
+
+def get_unlock_count(housegirl_id, target_profile_id=None):
+    if not housegirl_id:
+        return 0
+    count = len(
+        list(
+            db.collection('contact_access')
+            .where('housegirl_id', '==', housegirl_id)
+            .stream()
+        )
+    )
+    if count > 0:
+        return count
+    if not target_profile_id:
+        return 0
+    return len(
+        list(
+            db.collection('contact_access')
+            .where('target_profile_id', '==', target_profile_id)
+            .stream()
+        )
+    )
+
 @housegirls_bp.route('/', methods=['GET'])
 def get_housegirls():
     """Get all housegirl profiles with filtering"""
@@ -130,6 +153,8 @@ def get_housegirls():
 
             housegirl_id = housegirl.get('id')
             can_view_contact = has_contact_access(current_user_id, housegirl_id)
+            unlock_count = get_unlock_count(housegirl_id, profile_id)
+            computed_is_available = unlock_count < 3
 
             result.append({
                 'id': housegirl_id,
@@ -139,7 +164,7 @@ def get_housegirls():
                 'skills': housegirl.get('skills', []),
                 'rate': housegirl.get('expected_salary'),
                 'photo': housegirl.get('profile_photo_url'),
-                'availability': housegirl.get('is_available'),
+                'availability': computed_is_available,
                 'age': housegirl.get('age'),
                 'bio': housegirl.get('bio'),
                 'current_location': housegirl.get('current_location'),
@@ -149,7 +174,10 @@ def get_housegirls():
                 'expected_salary': housegirl.get('expected_salary'),
                 'accommodation_type': housegirl.get('accommodation_type'),
                 'tribe': housegirl.get('tribe'),
-                'is_available': housegirl.get('is_available'),
+                'is_available': computed_is_available,
+                'unlock_count': unlock_count,
+                'in_demand_alert': housegirl.get('in_demand_alert', False),
+                'activation_fee_paid': housegirl.get('activation_fee_paid', False),
                 'profile_photo_url': housegirl.get('profile_photo_url'),
                 'first_name': first_name,
                 'last_name': last_name,
@@ -208,6 +236,8 @@ def get_housegirl(housegirl_id):
                         email = u_data.get('email', '')
         current_user_id = get_authenticated_user_id_from_request()
         can_view_contact = has_contact_access(current_user_id, housegirl_id)
+        unlock_count = get_unlock_count(housegirl_id, profile_id)
+        computed_is_available = unlock_count < 3
         
         return jsonify({
             'id': housegirl.get('id'),
@@ -217,7 +247,7 @@ def get_housegirl(housegirl_id):
             'skills': housegirl.get('skills', []),
             'rate': housegirl.get('expected_salary'),
             'photo': housegirl.get('profile_photo_url'),
-            'availability': housegirl.get('is_available'),
+            'availability': computed_is_available,
             'age': housegirl.get('age'),
             'bio': housegirl.get('bio'),
             'current_location': housegirl.get('current_location'),
@@ -227,7 +257,10 @@ def get_housegirl(housegirl_id):
             'expected_salary': housegirl.get('expected_salary'),
             'accommodation_type': housegirl.get('accommodation_type'),
             'tribe': housegirl.get('tribe'),
-            'is_available': housegirl.get('is_available'),
+            'is_available': computed_is_available,
+            'unlock_count': unlock_count,
+            'in_demand_alert': housegirl.get('in_demand_alert', False),
+            'activation_fee_paid': housegirl.get('activation_fee_paid', False),
             'profile_photo_url': housegirl.get('profile_photo_url'),
             'first_name': first_name,
             'last_name': last_name,
@@ -284,6 +317,9 @@ def create_housegirl():
             'accommodation_type': data.get('accommodation_type', 'live_in'),
             'tribe': data.get('tribe', ''),
             'is_available': data.get('is_available', True),
+            'unlock_count': data.get('unlock_count', 0),
+            'in_demand_alert': data.get('in_demand_alert', False),
+            'activation_fee_paid': data.get('activation_fee_paid', False),
             'profile_photo_url': data.get('profile_photo_url'),
             'created_at': datetime.utcnow().isoformat(),
             'updated_at': datetime.utcnow().isoformat()
@@ -329,7 +365,7 @@ def update_housegirl(housegirl_id):
         
         fields = ['age', 'bio', 'current_location', 'location', 'education', 
                   'experience', 'expected_salary', 'accommodation_type', 
-                  'tribe', 'is_available', 'profile_photo_url']
+                  'tribe', 'is_available', 'profile_photo_url', 'unlock_count', 'in_demand_alert', 'activation_fee_paid']
                   
         for field in fields:
             if field in data:

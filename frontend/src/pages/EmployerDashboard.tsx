@@ -98,7 +98,7 @@ const EmployerDashboard = () => {
         hg.email &&
         hg.email !== 'Unlock to view'
       ),
-      unlockCount: 0, // Default unlock count
+      unlockCount: Number(hg.unlock_count) || 0,
       phone: hg.phone_number,
       email: hg.email,
       nationality: 'Kenyan', // Default nationality

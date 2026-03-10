@@ -25,6 +25,7 @@ type Profile = {
   phone: string;
   exactLocation: string;
   avatar: string | null;
+  unlockCount: number;
 };
 
 const PROFILE_FILTERS: RoleType[] = [
@@ -46,8 +47,10 @@ type ApiHousegirl = {
   expected_salary?: number;
   is_available?: boolean;
   phone_number?: string | null;
+  phone?: string | null;
   location?: string;
   profile_photo_url?: string | null;
+  unlock_count?: number;
 };
 
 const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
@@ -110,6 +113,7 @@ const HousegirlsListPage = () => {
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [highDemandWarning, setHighDemandWarning] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -162,9 +166,10 @@ const HousegirlsListPage = () => {
             experienceYears: parseExperienceYears(profile.experience),
             monthlyRate: Number(profile.expected_salary) || 0,
             available: Boolean(profile.is_available),
-            phone: profile.phone_number || 'Unlock to view',
+            phone: profile.phone_number || profile.phone || 'Unlock to view',
             exactLocation: location,
             avatar: profile.profile_photo_url || null,
+            unlockCount: Number(profile.unlock_count) || 0,
           };
         });
         setProfiles(mappedProfiles);
@@ -186,6 +191,12 @@ const HousegirlsListPage = () => {
       localStorage.setItem('pendingContactId', profileId);
       navigate('/login?mode=signup');
       return;
+    }
+    const selectedProfile = profiles.find((profile) => profile.id === profileId);
+    if (selectedProfile && !selectedProfile.available) {
+      setHighDemandWarning('This profile has high demand. They may not be available.');
+    } else {
+      setHighDemandWarning(null);
     }
     setSelectedProfileId(profileId);
     setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
@@ -663,6 +674,11 @@ const HousegirlsListPage = () => {
                         <div className="flex-1 w-full">
                           <div className="flex flex-col gap-1 text-center md:text-left">
                             <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
+                            {!profile.available && (
+                              <Badge variant="secondary" className="w-fit mx-auto md:mx-0 border-amber-300 bg-amber-50 text-amber-700 text-[11px] px-2 py-0.5 rounded-full">
+                                ⚡ High demand
+                              </Badge>
+                            )}
                             <Badge variant="secondary" className={`w-fit mx-auto md:mx-0 border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[profile.role as RoleType]}`}>
                               {profile.role}
                             </Badge>
@@ -839,9 +855,15 @@ const HousegirlsListPage = () => {
           onClose={() => {
             setShowPaymentModal(false);
             setSelectedProfileId(null);
+            setHighDemandWarning(null);
           }}
           onSuccess={handlePaymentSuccess}
         />
+      )}
+      {showPaymentModal && highDemandWarning && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          {highDemandWarning}
+        </div>
       )}
     </div>
   );

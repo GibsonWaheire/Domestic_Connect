@@ -15,6 +15,8 @@ payments_bp = Blueprint('payments', __name__)
 CONTACT_BUNDLE_PACKAGE_ID = 'contact_unlock'
 CONTACT_BUNDLE_PRICE = 200
 CONTACT_BUNDLE_CONTACTS = 3
+ACTIVATION_PACKAGE_ID = 'high_demand_activation'
+ACTIVATION_PACKAGE_PRICE = 500
 
 DARAJA_BASE_URL = os.getenv('DARAJA_BASE_URL', 'https://sandbox.safaricom.co.ke')
 DARAJA_SHORTCODE = os.getenv('DARAJA_SHORTCODE', '174379')
@@ -144,6 +146,18 @@ def create_purchase():
                     'created_at': datetime.utcnow().isoformat()
                 }
                 db.collection('payment_packages').document(CONTACT_BUNDLE_PACKAGE_ID).set(package_data)
+                package_dict = package_data
+            elif package_id == ACTIVATION_PACKAGE_ID:
+                package_data = {
+                    'id': ACTIVATION_PACKAGE_ID,
+                    'name': 'High Demand Activation',
+                    'description': 'Reset high demand status for profile visibility',
+                    'price': ACTIVATION_PACKAGE_PRICE,
+                    'contacts_included': 0,
+                    'is_active': True,
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                db.collection('payment_packages').document(ACTIVATION_PACKAGE_ID).set(package_data)
                 package_dict = package_data
             else:
                 return jsonify({'error': 'Payment package not found'}), 404
@@ -287,6 +301,7 @@ def unlock_contact():
         data = request.get_json()
         
         target_profile_id = data.get('target_profile_id')
+        housegirl_id = data.get('housegirl_id')
         
         if not target_profile_id:
             return jsonify({'error': 'Target profile ID required'}), 400
@@ -314,10 +329,28 @@ def unlock_contact():
             'id': access_id,
             'user_id': user_id,
             'target_profile_id': target_profile_id,
+            'housegirl_id': housegirl_id,
             'accessed_at': datetime.utcnow().isoformat()
         }
         
         db.collection('contact_access').document(access_id).set(access_data)
+
+        if housegirl_id:
+            unlock_count = len(
+                list(
+                    db.collection('contact_access')
+                    .where('housegirl_id', '==', housegirl_id)
+                    .stream()
+                )
+            )
+            updates = {
+                'unlock_count': unlock_count,
+                'is_available': unlock_count < 3,
+                'updated_at': datetime.utcnow().isoformat()
+            }
+            if unlock_count >= 3:
+                updates['in_demand_alert'] = True
+            db.collection('housegirl_profiles').document(housegirl_id).set(updates, merge=True)
         
         updated_summary = get_contact_credit_summary(user_id)
 
