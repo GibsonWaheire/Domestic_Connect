@@ -1,10 +1,47 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import firebase_auth_required
+from app.services.auth_service import firebase_auth_required, verify_firebase_token
 from app.firebase_init import db
 from datetime import datetime
 import uuid
+import logging
 
+
+logger = logging.getLogger(__name__)
 housegirls_bp = Blueprint('housegirls', __name__)
+
+
+def get_authenticated_user_id_from_request():
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return None
+    token = auth_header.split(' ')[1]
+    firebase_user = verify_firebase_token(token)
+    if not firebase_user:
+        return None
+    user_doc = db.collection('users').where('firebase_uid', '==', firebase_user.get('uid')).limit(1).stream()
+    user = next(user_doc, None)
+    if not user:
+        return None
+    return user.to_dict().get('id')
+
+
+def has_contact_access(current_user_id, housegirl_id):
+    if not current_user_id or not housegirl_id:
+        return False
+    housegirl_doc = db.collection('housegirl_profiles').document(housegirl_id).get()
+    if not housegirl_doc.exists:
+        return False
+    target_profile_id = housegirl_doc.to_dict().get('profile_id')
+    if not target_profile_id:
+        return False
+    access_docs = list(
+        db.collection('contact_access')
+        .where('user_id', '==', current_user_id)
+        .where('target_profile_id', '==', target_profile_id)
+        .limit(1)
+        .stream()
+    )
+    return len(access_docs) > 0
 
 @housegirls_bp.route('/', methods=['GET'])
 def get_housegirls():
@@ -69,10 +106,12 @@ def get_housegirls():
         paginated = filtered[start_idx:end_idx]
         
         result = []
+        current_user_id = get_authenticated_user_id_from_request()
         for housegirl in paginated:
             first_name = ""
             last_name = ""
             phone_number = ""
+            email = ""
             
             profile_id = housegirl.get('profile_id')
             if profile_id:
@@ -87,10 +126,20 @@ def get_housegirls():
                             first_name = u_data.get('first_name', '')
                             last_name = u_data.get('last_name', '')
                             phone_number = u_data.get('phone_number', '')
+                            email = u_data.get('email', '')
+
+            housegirl_id = housegirl.get('id')
+            can_view_contact = has_contact_access(current_user_id, housegirl_id)
 
             result.append({
-                'id': housegirl.get('id'),
+                'id': housegirl_id,
                 'profile_id': profile_id,
+                'name': f"{first_name} {last_name}".strip(),
+                'role': 'housegirl',
+                'skills': housegirl.get('skills', []),
+                'rate': housegirl.get('expected_salary'),
+                'photo': housegirl.get('profile_photo_url'),
+                'availability': housegirl.get('is_available'),
                 'age': housegirl.get('age'),
                 'bio': housegirl.get('bio'),
                 'current_location': housegirl.get('current_location'),
@@ -104,7 +153,8 @@ def get_housegirls():
                 'profile_photo_url': housegirl.get('profile_photo_url'),
                 'first_name': first_name,
                 'last_name': last_name,
-                'phone_number': phone_number,
+                'phone': phone_number if can_view_contact else 'Unlock to view',
+                'email': email if can_view_contact else 'Unlock to view',
                 'created_at': housegirl.get('created_at'),
                 'updated_at': housegirl.get('updated_at')
             })
@@ -122,9 +172,10 @@ def get_housegirls():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @housegirls_bp.route('/<housegirl_id>', methods=['GET'])
 def get_housegirl(housegirl_id):
@@ -139,6 +190,7 @@ def get_housegirl(housegirl_id):
         first_name = ""
         last_name = ""
         phone_number = ""
+        email = ""
         
         profile_id = housegirl.get('profile_id')
         if profile_id:
@@ -153,10 +205,19 @@ def get_housegirl(housegirl_id):
                         first_name = u_data.get('first_name', '')
                         last_name = u_data.get('last_name', '')
                         phone_number = u_data.get('phone_number', '')
+                        email = u_data.get('email', '')
+        current_user_id = get_authenticated_user_id_from_request()
+        can_view_contact = has_contact_access(current_user_id, housegirl_id)
         
         return jsonify({
             'id': housegirl.get('id'),
             'profile_id': profile_id,
+            'name': f"{first_name} {last_name}".strip(),
+            'role': 'housegirl',
+            'skills': housegirl.get('skills', []),
+            'rate': housegirl.get('expected_salary'),
+            'photo': housegirl.get('profile_photo_url'),
+            'availability': housegirl.get('is_available'),
             'age': housegirl.get('age'),
             'bio': housegirl.get('bio'),
             'current_location': housegirl.get('current_location'),
@@ -170,15 +231,17 @@ def get_housegirl(housegirl_id):
             'profile_photo_url': housegirl.get('profile_photo_url'),
             'first_name': first_name,
             'last_name': last_name,
-            'phone_number': phone_number,
+            'phone': phone_number if can_view_contact else 'Unlock to view',
+            'email': email if can_view_contact else 'Unlock to view',
             'created_at': housegirl.get('created_at'),
             'updated_at': housegirl.get('updated_at')
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @housegirls_bp.route('/', methods=['POST'])
 @firebase_auth_required
@@ -231,9 +294,10 @@ def create_housegirl():
         return jsonify(housegirl_data), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @housegirls_bp.route('/<housegirl_id>', methods=['PUT'])
 @firebase_auth_required
@@ -279,9 +343,10 @@ def update_housegirl(housegirl_id):
         return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @housegirls_bp.route('/<housegirl_id>', methods=['DELETE'])
 @firebase_auth_required
@@ -312,6 +377,7 @@ def delete_housegirl(housegirl_id):
         return jsonify({'message': 'Housegirl profile deleted successfully'}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
