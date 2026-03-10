@@ -33,7 +33,10 @@ def create_app(config_name=None):
             "http://127.0.0.1:5173",
             "https://domestic-connect.up.railway.app",
             "https://domestic-connect-production.up.railway.app",
-            "https://domesticconnect.vercel.app"
+            "https://domesticconnect-production.up.railway.app",
+            "https://domesticconnect.vercel.app",
+            "https://domestic-connect.co.ke",
+            "https://www.domestic-connect.co.ke"
         ]}},
         supports_credentials=True,
         allow_headers=['Content-Type', 'Authorization', 'Accept'],
