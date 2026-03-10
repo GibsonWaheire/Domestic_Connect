@@ -70,7 +70,7 @@ const LoginPage = () => {
 
   useEffect(() => {
     const syncRedirectSignIn = async () => {
-      const result = await handleGoogleRedirectResult();
+      const result = await handleGoogleRedirectResult(mode === 'signup' ? 'signup' : 'login', userType);
       if (result.error) {
         setError(result.error);
       }

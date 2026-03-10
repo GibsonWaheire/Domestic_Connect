@@ -46,7 +46,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
   handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
-  handleGoogleRedirectResult: (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
+  handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency') => Promise<{ error: string | null; user?: User }>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -581,6 +581,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       shouldSyncFirebaseUserRef.current = true;
+      sessionStorage.setItem('auth_mode', mode || 'login');
+      if (userType) {
+        sessionStorage.setItem('auth_user_type', userType);
+      }
       const { signInWithGoogle: firebaseSignInWithGoogle } = await import('@/lib/firebaseAuth');
       await firebaseSignInWithGoogle();
       return { error: null };
@@ -598,9 +602,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const handleGoogleRedirectResult = async (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => {
+  const handleGoogleRedirectResult = async (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency') => {
     try {
       setLoading(true);
+      const resolvedMode = mode || (sessionStorage.getItem('auth_mode') as 'login' | 'signup' | null) || 'login';
+      const resolvedRedirectUserType = userType || (sessionStorage.getItem('auth_user_type') as 'employer' | 'housegirl' | 'agency' | null) || undefined;
+      sessionStorage.removeItem('auth_mode');
+      sessionStorage.removeItem('auth_user_type');
       const { getGoogleRedirectResult } = await import('@/lib/firebaseAuth');
       const result = await getGoogleRedirectResult();
       if (!result?.user) {
@@ -614,8 +622,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-          user_type: userType,
-          mode,
+          user_type: resolvedRedirectUserType,
+          mode: resolvedMode,
           display_name: result.user.displayName,
           email: result.user.email,
           photo_url: result.user.photoURL
@@ -629,6 +637,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if ((response as { status?: string }).status === 'not_found') {
+        if (resolvedMode === 'signup') {
+          const signupResponse = await apiRequest<{ status?: string; user_type: 'employer' | 'housegirl' | 'agency'; user?: User; uid?: string }>('/api/auth/verify', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              user_type: resolvedRedirectUserType,
+              mode: 'signup',
+              display_name: result.user.displayName,
+              email: result.user.email,
+              photo_url: result.user.photoURL
+            })
+          });
+
+          if (signupResponse.status === 'role_required') {
+            const responseUid = signupResponse.uid || result.user.uid;
+            navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+            return { error: null, user: signupResponse.user };
+          }
+
+          if (signupResponse.user) {
+            setUser(signupResponse.user);
+            setIsFirebaseUser(true);
+          }
+
+          const signupUserType = signupResponse.user_type;
+          if (signupUserType === 'employer') {
+            navigate('/employer-dashboard');
+          } else if (signupUserType === 'housegirl') {
+            navigate('/housegirl-dashboard');
+          } else {
+            navigate('/');
+          }
+
+          return { error: null, user: signupResponse.user };
+        }
+
         toast({
           title: 'Account not found',
           description: 'No account found with this number. Create an account first.',
