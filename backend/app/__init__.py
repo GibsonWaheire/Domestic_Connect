@@ -54,6 +54,7 @@ def create_app(config_name=None):
     def after_request(response):
         response = add_security_headers(response)
         response = add_performance_headers(response)
+        response.headers['Content-Security-Policy'] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:* 127.0.0.1:*; frame-ancestors 'self' https://accounts.google.com"
         return response
     
     # Register blueprints

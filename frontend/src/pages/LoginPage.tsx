@@ -19,6 +19,7 @@ const LoginPage = () => {
   const resendOTP = authContext?.resendOTP || (async () => ({ error: 'Authentication is unavailable.' }));
   const changePhoneNumber = authContext?.changePhoneNumber || (() => { });
   const handleGoogleSignIn = authContext?.handleGoogleSignIn || (async () => ({ error: 'Authentication is unavailable.' }));
+  const handleGoogleRedirectResult = authContext?.handleGoogleRedirectResult || (async () => ({ error: null }));
   const signIn = authContext?.signIn || (async () => ({ error: 'Authentication is unavailable.' }));
   const signUp = authContext?.signUp || (async () => ({ error: 'Authentication is unavailable.' }));
 
@@ -64,6 +65,18 @@ const LoginPage = () => {
       setPendingUid('');
     }
   }, [searchParams]);
+
+  useEffect(() => {
+    const syncRedirectSignIn = async () => {
+      const callbackMode = mode === 'signup' ? 'signup' : 'login';
+      const callbackUserType = mode === 'signup' ? userType : undefined;
+      const result = await handleGoogleRedirectResult(callbackUserType, callbackMode);
+      if (result.error) {
+        setError(result.error);
+      }
+    };
+    syncRedirectSignIn();
+  }, [handleGoogleRedirectResult, mode, userType]);
 
   useEffect(() => {
     if (!user) return;
@@ -415,7 +428,7 @@ const LoginPage = () => {
                   <Button
                     type="button"
                     disabled={loading}
-                    onClick={() => handleGoogleSignIn(userType, mode)}
+                    onClick={() => handleGoogleSignIn(userType, mode === 'signup' ? 'signup' : 'login')}
                     className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#111] rounded-xl h-14 text-base font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
