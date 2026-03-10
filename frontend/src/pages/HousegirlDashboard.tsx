@@ -43,6 +43,7 @@ import ReturnToHome from '@/components/ReturnToHome';
 import { jobsApi, JobPosting, crossEntityApi, DashboardData } from '@/lib/api';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface JobOpportunity {
   id: string;
@@ -112,6 +113,13 @@ const HousegirlDashboard = () => {
 
   // State for real dashboard data
   const [jobOpportunities, setJobOpportunities] = useState<JobOpportunity[]>([]);
+  const [housegirlProfileId, setHousegirlProfileId] = useState<string>('');
+  const [unlockCount, setUnlockCount] = useState(0);
+  const [activationFeePaid, setActivationFeePaid] = useState(false);
+  const [showActivationModal, setShowActivationModal] = useState(false);
+  const [activationPhone, setActivationPhone] = useState('');
+  const [isActivating, setIsActivating] = useState(false);
+  const [activationPending, setActivationPending] = useState(false);
 
   // Get user's actual data from registration
   const getUserData = useCallback(() => {
@@ -199,11 +207,107 @@ const HousegirlDashboard = () => {
         if (apiPhoto) {
           setProfilePhoto(apiPhoto);
         }
+        setHousegirlProfileId(String(result?.id || ''));
+        setUnlockCount(Number(result?.unlock_count) || 0);
+        setActivationFeePaid(Boolean(result?.activation_fee_paid));
+        if (!activationPhone && user.phone_number) {
+          setActivationPhone(user.phone_number);
+        }
       } catch {
       }
     };
     loadProfilePhoto();
-  }, [user, getUserData]);
+  }, [activationPhone, user, getUserData]);
+
+  const handleActivationPayment = async () => {
+    if (!housegirlProfileId || !activationPhone) {
+      return;
+    }
+
+    setIsActivating(true);
+    setActivationPending(false);
+
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          package_id: 'high_demand_activation',
+          phone_number: activationPhone,
+          amount: 500,
+        }),
+      });
+      const purchaseData = await purchaseResponse.json().catch(() => ({}));
+      if (!purchaseResponse.ok || !purchaseData?.checkout_request_id) {
+        throw new Error(purchaseData?.error || 'Unable to initiate activation payment.');
+      }
+
+      setActivationPending(true);
+      const timeoutAt = Date.now() + 120000;
+      let paymentStatus = 'pending';
+      while (Date.now() < timeoutAt) {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const statusResponse = await fetch(`${API_BASE_URL}/api/payments/purchase-status/${purchaseData.checkout_request_id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        const statusData = await statusResponse.json().catch(() => ({}));
+        paymentStatus = statusData?.status || 'pending';
+        if (paymentStatus === 'completed') {
+          break;
+        }
+        if (paymentStatus === 'failed') {
+          throw new Error('Activation payment failed. Please try again.');
+        }
+      }
+
+      if (paymentStatus !== 'completed') {
+        throw new Error('Payment not confirmed. Please try again.');
+      }
+
+      const resetResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlProfileId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          is_available: true,
+          in_demand_alert: false,
+          unlock_count: 0,
+          activation_fee_paid: true,
+        }),
+      });
+      if (!resetResponse.ok) {
+        throw new Error('Activation succeeded but failed to refresh profile status.');
+      }
+
+      setUnlockCount(0);
+      setActivationFeePaid(true);
+      setShowActivationModal(false);
+      setActivationPending(false);
+      await refreshData(false);
+      toast({
+        title: 'Activation successful',
+        description: 'Your profile visibility has been restored.',
+      });
+    } catch (error) {
+      toast({
+        title: 'Activation error',
+        description: error instanceof Error ? error.message : 'Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsActivating(false);
+      setActivationPending(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -390,6 +494,18 @@ const HousegirlDashboard = () => {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-8">
+        {unlockCount >= 3 && !activationFeePaid && (
+          <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            Your profile is in high demand! Activate premium for KES 500 to stay visible and prioritized.
+            <button
+              type="button"
+              className="ml-1 font-medium underline"
+              onClick={() => setShowActivationModal(true)}
+            >
+              →
+            </button>
+          </div>
+        )}
         {/* Welcome Section */}
         <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
@@ -953,6 +1069,41 @@ const HousegirlDashboard = () => {
                   Save Changes
                 </Button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {showActivationModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Premium Activation</h3>
+            <p className="text-sm text-gray-600 mb-4">Pay KES 500 to reset high demand status and prioritize your profile.</p>
+            <input
+              type="tel"
+              value={activationPhone}
+              onChange={(e) => setActivationPhone(e.target.value)}
+              placeholder="M-Pesa phone number"
+              className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm mb-3"
+            />
+            {activationPending && (
+              <p className="text-sm text-amber-700 mb-3">Check your phone for M-Pesa prompt and enter PIN to complete.</p>
+            )}
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowActivationModal(false)}
+                disabled={isActivating}
+              >
+                Cancel
+              </Button>
+              <Button
+                className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                onClick={handleActivationPayment}
+                disabled={isActivating || !activationPhone}
+              >
+                {isActivating ? 'Processing...' : 'Pay KES 500'}
+              </Button>
             </div>
           </div>
         </div>

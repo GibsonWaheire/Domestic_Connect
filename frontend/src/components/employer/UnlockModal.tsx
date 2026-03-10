@@ -42,6 +42,18 @@ export const UnlockModal = ({
 
     try {
       const token = await FirebaseAuthService.getIdToken();
+      const housegirlResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlToUnlock.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const housegirlData = await housegirlResponse.json().catch(() => ({}));
+      const targetProfileId = housegirlData?.profile_id;
+      if (!targetProfileId) {
+        throw new Error('Unable to identify this profile for unlock.');
+      }
+
       const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
         method: 'POST',
         headers: {
@@ -99,7 +111,7 @@ export const UnlockModal = ({
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ target_profile_id: String(housegirlToUnlock.id), housegirl_id: String(housegirlToUnlock.id) }),
+        body: JSON.stringify({ target_profile_id: String(targetProfileId), housegirl_id: String(housegirlToUnlock.id) }),
       });
       const unlockData = await unlockResponse.json().catch(() => ({}));
       if (!unlockResponse.ok) {
@@ -116,7 +128,7 @@ export const UnlockModal = ({
 
       onUnlockSuccess({
         housegirlId: housegirlToUnlock.id,
-        phone: detailsData?.phone_number || undefined,
+        phone: detailsData?.phone || detailsData?.phone_number || undefined,
         email: detailsData?.email || undefined,
       });
 
@@ -196,6 +208,9 @@ export const UnlockModal = ({
                 Payment will be processed via M-Pesa STK Push
               </div>
             </div>
+            {housegirlToUnlock.status === 'unavailable' && (
+              <div className="text-sm text-amber-700">⚠️ This person may be unavailable due to high demand.</div>
+            )}
             {isPaymentPending && (
               <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <div className="flex items-center space-x-2 text-amber-800">
