@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode, useCallback } from 'react';
+import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
@@ -61,6 +61,8 @@ export const useAuth = () => {
   return context;
 };
 
+export const useAuthEnhanced = () => useContext(AuthContext);
+
 // API base URL
 // Use relative URLs for development (proxy handles forwarding)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
@@ -115,6 +117,16 @@ const mapPhoneAuthError = (code?: string) => {
   return 'Something went wrong. Please try again.';
 };
 
+const mapEmailAuthError = (code?: string) => {
+  if (code === 'auth/email-already-in-use') return 'An account with this email exists. Please sign in instead.';
+  if (code === 'auth/wrong-password') return 'Incorrect password. Please try again.';
+  if (code === 'auth/user-not-found') return 'No account found with this email.';
+  if (code === 'auth/weak-password') return 'Password must be at least 6 characters.';
+  if (code === 'auth/too-many-requests') return 'Too many attempts. Please wait and try again.';
+  if (code === 'auth/invalid-email') return 'Please enter a valid email address.';
+  return 'Something went wrong. Please try again.';
+};
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -126,6 +138,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [authStep, setAuthStep] = useState<1 | 2>(1);
   const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency'>('employer');
   const [selectedMode, setSelectedMode] = useState<'login' | 'signup'>('login');
+  const shouldSyncFirebaseUserRef = useRef(false);
 
   const checkSession = useCallback(async () => {
     try {
@@ -224,18 +237,26 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               clearTimeout(fallbackTimeout);
               return;
             }
-            // Prevent duplicate sync calls right after successful login
-            if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
+            if (!shouldSyncFirebaseUserRef.current) {
               setLoading(false);
               clearTimeout(fallbackTimeout);
               return;
             }
+            // Prevent duplicate sync calls right after successful login
+            if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
+              setLoading(false);
+              clearTimeout(fallbackTimeout);
+              shouldSyncFirebaseUserRef.current = false;
+              return;
+            }
             // User is signed in with Firebase
             await handleFirebaseUser(firebaseUser);
+            shouldSyncFirebaseUserRef.current = false;
           } else {
             // User is signed out from Firebase
             setUser(null);
             setIsFirebaseUser(false);
+            shouldSyncFirebaseUserRef.current = false;
           }
         } finally {
           // ALWAYS finish loading after Firebase resolves
@@ -286,8 +307,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     try {
       setLoading(true);
+      shouldSyncFirebaseUserRef.current = true;
       const verified = await FirebaseAuthService.verifyOTP(confirmationResult, code);
       if (!verified.success || !verified.userCredential) {
+        shouldSyncFirebaseUserRef.current = false;
         const errorMessage = verified.error || mapPhoneAuthError(verified.code);
         return { error: errorMessage };
       }
@@ -321,6 +344,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error: null, userType: resolvedUserType };
     } catch (error: unknown) {
+      shouldSyncFirebaseUserRef.current = false;
       const exactError = error instanceof Error ? error.message : String(error);
       return { error: exactError || 'Something went wrong. Please try again.' };
     } finally {
@@ -346,11 +370,89 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     userType: 'employer' | 'housegirl' | 'agency',
     additionalData: Record<string, unknown>
   ) => {
-    return { error: 'Email and password sign up is no longer supported.' };
+    try {
+      setLoading(true);
+      shouldSyncFirebaseUserRef.current = true;
+      const { signUpWithEmail } = await import('@/lib/firebaseAuth');
+      const result = await signUpWithEmail(email, password);
+      const token = await result.user.getIdToken();
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          user_type: userType,
+          mode: 'signup',
+          ...additionalData
+        })
+      });
+
+      if (response.user) {
+        setUser(response.user);
+        setIsFirebaseUser(true);
+      }
+
+      const resolvedUserType = response.user_type;
+      if (resolvedUserType === 'employer') {
+        navigate('/employer-dashboard');
+      } else if (resolvedUserType === 'housegirl') {
+        navigate('/housegirl-dashboard');
+      } else {
+        navigate('/');
+      }
+
+      return { error: null };
+    } catch (error: unknown) {
+      shouldSyncFirebaseUserRef.current = false;
+      const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
+      const fallbackMessage = error instanceof Error ? error.message : String(error);
+      return { error: mapEmailAuthError(errorCode) || fallbackMessage };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signIn = async (email: string, password: string) => {
-    return { error: 'Email and password sign in is no longer supported.' };
+    try {
+      setLoading(true);
+      shouldSyncFirebaseUserRef.current = true;
+      const { signInWithEmail } = await import('@/lib/firebaseAuth');
+      const result = await signInWithEmail(email, password);
+      const token = await result.user.getIdToken();
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          mode: 'login'
+        })
+      });
+
+      if (response.user) {
+        setUser(response.user);
+        setIsFirebaseUser(true);
+      }
+
+      const resolvedUserType = response.user_type;
+      if (resolvedUserType === 'employer') {
+        navigate('/employer-dashboard');
+      } else if (resolvedUserType === 'housegirl') {
+        navigate('/housegirl-dashboard');
+      } else {
+        navigate('/');
+      }
+
+      return { error: null, user: response.user };
+    } catch (error: unknown) {
+      shouldSyncFirebaseUserRef.current = false;
+      const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
+      const fallbackMessage = error instanceof Error ? error.message : String(error);
+      return { error: mapEmailAuthError(errorCode) || fallbackMessage };
+    } finally {
+      setLoading(false);
+    }
   };
 
   const signInWithGoogle = async () => {
@@ -360,6 +462,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const handleGoogleSignIn = async (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => {
     try {
       setLoading(true);
+      shouldSyncFirebaseUserRef.current = true;
       const { signInWithGoogle: firebaseSignInWithGoogle } = await import('@/lib/firebaseAuth');
       const result = await firebaseSignInWithGoogle();
       const token = await result.user.getIdToken();
@@ -394,6 +497,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return { error: null, user: response.user };
     } catch (error: unknown) {
+      shouldSyncFirebaseUserRef.current = false;
       const exactError = error instanceof Error ? error.message : String(error);
       toast({
         title: 'Sign In Error',
@@ -424,6 +528,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Clear user state
       setUser(null);
       setIsFirebaseUser(false);
+      shouldSyncFirebaseUserRef.current = false;
 
       toast({
         title: "Signed Out",
@@ -440,6 +545,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       // Even if logout fails, clear local state
       setUser(null);
       setIsFirebaseUser(false);
+      shouldSyncFirebaseUserRef.current = false;
 
       toast({
         title: "Signed Out",

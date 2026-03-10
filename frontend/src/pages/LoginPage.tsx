@@ -3,22 +3,23 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/hooks/useAuthEnhanced';
+import { useAuthEnhanced } from '@/hooks/useAuthEnhanced';
 
 const LoginPage = () => {
   const navigate = useNavigate();
-  const {
-    user,
-    loading,
-    authStep,
-    phoneNumber,
-    formatKenyanPhone,
-    handleSendOTP,
-    handleVerifyOTP,
-    resendOTP,
-    changePhoneNumber,
-    handleGoogleSignIn,
-  } = useAuth();
+  const authContext = useAuthEnhanced();
+  const user = authContext?.user || null;
+  const loading = authContext?.loading || false;
+  const authStep = authContext?.authStep || 1;
+  const phoneNumber = authContext?.phoneNumber || '';
+  const formatKenyanPhone = authContext?.formatKenyanPhone || ((phone: string) => phone);
+  const handleSendOTP = authContext?.handleSendOTP || (async () => ({ error: 'Authentication is unavailable.' }));
+  const handleVerifyOTP = authContext?.handleVerifyOTP || (async () => ({ error: 'Authentication is unavailable.' }));
+  const resendOTP = authContext?.resendOTP || (async () => ({ error: 'Authentication is unavailable.' }));
+  const changePhoneNumber = authContext?.changePhoneNumber || (() => { });
+  const handleGoogleSignIn = authContext?.handleGoogleSignIn || (async () => ({ error: 'Authentication is unavailable.' }));
+  const signIn = authContext?.signIn || (async () => ({ error: 'Authentication is unavailable.' }));
+  const signUp = authContext?.signUp || (async () => ({ error: 'Authentication is unavailable.' }));
 
   const [searchParams] = useSearchParams();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -28,6 +29,10 @@ const LoginPage = () => {
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [lastSubmittedCode, setLastSubmittedCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [emailInput, setEmailInput] = useState('');
+  const [passwordInput, setPasswordInput] = useState('');
+  const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
+  const [showEmailAuth, setShowEmailAuth] = useState(false);
 
   const maskPhoneForDisplay = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
@@ -139,6 +144,28 @@ const LoginPage = () => {
     }
   };
 
+  const handleEmailAuth = async () => {
+    setError(null);
+
+    if (mode === 'signup' && passwordInput !== confirmPasswordInput) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    if (mode === 'login') {
+      const result = await signIn(emailInput, passwordInput);
+      if (result.error) {
+        setError(result.error);
+      }
+      return;
+    }
+
+    const result = await signUp(emailInput, passwordInput, userType, {});
+    if (result.error) {
+      setError(result.error);
+    }
+  };
+
   return (
     <div className="flex min-h-screen bg-[#FDF6F0] font-sans text-[#111]">
       {/* Left Panel - Hidden on Mobile */}
@@ -205,6 +232,13 @@ const LoginPage = () => {
 
         <div className="flex-1 flex flex-col justify-center items-center px-6 py-8 md:p-12 relative w-full">
           <div className="w-full max-w-[400px] mx-auto">
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900">Welcome to Domestic Connect</h2>
+              <p className="mt-1 text-sm text-gray-500">
+                {mode === 'login' ? 'Sign in to your account' : 'Create your free account'}
+              </p>
+            </div>
+
             {/* Top Pill Tab Toggle */}
             <div className="flex p-1 bg-white/60 backdrop-blur-sm border border-gray-200 rounded-full mb-10 shadow-sm">
               <button
@@ -303,6 +337,70 @@ const LoginPage = () => {
                   </svg>
                   {mode === 'login' ? 'Sign In with Google' : 'Sign Up with Google'}
                 </Button>
+
+                <div className={`${showEmailAuth ? 'max-h-96 mt-8' : 'max-h-0'} overflow-hidden transition-all duration-300`}>
+                  <div className="relative my-8">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-gray-200" />
+                    </div>
+                    <div className="relative flex justify-center text-sm font-medium">
+                      <span className="bg-[#FDF6F0] px-4 text-gray-400">or use email</span>
+                    </div>
+                  </div>
+
+                  <div className="mb-4">
+                    <Label htmlFor="emailInput" className="block text-sm font-semibold text-[#111] mb-2">Email</Label>
+                    <Input
+                      id="emailInput"
+                      type="email"
+                      value={emailInput}
+                      onChange={(e) => setEmailInput(e.target.value)}
+                      placeholder="you@example.com"
+                      className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <Label htmlFor="passwordInput" className="block text-sm font-semibold text-[#111] mb-2">Password</Label>
+                    <Input
+                      id="passwordInput"
+                      type="password"
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
+                    />
+                  </div>
+
+                  {mode === 'signup' && (
+                    <div className="mb-6">
+                      <Label htmlFor="confirmPasswordInput" className="block text-sm font-semibold text-[#111] mb-2">Confirm Password</Label>
+                      <Input
+                        id="confirmPasswordInput"
+                        type="password"
+                        value={confirmPasswordInput}
+                        onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                        className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
+                      />
+                    </div>
+                  )}
+
+                  <Button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleEmailAuth}
+                    className="w-full bg-[#111] text-white rounded-xl h-12 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md mb-2"
+                  >
+                    {mode === 'login' ? 'Sign In with Email' : 'Create Account with Email'}
+                  </Button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setShowEmailAuth((prev) => !prev)}
+                  className="mt-6 text-sm text-gray-400 underline cursor-pointer"
+                >
+                  {showEmailAuth ? '← Back to phone/Google' : 'Prefer email? Sign in with email →'}
+                </button>
 
                 <div className="mt-8 text-center text-sm font-medium">
                   {mode === 'login' ? (
