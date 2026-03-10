@@ -29,6 +29,7 @@ const LoginPage = () => {
   const [phoneInput, setPhoneInput] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpLoading, setOtpLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [lastSubmittedCode, setLastSubmittedCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -69,15 +70,13 @@ const LoginPage = () => {
 
   useEffect(() => {
     const syncRedirectSignIn = async () => {
-      const callbackMode = mode === 'signup' ? 'signup' : 'login';
-      const callbackUserType = mode === 'signup' ? userType : undefined;
-      const result = await handleGoogleRedirectResult(callbackUserType, callbackMode);
+      const result = await handleGoogleRedirectResult();
       if (result.error) {
         setError(result.error);
       }
     };
     syncRedirectSignIn();
-  }, [handleGoogleRedirectResult, mode, userType]);
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -172,6 +171,16 @@ const LoginPage = () => {
     const result = await resendOTP();
     if (result.error) {
       setError(result.error);
+    }
+  };
+
+  const handleGoogleClick = async () => {
+    setError(null);
+    setGoogleLoading(true);
+    try {
+      await handleGoogleSignIn(userType, mode === 'signup' ? 'signup' : 'login');
+    } finally {
+      setGoogleLoading(false);
     }
   };
 
@@ -433,8 +442,8 @@ const LoginPage = () => {
                 <div className={`transition-all duration-200 ${showEmailForm ? 'hidden' : ''}`}>
                   <Button
                     type="button"
-                    disabled={loading}
-                    onClick={() => handleGoogleSignIn(userType, mode === 'signup' ? 'signup' : 'login')}
+                    disabled={googleLoading}
+                    onClick={handleGoogleClick}
                     className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#111] rounded-xl h-14 text-base font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
