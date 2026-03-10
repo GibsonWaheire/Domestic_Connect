@@ -68,6 +68,7 @@ export const useAuthEnhanced = () => useContext(AuthContext);
 // API base URL
 // Use relative URLs for development (proxy handles forwarding)
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
 
 // Generic API request function
 async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
@@ -666,7 +667,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signOut = async () => {
+  const signOut = useCallback(async (redirectTo = '/home') => {
     try {
       setLoading(true);
       setIsSigningOut(true);
@@ -691,8 +692,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         description: "You have been signed out successfully.",
       });
 
-      // Force a hard redirect to home page and clear client router state completely
-      navigate('/home');
+      navigate(redirectTo);
     } catch (error) {
       if (import.meta.env.DEV) {
         console.error('Sign out error:', error);
@@ -711,7 +711,51 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(false);
       setIsSigningOut(false);
     }
-  };
+  }, [isFirebaseUser, navigate]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let timer: ReturnType<typeof setTimeout>;
+    let warningTimer: ReturnType<typeof setTimeout>;
+
+    const resetTimer = () => {
+      clearTimeout(timer);
+      clearTimeout(warningTimer);
+
+      warningTimer = setTimeout(() => {
+        toast({
+          title: "Session Expiring",
+          description: "You will be logged out in 2 minutes due to inactivity.",
+          variant: "destructive",
+        });
+      }, INACTIVITY_TIMEOUT - 2 * 60 * 1000);
+
+      timer = setTimeout(async () => {
+        await signOut('/login');
+      }, INACTIVITY_TIMEOUT);
+    };
+
+    const events: Array<keyof WindowEventMap> = [
+      'mousedown',
+      'mousemove',
+      'keydown',
+      'touchstart',
+      'click',
+      'scroll',
+    ];
+
+    events.forEach((eventName) => window.addEventListener(eventName, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(warningTimer);
+      events.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
+    };
+  }, [user, signOut]);
 
   const resetPassword = async (email: string) => {
     return { error: 'Password reset is no longer supported.' };
