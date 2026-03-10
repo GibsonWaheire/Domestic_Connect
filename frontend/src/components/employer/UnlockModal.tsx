@@ -7,6 +7,8 @@ import {
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
+import { API_BASE_URL } from '@/lib/apiConfig';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
 
 interface UnlockModalProps {
   showUnlockModal: boolean;
@@ -14,6 +16,8 @@ interface UnlockModalProps {
   housegirlToUnlock: Housegirl | null;
   isUnlocking: boolean;
   setIsUnlocking: (unlocking: boolean) => void;
+  employerPhone?: string;
+  onUnlockSuccess: (payload: { housegirlId: number; phone?: string; email?: string }) => void;
 }
 
 export const UnlockModal = ({ 
@@ -21,44 +25,111 @@ export const UnlockModal = ({
   setShowUnlockModal, 
   housegirlToUnlock, 
   isUnlocking, 
-  setIsUnlocking 
+  setIsUnlocking,
+  employerPhone,
+  onUnlockSuccess
 }: UnlockModalProps) => {
   const { showSuccessNotification, showInfoNotification } = useNotificationActions();
+  const [isPaymentPending, setIsPaymentPending] = useState(false);
+
+  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
   const handleUnlock = async () => {
     if (!housegirlToUnlock) return;
-    
+
     setIsUnlocking(true);
-    
-    // TODO: Integrate with Daraja API for M-Pesa STK Push
-    // For now, simulate payment process
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Update the housegirl's contact status to unlocked
-    housegirlToUnlock.contactUnlocked = true;
-    housegirlToUnlock.unlockCount = (housegirlToUnlock.unlockCount || 0) + 1;
-    
-    setIsUnlocking(false);
-    setShowUnlockModal(false);
-    
-    // Show detailed unlock statistics
-    const currentUserUnlocks = 1; // This would come from backend
-    const totalUnlocks = housegirlToUnlock.unlockCount;
-    const otherUsersUnlocks = totalUnlocks - currentUserUnlocks;
-    
-    showSuccessNotification(
-      "Contact Unlocked Successfully!", 
-      `You've unlocked this contact ${currentUserUnlocks} time(s). Total unlocks: ${totalUnlocks} (${otherUsersUnlocks} by other users)`
-    );
-    
-    // Show additional alert for high unlock counts
-    if (totalUnlocks > 5) {
-      setTimeout(() => {
-        showInfoNotification(
-          "Popular Profile", 
-          `This housegirl's contact has been unlocked ${totalUnlocks} times! She's in high demand.`
-        );
-      }, 1000);
+    setIsPaymentPending(false);
+
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          package_id: 'contact_unlock',
+          phone: employerPhone,
+          phone_number: employerPhone,
+          amount: 200,
+        }),
+      });
+
+      const purchaseData = await purchaseResponse.json().catch(() => ({}));
+      if (!purchaseResponse.ok || !purchaseData?.checkout_request_id) {
+        throw new Error(purchaseData?.error || 'Failed to initiate payment.');
+      }
+
+      const checkoutRequestId = purchaseData.checkout_request_id as string;
+      setIsPaymentPending(true);
+      showInfoNotification(
+        'Payment pending',
+        'Check your phone for M-Pesa prompt. Enter your M-Pesa PIN to complete.'
+      );
+
+      const timeoutAt = Date.now() + 120000;
+      let paymentStatus = 'pending';
+      while (Date.now() < timeoutAt) {
+        await wait(3000);
+        const statusResponse = await fetch(`${API_BASE_URL}/api/payments/purchase-status/${checkoutRequestId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+
+        const statusData = await statusResponse.json().catch(() => ({}));
+        paymentStatus = statusData?.status || 'pending';
+        if (paymentStatus === 'completed') {
+          break;
+        }
+        if (paymentStatus === 'failed') {
+          throw new Error('Payment failed. Please try again.');
+        }
+      }
+
+      if (paymentStatus !== 'completed') {
+        throw new Error('Payment not confirmed. Please try again.');
+      }
+
+      const unlockResponse = await fetch(`${API_BASE_URL}/api/payments/contact-access`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ target_profile_id: String(housegirlToUnlock.id), housegirl_id: String(housegirlToUnlock.id) }),
+      });
+      const unlockData = await unlockResponse.json().catch(() => ({}));
+      if (!unlockResponse.ok) {
+        throw new Error(unlockData?.error || 'Failed to unlock contact.');
+      }
+
+      const detailsResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlToUnlock.id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+      const detailsData = await detailsResponse.json().catch(() => ({}));
+
+      onUnlockSuccess({
+        housegirlId: housegirlToUnlock.id,
+        phone: detailsData?.phone_number || undefined,
+        email: detailsData?.email || undefined,
+      });
+
+      setShowUnlockModal(false);
+      showSuccessNotification('Contact unlocked successfully!', 'You can now view phone and email details.');
+    } catch (error) {
+      showInfoNotification(
+        'Payment error',
+        error instanceof Error ? error.message : 'Something went wrong. Please try again.'
+      );
+    } finally {
+      setIsPaymentPending(false);
+      setIsUnlocking(false);
     }
   };
 
@@ -125,6 +196,15 @@ export const UnlockModal = ({
                 Payment will be processed via M-Pesa STK Push
               </div>
             </div>
+            {isPaymentPending && (
+              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                <div className="flex items-center space-x-2 text-amber-800">
+                  <div className="w-4 h-4 border-2 border-amber-700 border-t-transparent rounded-full animate-spin"></div>
+                  <span className="text-sm font-medium">Check your phone for M-Pesa prompt</span>
+                </div>
+                <div className="text-sm text-amber-700 mt-1">Enter your M-Pesa PIN to complete</div>
+              </div>
+            )}
           </div>
 
           {/* Action Buttons */}
@@ -139,13 +219,13 @@ export const UnlockModal = ({
             </Button>
             <Button
               onClick={handleUnlock}
-              disabled={isUnlocking}
+              disabled={isUnlocking || isPaymentPending}
               className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
             >
               {isUnlocking ? (
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>Processing Payment...</span>
+                  <span>{isPaymentPending ? 'Payment Pending...' : 'Initiating Payment...'}</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">

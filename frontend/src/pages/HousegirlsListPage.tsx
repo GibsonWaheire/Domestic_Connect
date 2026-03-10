@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
-import { MapPin, Menu, Phone, Search } from 'lucide-react';
+import { API_BASE_URL } from '@/lib/apiConfig';
+import { Lock, MapPin, Menu, Phone, Search } from 'lucide-react';
 
 const bgImage = '/housegirls.webp';
 
@@ -36,73 +37,18 @@ const PROFILE_FILTERS: RoleType[] = [
 const KENYA_CITIES_CACHE_KEY = 'dc_kenya_cities_cache_v1';
 const KENYA_CITIES_CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-const MOCK_PROFILES: Profile[] = [
-  {
-    id: 'mock-1',
-    name: 'Mary Wanjiku',
-    role: 'House Help',
-    location: 'Kasarani, Nairobi',
-    tags: ['Cleaning', 'Laundry', 'Ironing'],
-    experienceYears: 5,
-    monthlyRate: 15000,
-    available: true,
-    phone: '+254 712 334 110',
-    exactLocation: 'Kasarani, Nairobi',
-    avatar: null,
-  },
-  {
-    id: 'mock-2',
-    name: 'Grace Akinyi',
-    role: 'Nanny',
-    location: 'Nyali, Mombasa',
-    tags: ['Childcare', 'Meal Prep', 'Tutoring'],
-    experienceYears: 4,
-    monthlyRate: 18000,
-    available: true,
-    phone: '+254 701 992 803',
-    exactLocation: 'Nyali, Mombasa',
-    avatar: null,
-  },
-  {
-    id: 'mock-3',
-    name: 'Joyce Atieno',
-    role: 'Cook',
-    location: 'Milimani, Kisumu',
-    tags: ['Cooking', 'Baking', 'Meal Prep'],
-    experienceYears: 7,
-    monthlyRate: 20000,
-    available: false,
-    phone: '+254 722 883 094',
-    exactLocation: 'Milimani, Kisumu',
-    avatar: null,
-  },
-  {
-    id: 'mock-4',
-    name: 'Jane Njeri',
-    role: 'Caregiver',
-    location: 'Section 58, Nakuru',
-    tags: ['Elder Care', 'Medication', 'Companionship'],
-    experienceYears: 6,
-    monthlyRate: 22000,
-    available: true,
-    phone: '+254 734 918 725',
-    exactLocation: 'Section 58, Nakuru',
-    avatar: null,
-  },
-  {
-    id: 'mock-5',
-    name: 'Faith Chebet',
-    role: 'Cleaner',
-    location: 'Pioneer, Eldoret',
-    tags: ['Deep Cleaning', 'Laundry', 'Organization'],
-    experienceYears: 3,
-    monthlyRate: 14000,
-    available: true,
-    phone: '+254 746 113 302',
-    exactLocation: 'Pioneer, Eldoret',
-    avatar: null,
-  },
-];
+type ApiHousegirl = {
+  id: string | number;
+  first_name?: string;
+  last_name?: string;
+  skills?: string[];
+  experience?: string;
+  expected_salary?: number;
+  is_available?: boolean;
+  phone_number?: string | null;
+  location?: string;
+  profile_photo_url?: string | null;
+};
 
 const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
   id: 'contact_unlock',
@@ -162,12 +108,14 @@ const HousegirlsListPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
+  const [loading, setLoading] = useState(true);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   const filteredProfiles = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
-    return MOCK_PROFILES.filter((profile) => {
+    return profiles.filter((profile) => {
       const roleMatch = selectedCategory === 'All' || profile.role === selectedCategory;
       const locationMatch =
         selectedLocation === 'All locations' ||
@@ -179,7 +127,52 @@ const HousegirlsListPage = () => {
         profile.tags.some((tag) => tag.toLowerCase().includes(query));
       return roleMatch && locationMatch && queryMatch;
     });
-  }, [searchTerm, selectedCategory, selectedLocation]);
+  }, [profiles, searchTerm, selectedCategory, selectedLocation]);
+  useEffect(() => {
+    const normalizeRole = (skills: string[] = []): RoleType => {
+      const combined = skills.join(' ').toLowerCase();
+      if (combined.includes('nanny') || combined.includes('child')) return 'Nanny';
+      if (combined.includes('cook') || combined.includes('chef')) return 'Cook';
+      if (combined.includes('care') || combined.includes('elder')) return 'Caregiver';
+      if (combined.includes('clean')) return 'Cleaner';
+      return 'House Help';
+    };
+
+    const parseExperienceYears = (experience?: string): number => {
+      if (!experience) return 0;
+      const parsed = Number.parseInt(experience.replace(/\D+/g, ''), 10);
+      return Number.isNaN(parsed) ? 0 : parsed;
+    };
+
+    fetch(`${API_BASE_URL}/api/housegirls`)
+      .then((r) => r.json())
+      .then((data) => {
+        const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
+        const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
+          const firstName = profile.first_name?.trim() || 'Unknown';
+          const lastName = profile.last_name?.trim() || '';
+          const name = `${firstName} ${lastName}`.trim();
+          const location = profile.location || 'Location not provided';
+          return {
+            id: String(profile.id),
+            name,
+            role: normalizeRole(profile.skills),
+            location,
+            tags: profile.skills || [],
+            experienceYears: parseExperienceYears(profile.experience),
+            monthlyRate: Number(profile.expected_salary) || 0,
+            available: Boolean(profile.is_available),
+            phone: profile.phone_number || 'Unlock to view',
+            exactLocation: location,
+            avatar: profile.profile_photo_url || null,
+          };
+        });
+        setProfiles(mappedProfiles);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
+  }, []);
+
 
   useEffect(() => {
     setCurrentPage(1);
@@ -229,7 +222,7 @@ const HousegirlsListPage = () => {
       return;
     }
 
-    const matchingProfile = MOCK_PROFILES.find((profile) => profile.id === pendingContactId);
+    const matchingProfile = profiles.find((profile) => profile.id === pendingContactId);
     if (!matchingProfile) {
       localStorage.removeItem('pendingContactId');
       if (pendingFromQuery) {
@@ -250,7 +243,7 @@ const HousegirlsListPage = () => {
       const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
       window.history.replaceState({}, '', nextUrl);
     }
-  }, [user]);
+  }, [profiles, user]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
@@ -327,7 +320,7 @@ const HousegirlsListPage = () => {
       } catch {
         const fallbackCities = Array.from(
           new Set(
-            MOCK_PROFILES.map((profile) => profile.location.split(',').at(-1)?.trim()).filter(
+            profiles.map((profile) => profile.location.split(',').at(-1)?.trim()).filter(
               (city): city is string => Boolean(city)
             )
           )
@@ -337,7 +330,7 @@ const HousegirlsListPage = () => {
     };
 
     loadKenyaCities();
-  }, []);
+  }, [profiles]);
 
   const handleFindHelp = () => {
     const profilesSection = document.getElementById('profiles-list');
@@ -630,8 +623,14 @@ const HousegirlsListPage = () => {
           <div className="w-full px-0 md:px-10">
             <div className="flex flex-col w-full relative">
               <div className="flex flex-col gap-[8px] w-full">
+                {loading && (
+                  <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
+                    Loading profiles...
+                  </div>
+                )}
                 {paginatedProfiles.map((profile) => {
                   const isUnlocked = Boolean(unlockedProfiles[profile.id]);
+                  const isContactLocked = profile.phone === 'Unlock to view';
                   return (
                     <article
                       key={profile.id}
@@ -681,7 +680,14 @@ const HousegirlsListPage = () => {
                             <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
                             {isUnlocked && (
                               <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit mx-auto md:mx-0">
-                                Contact: {profile.phone} · {profile.exactLocation}
+                                {isContactLocked ? (
+                                  <span className="inline-flex items-center gap-2 text-amber-600">
+                                    <Lock className="h-3 w-3" />
+                                    Unlock to view contact
+                                  </span>
+                                ) : (
+                                  <>Contact: {profile.phone} · {profile.exactLocation}</>
+                                )}
                               </div>
                             )}
                           </div>

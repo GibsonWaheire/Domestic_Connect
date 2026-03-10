@@ -92,7 +92,12 @@ const EmployerDashboard = () => {
       skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
       rating: 4.5, // Default rating since it's not in API yet
       reviews: 12, // Default reviews
-      contactUnlocked: false, // Default to locked
+      contactUnlocked: Boolean(
+        hg.phone_number &&
+        hg.phone_number !== 'Unlock to view' &&
+        hg.email &&
+        hg.email !== 'Unlock to view'
+      ),
       unlockCount: 0, // Default unlock count
       phone: hg.phone_number,
       email: hg.email,
@@ -238,6 +243,23 @@ const EmployerDashboard = () => {
     setUnlockRestrictionMessage(null);
     setHousegirlToUnlock(housegirl);
     setShowUnlockModal(true);
+  };
+
+  const handleUnlockSuccess = async (payload: { housegirlId: number; phone?: string; email?: string }) => {
+    setHousegirls((prev) =>
+      prev.map((housegirl) =>
+        housegirl.id === payload.housegirlId
+          ? {
+              ...housegirl,
+              contactUnlocked: true,
+              unlockCount: (housegirl.unlockCount || 0) + 1,
+              phone: payload.phone || housegirl.phone,
+              email: payload.email || housegirl.email,
+            }
+          : housegirl
+      )
+    );
+    await refreshData(false);
   };
 
   const sidebarItems = [
@@ -508,6 +530,8 @@ const EmployerDashboard = () => {
           housegirlToUnlock={housegirlToUnlock}
           isUnlocking={isUnlocking}
           setIsUnlocking={setIsUnlocking}
+          employerPhone={user.phone_number}
+          onUnlockSuccess={handleUnlockSuccess}
         />
       </div>
     </NotificationProvider>
