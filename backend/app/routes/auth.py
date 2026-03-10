@@ -148,7 +148,13 @@ def verify_phone_auth():
             return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
 
         phone_number = decoded_token.get('phone_number')
-        email = decoded_token.get('email', None)
+        
+        # Null safety checks
+        display_name_safe = data.get('display_name') or ''
+        email_safe = data.get('email') or decoded_token.get('email') or ''
+        photo_url_safe = data.get('photo_url') or ''
+        user_type_safe = data.get('user_type') or 'employer'
+        
         timestamp = datetime.utcnow().isoformat()
         user_id = f"user_{uid}"
         user_doc_ref = db.collection('users').document(user_id)
@@ -157,7 +163,7 @@ def verify_phone_auth():
         if user_doc.exists:
             existing_data = user_doc.to_dict() or {}
             # Use stored user_type, ignore request user_type
-            stored_user_type = existing_data.get('user_type', user_type)
+            stored_user_type = existing_data.get('user_type') or user_type_safe
             
             user_data = {
                 **existing_data,
@@ -165,23 +171,21 @@ def verify_phone_auth():
                 'firebase_uid': uid,
                 'phone': phone_number,
                 'phone_number': phone_number,
-                'email': email,
+                'email': email_safe,
                 'updated_at': timestamp,
                 'profile_complete': existing_data.get('profile_complete', False)
             }
             # Add photo_url if provided and not already set
-            photo_url = data.get('photo_url')
-            if photo_url and not existing_data.get('photo_url'):
-                user_data['photo_url'] = photo_url
+            if photo_url_safe and not existing_data.get('photo_url'):
+                user_data['photo_url'] = photo_url_safe
                 
             user_doc_ref.set(user_data, merge=True)
             user_type_to_return = stored_user_type
         else:
             first_name = ''
             last_name = ''
-            display_name = data.get('display_name')
-            if display_name:
-                name_parts = display_name.split(' ')
+            if display_name_safe:
+                name_parts = display_name_safe.split(' ')
                 first_name = name_parts[0]
                 if len(name_parts) > 1:
                     last_name = ' '.join(name_parts[1:])
@@ -192,11 +196,11 @@ def verify_phone_auth():
                 'firebase_uid': uid,
                 'phone': phone_number,
                 'phone_number': phone_number,
-                'email': email,
-                'user_type': user_type,
+                'email': email_safe,
+                'user_type': user_type_safe,
                 'first_name': first_name,
                 'last_name': last_name,
-                'photo_url': data.get('photo_url'),
+                'photo_url': photo_url_safe,
                 'created_at': timestamp,
                 'updated_at': timestamp,
                 'profile_complete': False,
@@ -213,17 +217,17 @@ def verify_phone_auth():
                 'user_id': user_id,
                 'first_name': first_name,
                 'last_name': last_name,
-                'email': email,
+                'email': email_safe,
                 'phone_number': phone_number,
                 'created_at': timestamp,
                 'updated_at': timestamp
             }
-            if user_type == 'employer':
+            if user_type_safe == 'employer':
                 db.collection('employer_profiles').document(profile_id).set(profile_data)
-            elif user_type == 'housegirl':
+            elif user_type_safe == 'housegirl':
                 db.collection('housegirl_profiles').document(profile_id).set(profile_data)
 
-            user_type_to_return = user_type
+            user_type_to_return = user_type_safe
 
         session['user_id'] = user_id
         session['user_type'] = user_type_to_return
@@ -234,8 +238,8 @@ def verify_phone_auth():
             'user': {
                 'uid': uid,
                 'user_type': user_type_to_return,
-                'email': email,
-                'display_name': data.get('display_name', f"{first_name} {last_name}".strip())
+                'email': email_safe,
+                'display_name': display_name_safe or f"{first_name} {last_name}".strip()
             }
         }), 200
     except Exception as e:
