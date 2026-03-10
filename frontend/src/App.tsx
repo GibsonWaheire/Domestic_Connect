@@ -2,7 +2,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
@@ -39,6 +40,28 @@ const queryClient = new QueryClient({
   },
 });
 
+const RouteTitleManager = () => {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname === "/" || location.pathname === "/home") {
+      document.title = "Domestic Connect | Find House Help Kenya";
+      return;
+    }
+    if (location.pathname === "/housegirls") {
+      document.title = "Browse Domestic Workers | Domestic Connect Kenya";
+      return;
+    }
+    if (location.pathname === "/login") {
+      document.title = "Sign In | Domestic Connect";
+      return;
+    }
+    document.title = "Domestic Connect | Find Trusted House Help in Kenya";
+  }, [location.pathname]);
+
+  return null;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -48,6 +71,7 @@ const App = () => (
           v7_relativeSplatPath: true
         }}
       >
+        <RouteTitleManager />
         <AuthProvider>
           <HelmetProvider>
             <TooltipProvider>

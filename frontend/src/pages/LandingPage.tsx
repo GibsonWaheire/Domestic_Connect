@@ -9,6 +9,21 @@ const LandingPage = () => {
   const heroImage = '/woooies.avif';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user } = useAuth();
+  const localBusinessSchema = {
+    "@context": "https://schema.org",
+    "@type": "LocalBusiness",
+    "name": "Domestic Connect",
+    "description": "Find verified domestic workers across Kenya",
+    "url": "https://domestic-connect.co.ke",
+    "areaServed": "Kenya",
+    "serviceType": [
+      "House Help",
+      "Nanny",
+      "Cook",
+      "Caregiver",
+      "Cleaner"
+    ]
+  };
 
   const getDashboardRoute = () => {
     if (!user) return '/';
@@ -58,6 +73,10 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
+      />
       {/* NAVBAR */}
       <header className="border-b border-gray-100 bg-white">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
