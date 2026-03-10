@@ -255,6 +255,33 @@ def mpesa_callback():
             'updated_at': datetime.utcnow().isoformat()
         })
 
+        if purchase_data.get('package_id') == ACTIVATION_PACKAGE_ID:
+            user_id = purchase_data.get('user_id')
+            if user_id:
+                profiles = list(
+                    db.collection('profiles')
+                    .where('user_id', '==', user_id)
+                    .limit(1)
+                    .stream()
+                )
+                if profiles:
+                    profile_id = profiles[0].to_dict().get('id')
+                    if profile_id:
+                        housegirl_profiles = list(
+                            db.collection('housegirl_profiles')
+                            .where('profile_id', '==', profile_id)
+                            .limit(1)
+                            .stream()
+                        )
+                        if housegirl_profiles:
+                            db.collection('housegirl_profiles').document(housegirl_profiles[0].id).set({
+                                'unlock_count': 0,
+                                'is_available': True,
+                                'in_demand_alert': False,
+                                'activation_fee_paid': True,
+                                'updated_at': datetime.utcnow().isoformat()
+                            }, merge=True)
+
         return jsonify({
             'message': 'Payment confirmed and credits added',
             'checkout_request_id': checkout_request_id

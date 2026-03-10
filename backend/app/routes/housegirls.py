@@ -361,11 +361,14 @@ def update_housegirl(housegirl_id):
             return jsonify({'error': 'Unauthorized'}), 403
             
         data = request.get_json()
+        BLOCKED_FIELDS = ['unlock_count', 'is_available', 'in_demand_alert']
+        for field in BLOCKED_FIELDS:
+            data.pop(field, None)
         updates = {}
         
         fields = ['age', 'bio', 'current_location', 'location', 'education', 
                   'experience', 'expected_salary', 'accommodation_type', 
-                  'tribe', 'is_available', 'profile_photo_url', 'unlock_count', 'in_demand_alert', 'activation_fee_paid']
+                  'tribe', 'profile_photo_url', 'activation_fee_paid']
                   
         for field in fields:
             if field in data:
