@@ -42,6 +42,7 @@ import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
 import { jobsApi, JobPosting, crossEntityApi, DashboardData } from '@/lib/api';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
 
 interface JobOpportunity {
   id: string;
@@ -95,12 +96,8 @@ const HousegirlDashboard = () => {
   }, [user, loading, navigate]);
 
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'messages'>('overview');
-  const [profilePhoto, setProfilePhoto] = useState<string | null>(() => {
-    // Load photo from localStorage on component mount
-    return localStorage.getItem('housegirl_profile_photo');
-  });
+  const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showProfilePromptBanner, setShowProfilePromptBanner] = useState(false);
   const [editFormData, setEditFormData] = useState<EditFormData>({
     bio: '',
     expectedSalary: '',
@@ -118,18 +115,18 @@ const HousegirlDashboard = () => {
 
   // Get user's actual data from registration
   const getUserData = useCallback(() => {
-    // Use actual user data from registration, with fallbacks
     return {
-      age: user?.age || '25',
-      location: user?.location || 'Nairobi',
-      experience: user?.experience || '2 Years',
-      education: user?.education || 'Form 4 and Above',
-      expectedSalary: user?.expectedSalary || 'KSh 15,000',
-      accommodationType: user?.accommodationType || 'Live-in',
-      community: user?.community || 'Kikuyu',
-      skills: user?.skills || ['Cooking', 'Cleaning', 'Laundry', 'Childcare'],
-      languages: user?.languages || ['English', 'Swahili'],
-      bio: user?.bio || 'Professional house help with experience in cooking, cleaning, and childcare.'
+      age: user?.age || '',
+      location: user?.location || '',
+      experience: user?.experience || '',
+      education: user?.education || '',
+      expectedSalary: user?.expectedSalary || '',
+      accommodationType: user?.accommodationType || '',
+      community: user?.community || '',
+      skills: user?.skills || [],
+      languages: user?.languages || [],
+      bio: user?.bio || '',
+      photoUrl: (user as { photo_url?: string; profile_photo_url?: string } | null)?.photo_url || (user as { photo_url?: string; profile_photo_url?: string } | null)?.profile_photo_url || ''
     };
   }, [user]);
 
@@ -158,7 +155,7 @@ const HousegirlDashboard = () => {
         employer: job.employer?.name || 'Unknown Employer',
         description: job.description,
         requirements: job.skills_required || [],
-        matchScore: Math.floor(Math.random() * 40) + 60 // Random match score for now
+        matchScore: 0
       }));
       setJobOpportunities(transformedJobs);
     }
@@ -182,20 +179,52 @@ const HousegirlDashboard = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    if (localStorage.getItem('dc_profile_prompt_housegirl') === 'true') {
-      setShowProfilePromptBanner(true);
-    }
-  }, []);
+    const loadProfilePhoto = async () => {
+      if (!user || user.user_type !== 'housegirl') return;
+      const userData = getUserData();
+      if (userData.photoUrl) {
+        setProfilePhoto(userData.photoUrl);
+      }
+      try {
+        const token = await FirebaseAuthService.getIdToken();
+        const response = await fetch(`/api/housegirls/${user.id}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (!response.ok) return;
+        const result = await response.json();
+        const apiPhoto = result?.profile_photo_url || result?.photo_url || '';
+        if (apiPhoto) {
+          setProfilePhoto(apiPhoto);
+        }
+      } catch {
+      }
+    };
+    loadProfilePhoto();
+  }, [user, getUserData]);
 
   const handleSignOut = async () => {
     await signOut();
     navigate('/housegirls');
   };
 
-  const handlePhotoUpload = (photoUrl: string) => {
+  const handlePhotoUpload = async (photoUrl: string) => {
     setProfilePhoto(photoUrl);
-    // Save to localStorage for persistence
-    localStorage.setItem('housegirl_profile_photo', photoUrl);
+    if (!user) return;
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      await fetch(`/api/housegirls/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ photo_url: photoUrl }),
+      });
+    } catch {
+    }
   };
 
   const handleFormChange = (field: string, value: string) => {
@@ -233,7 +262,15 @@ const HousegirlDashboard = () => {
     }
   }, [user, getUserData]);
 
-  if (loading || !user || user.user_type !== 'housegirl') {
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!user || user.user_type !== 'housegirl') {
     return null;
   }
 
