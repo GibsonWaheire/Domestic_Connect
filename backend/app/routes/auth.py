@@ -156,6 +156,9 @@ def verify_phone_auth():
 
         if user_doc.exists:
             existing_data = user_doc.to_dict() or {}
+            # Use stored user_type, ignore request user_type
+            stored_user_type = existing_data.get('user_type', user_type)
+            
             user_data = {
                 **existing_data,
                 'uid': uid,
@@ -163,7 +166,6 @@ def verify_phone_auth():
                 'phone': phone_number,
                 'phone_number': phone_number,
                 'email': email,
-                'user_type': user_type,
                 'updated_at': timestamp,
                 'profile_complete': existing_data.get('profile_complete', False)
             }
@@ -173,6 +175,7 @@ def verify_phone_auth():
                 user_data['photo_url'] = photo_url
                 
             user_doc_ref.set(user_data, merge=True)
+            user_type_to_return = stored_user_type
         else:
             first_name = ''
             last_name = ''
@@ -202,14 +205,38 @@ def verify_phone_auth():
                 'is_firebase_user': True
             }
             user_doc_ref.set(user_data)
+            
+            # Create role-specific profile document
+            profile_id = str(uuid.uuid4())
+            profile_data = {
+                'id': profile_id,
+                'user_id': user_id,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': email,
+                'phone_number': phone_number,
+                'created_at': timestamp,
+                'updated_at': timestamp
+            }
+            if user_type == 'employer':
+                db.collection('employer_profiles').document(profile_id).set(profile_data)
+            elif user_type == 'housegirl':
+                db.collection('housegirl_profiles').document(profile_id).set(profile_data)
+
+            user_type_to_return = user_type
 
         session['user_id'] = user_id
-        session['user_type'] = user_type
+        session['user_type'] = user_type_to_return
 
         return jsonify({
             'message': 'Phone verification successful',
-            'user_type': user_type,
-            'user': user_data
+            'user_type': user_type_to_return,
+            'user': {
+                'uid': uid,
+                'user_type': user_type_to_return,
+                'email': email,
+                'display_name': data.get('display_name', f"{first_name} {last_name}".strip())
+            }
         }), 200
     except Exception as e:
         import traceback
