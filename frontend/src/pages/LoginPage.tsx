@@ -28,6 +28,7 @@ const LoginPage = () => {
   const [userType, setUserType] = useState<'employer' | 'housegirl'>('employer');
   const [phoneInput, setPhoneInput] = useState('');
   const [otpCode, setOtpCode] = useState('');
+  const [otpLoading, setOtpLoading] = useState(false);
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [lastSubmittedCode, setLastSubmittedCode] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -144,15 +145,20 @@ const LoginPage = () => {
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    const formattedPhone = formatKenyanPhone(phoneInput);
-    const authMode = mode === 'signup' ? 'signup' : 'login';
-    const result = await handleSendOTP(formattedPhone, userType, authMode);
-    if (result.error) {
-      setError(result.error);
-      return;
+    setOtpLoading(true);
+    try {
+      const formattedPhone = formatKenyanPhone(phoneInput);
+      const authMode = mode === 'signup' ? 'signup' : 'login';
+      const result = await handleSendOTP(formattedPhone, userType, authMode);
+      if (result.error) {
+        setError(result.error);
+        return;
+      }
+      setOtpCode('');
+      setLastSubmittedCode('');
+    } finally {
+      setOtpLoading(false);
     }
-    setOtpCode('');
-    setLastSubmittedCode('');
   };
 
   const handleVerifySubmit = async (e: React.FormEvent) => {
@@ -408,10 +414,10 @@ const LoginPage = () => {
                 <div className={`transition-all duration-200 ${showEmailForm ? 'hidden' : ''}`}>
                   <Button
                     type="submit"
-                    disabled={loading}
+                    disabled={otpLoading}
                     className="w-full bg-[#111] text-white rounded-xl h-14 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md mb-2"
                   >
-                    {loading ? 'Processing...' : (mode === 'login' ? 'Send Code' : 'Save & Continue')}
+                    {otpLoading ? 'Processing...' : (mode === 'login' ? 'Send Code' : 'Save & Continue')}
                   </Button>
                 </div>
 
