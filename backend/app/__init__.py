@@ -6,7 +6,8 @@ import sys
 # Add the backend directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-# The global `db` handles Firebase. We don't initialize it via Flask extensions.
+# The global `db` handles Firebase. We don't initialize it via Flask extensions   
+
 from app.firebase_init import db
 
 def create_app(config_name=None):
@@ -26,18 +27,17 @@ def create_app(config_name=None):
     if hasattr(config_class, 'init_app'):
         config_class.init_app(app)
         
-    origins = os.environ.get(
-        'CORS_ORIGINS',
-        'http://localhost:5173'
-    ).split(',')
-
     CORS(app,
-        origins=[o.strip() for o in origins],
+        resources={r"/*": {"origins": [
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173",
+            "https://domestic-connect.up.railway.app",
+            "https://domestic-connect-production.up.railway.app",
+            "https://domesticconnect.vercel.app"
+        ]}},
         supports_credentials=True,
-        allow_headers=['Content-Type', 
-                       'Authorization'],
-        methods=['GET','POST','PUT',
-                 'DELETE','OPTIONS']
+        allow_headers=['Content-Type', 'Authorization', 'Accept'],
+        methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
     )
     
     # Create upload directory

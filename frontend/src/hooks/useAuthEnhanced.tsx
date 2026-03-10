@@ -257,14 +257,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       const formattedPhone = formatKenyanPhone(rawPhone);
-      await apiRequest('/api/otp/send', {
-        method: 'POST',
-        body: JSON.stringify({
-          phone: formattedPhone,
-          user_type: userType,
-          mode
-        })
-      });
       const otpResult = await FirebaseAuthService.sendOTP(formattedPhone);
       if (import.meta.env.DEV) {
         console.log('sendOTP confirmationResult exists:', Boolean(otpResult.confirmationResult));
@@ -301,15 +293,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const token = await verified.userCredential.user.getIdToken();
-      await apiRequest('/api/otp/verify', {
-        method: 'POST',
-        body: JSON.stringify({
-          phone: phoneNumber,
-          code,
-          user_type: selectedUserType,
-          mode
-        })
-      });
 
       const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
         method: 'POST',
