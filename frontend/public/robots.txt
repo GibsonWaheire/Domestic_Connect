@@ -1,8 +1,8 @@
 User-agent: *
 Allow: /
+Disallow: /employer-dashboard
+Disallow: /housegirl-dashboard
+Disallow: /agency-dashboard
+Disallow: /admin
 
-# Sitemap
-Sitemap: https://domesticconnect.co.ke/sitemap.xml
-
-# Crawl-delay
-Crawl-delay: 1
+Sitemap: https://domestic-connect.co.ke/sitemap.xml

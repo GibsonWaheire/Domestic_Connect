@@ -367,7 +367,7 @@ const HousegirlsListPage = () => {
       style={{ fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif", lineHeight: 1.5 }}
     >
       <Helmet>
-        <title>Domestic Connect | Find a Housegirl, Nanny, Caregiver & House Manager in Kenya</title>
+        <title>Browse Domestic Workers | Domestic Connect Kenya</title>
         <meta
           name="description"
           content="Looking for a trusted housegirl, nanny, house manager, caregiver or cleaner in Nairobi, Mombasa, Kisumu, Nakuru or anywhere in Kenya? Browse verified profiles and connect today for just KES 200."
