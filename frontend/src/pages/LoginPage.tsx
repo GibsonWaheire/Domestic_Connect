@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthEnhanced } from '@/hooks/useAuthEnhanced';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ const LoginPage = () => {
   const signUp = authContext?.signUp || (async () => ({ error: 'Authentication is unavailable.' }));
 
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'select-role'>('login');
   const [userType, setUserType] = useState<'employer' | 'housegirl'>('employer');
   const [phoneInput, setPhoneInput] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -33,6 +34,9 @@ const LoginPage = () => {
   const [passwordInput, setPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [showEmailForm, setShowEmailForm] = useState(false);
+  const [isUpdatingRole, setIsUpdatingRole] = useState(false);
+  const [pendingUid, setPendingUid] = useState('');
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
   const maskPhoneForDisplay = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
@@ -48,12 +52,18 @@ const LoginPage = () => {
 
   useEffect(() => {
     const urlMode = searchParams.get('mode');
+    const uid = searchParams.get('uid') || '';
     if (urlMode === 'signup') {
       setMode('signup');
+      setPendingUid('');
+    } else if (urlMode === 'select-role') {
+      setMode('select-role');
+      setPendingUid(uid);
     } else {
       setMode('login');
+      setPendingUid('');
     }
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     if (!user) return;
@@ -78,7 +88,8 @@ const LoginPage = () => {
     setLastSubmittedCode(code);
     setError(null);
     try {
-      const result = await handleVerifyOTP(code, mode);
+      const authMode = mode === 'signup' ? 'signup' : 'login';
+      const result = await handleVerifyOTP(code, authMode);
       if (result.error) {
         setError(result.error);
         setLastSubmittedCode('');
@@ -121,7 +132,8 @@ const LoginPage = () => {
     e.preventDefault();
     setError(null);
     const formattedPhone = formatKenyanPhone(phoneInput);
-    const result = await handleSendOTP(formattedPhone, userType, mode);
+    const authMode = mode === 'signup' ? 'signup' : 'login';
+    const result = await handleSendOTP(formattedPhone, userType, authMode);
     if (result.error) {
       setError(result.error);
       return;
@@ -163,6 +175,45 @@ const LoginPage = () => {
     const result = await signUp(emailInput, passwordInput, userType, {});
     if (result.error) {
       setError(result.error);
+    }
+  };
+
+  const handleSelectRole = async (selectedType: 'employer' | 'housegirl') => {
+    try {
+      setIsUpdatingRole(true);
+      setError(null);
+      const firebaseUser = FirebaseAuthService.getCurrentUser();
+      if (!firebaseUser) {
+        setError('Session expired. Please log in again.');
+        return;
+      }
+      const token = await FirebaseAuthService.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/api/auth/update-role`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          uid: pendingUid || firebaseUser.uid,
+          user_type: selectedType,
+        }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data?.success) {
+        setError(data?.error || 'Failed to update role.');
+        return;
+      }
+      if (selectedType === 'housegirl') {
+        navigate('/housegirl-dashboard', { replace: true });
+      } else {
+        navigate('/employer-dashboard', { replace: true });
+      }
+    } catch (error: unknown) {
+      const exactError = error instanceof Error ? error.message : String(error);
+      setError(exactError || 'Failed to update role.');
+    } finally {
+      setIsUpdatingRole(false);
     }
   };
 
@@ -233,29 +284,40 @@ const LoginPage = () => {
         <div className="flex-1 flex flex-col justify-center items-center px-6 py-8 md:p-12 relative w-full">
           <div className="w-full max-w-[400px] mx-auto">
             <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">Welcome to Domestic Connect</h2>
-              <p className="mt-1 text-sm text-gray-500">
-                {mode === 'login' ? 'Sign in to your account' : 'Create your free account'}
-              </p>
+              {mode === 'select-role' ? (
+                <>
+                  <h2 className="text-xl font-semibold text-gray-900">One more step</h2>
+                  <p className="mt-1 text-sm text-gray-500">What best describes you?</p>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-xl font-semibold text-gray-900">Welcome to Domestic Connect</h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    {mode === 'login' ? 'Sign in to your account' : 'Create your free account'}
+                  </p>
+                </>
+              )}
             </div>
 
             {/* Top Pill Tab Toggle */}
-            <div className="flex p-1 bg-white/60 backdrop-blur-sm border border-gray-200 rounded-full mb-10 shadow-sm">
-              <button
-                type="button"
-                onClick={() => { setMode('login'); navigate('/login'); }}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'login' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => { setMode('signup'); navigate('/login?mode=signup'); }}
-                className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'signup' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
-              >
-                Create Account
-              </button>
-            </div>
+            {mode !== 'select-role' && (
+              <div className="flex p-1 bg-white/60 backdrop-blur-sm border border-gray-200 rounded-full mb-10 shadow-sm">
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); navigate('/login'); }}
+                  className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'login' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setMode('signup'); navigate('/login?mode=signup'); }}
+                  className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'signup' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
+                >
+                  Create Account
+                </button>
+              </div>
+            )}
 
             {error && (
               <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium text-center shadow-sm">
@@ -263,7 +325,31 @@ const LoginPage = () => {
               </div>
             )}
 
-            {authStep === 1 ? (
+            {mode === 'select-role' ? (
+              <div className="flex flex-col gap-4">
+                <button
+                  type="button"
+                  onClick={() => handleSelectRole('employer')}
+                  disabled={isUpdatingRole}
+                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300"
+                >
+                  <div className="text-lg font-semibold text-gray-900">👔 I am an Employer</div>
+                  <div className="mt-1 text-sm text-gray-500">I am looking for house help</div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSelectRole('housegirl')}
+                  disabled={isUpdatingRole}
+                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300"
+                >
+                  <div className="text-lg font-semibold text-gray-900">👩 I am a Housegirl</div>
+                  <div className="mt-1 text-sm text-gray-500">I am looking for work</div>
+                </button>
+                {isUpdatingRole && (
+                  <p className="text-sm text-gray-500 text-center mt-2">Saving your role...</p>
+                )}
+              </div>
+            ) : authStep === 1 ? (
               <form onSubmit={handleSendCode} className="flex flex-col animate-in fade-in duration-300">
                 {mode === 'signup' && (
                   <div className="flex w-full rounded-[14px] bg-white border border-gray-200 p-1.5 mb-6 shadow-sm">

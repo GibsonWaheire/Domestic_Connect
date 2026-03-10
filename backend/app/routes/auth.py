@@ -8,7 +8,10 @@ from app.middleware.logging import log_request, log_error, log_user_action
 import uuid
 import bcrypt
 from datetime import datetime
+import logging
 
+
+logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/firebase_signup', methods=['POST'])
@@ -79,9 +82,10 @@ def firebase_signup():
         }), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/firebase_user', methods=['POST'])
 @firebase_auth_required
@@ -125,9 +129,10 @@ def firebase_user():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/verify', methods=['POST'])
 @firebase_auth_required
@@ -144,16 +149,14 @@ def verify_phone_auth():
         if not uid:
             return jsonify({'error': 'Invalid Firebase token.'}), 401
 
-        if user_type not in ['employer', 'housegirl', 'agency']:
-            return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
-
         phone_number = decoded_token.get('phone_number')
         
         # Null safety checks
         display_name_safe = data.get('display_name') or ''
         email_safe = data.get('email') or decoded_token.get('email') or ''
         photo_url_safe = data.get('photo_url') or ''
-        user_type_safe = data.get('user_type') or 'employer'
+        first_name = ''
+        last_name = ''
         
         timestamp = datetime.utcnow().isoformat()
         user_id = f"user_{uid}"
@@ -162,8 +165,14 @@ def verify_phone_auth():
 
         if user_doc.exists:
             existing_data = user_doc.to_dict() or {}
-            # Use stored user_type, ignore request user_type
-            stored_user_type = existing_data.get('user_type') or user_type_safe
+            stored_user_type = existing_data.get('user_type')
+
+            if not stored_user_type:
+                return jsonify({
+                    'status': 'role_required',
+                    'message': 'Please select your role',
+                    'uid': uid
+                }), 200
             
             user_data = {
                 **existing_data,
@@ -182,8 +191,9 @@ def verify_phone_auth():
             user_doc_ref.set(user_data, merge=True)
             user_type_to_return = stored_user_type
         else:
-            first_name = ''
-            last_name = ''
+            if user_type not in ['employer', 'housegirl', 'agency']:
+                return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
+
             if display_name_safe:
                 name_parts = display_name_safe.split(' ')
                 first_name = name_parts[0]
@@ -197,7 +207,7 @@ def verify_phone_auth():
                 'phone': phone_number,
                 'phone_number': phone_number,
                 'email': email_safe,
-                'user_type': user_type_safe,
+                'user_type': user_type,
                 'first_name': first_name,
                 'last_name': last_name,
                 'photo_url': photo_url_safe,
@@ -222,18 +232,19 @@ def verify_phone_auth():
                 'created_at': timestamp,
                 'updated_at': timestamp
             }
-            if user_type_safe == 'employer':
+            if user_type == 'employer':
                 db.collection('employer_profiles').document(profile_id).set(profile_data)
-            elif user_type_safe == 'housegirl':
+            elif user_type == 'housegirl':
                 db.collection('housegirl_profiles').document(profile_id).set(profile_data)
 
-            user_type_to_return = user_type_safe
+            user_type_to_return = user_type
 
         session['user_id'] = user_id
         session['user_type'] = user_type_to_return
 
         return jsonify({
             'message': 'Phone verification successful',
+            'status': 'ok',
             'user_type': user_type_to_return,
             'user': {
                 'uid': uid,
@@ -243,9 +254,70 @@ def verify_phone_auth():
             }
         }), 200
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
+
+@auth_bp.route('/update-role', methods=['POST'])
+@firebase_auth_required
+@rate_limit(max_requests=10, window_seconds=300)
+@log_request()
+@log_error()
+def update_role():
+    try:
+        user = request.current_user
+        firebase_user = request.firebase_user or {}
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        data = request.get_json() or {}
+        user_type = data.get('user_type')
+        if user_type not in ['employer', 'housegirl']:
+            return jsonify({'error': 'Invalid user_type. Must be employer or housegirl.'}), 400
+
+        timestamp = datetime.utcnow().isoformat()
+        user_ref = db.collection('users').document(getattr(user, 'id'))
+        user_ref.set({
+            'user_type': user_type,
+            'updated_at': timestamp
+        }, merge=True)
+
+        profile_docs = list(
+            db.collection('profiles')
+            .where('user_id', '==', getattr(user, 'id'))
+            .limit(1)
+            .stream()
+        )
+        if profile_docs:
+            profile_id = profile_docs[0].to_dict().get('id')
+            db.collection('profiles').document(profile_id).set({
+                'updated_at': timestamp
+            }, merge=True)
+        else:
+            profile_id = str(uuid.uuid4())
+            db.collection('profiles').document(profile_id).set({
+                'id': profile_id,
+                'user_id': getattr(user, 'id'),
+                'first_name': getattr(user, 'first_name', ''),
+                'last_name': getattr(user, 'last_name', ''),
+                'email': getattr(user, 'email', '') or firebase_user.get('email', ''),
+                'phone_number': getattr(user, 'phone_number', '') or firebase_user.get('phone_number', ''),
+                'created_at': timestamp,
+                'updated_at': timestamp
+            })
+
+        session['user_type'] = user_type
+
+        return jsonify({
+            'user_type': user_type,
+            'success': True
+        }), 200
+    except Exception as e:
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/signup', methods=['POST'])
 @rate_limit(max_requests=5, window_seconds=300)  # 5 requests per 5 minutes
@@ -295,9 +367,10 @@ def signup():
         }), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/login', methods=['POST'])
 @rate_limit(max_requests=10, window_seconds=300)  # 10 requests per 5 minutes
@@ -331,9 +404,10 @@ def login():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/logout', methods=['DELETE'])
 @log_request()
@@ -352,7 +426,10 @@ def logout():
         return jsonify({'message': 'Logout successful'}), 200
         
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/check_session', methods=['GET'])
 @log_request()
@@ -373,7 +450,10 @@ def check_session():
         
     except Exception as e:
         print(f"Check session error: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @auth_bp.route('/update-profile', methods=['PUT'])
 @firebase_auth_required
@@ -392,6 +472,7 @@ def update_user_profile():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
