@@ -145,6 +145,7 @@ def verify_phone_auth():
         decoded_token = request.firebase_user or {}
         uid = decoded_token.get('uid')
         user_type = data.get('user_type')
+        mode = data.get('mode', 'login')
 
         if not uid:
             return jsonify({'error': 'Invalid Firebase token.'}), 401
@@ -166,6 +167,13 @@ def verify_phone_auth():
         if user_doc.exists:
             existing_data = user_doc.to_dict() or {}
             stored_user_type = existing_data.get('user_type')
+
+            if mode == 'signup' and stored_user_type:
+                return jsonify({
+                    'status': 'account_exists',
+                    'user_type': stored_user_type,
+                    'message': f'This number is already registered as an {stored_user_type}. Would you like to sign in instead?'
+                }), 200
 
             if not stored_user_type:
                 return jsonify({
@@ -191,6 +199,11 @@ def verify_phone_auth():
             user_doc_ref.set(user_data, merge=True)
             user_type_to_return = stored_user_type
         else:
+            if mode == 'login':
+                return jsonify({
+                    'status': 'not_found',
+                    'message': 'No account found. Please create an account first.'
+                }), 200
             if user_type not in ['employer', 'housegirl', 'agency']:
                 return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
 

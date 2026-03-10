@@ -1,6 +1,7 @@
 import { useState, useEffect, createContext, useContext, ReactNode, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
+import { ToastAction } from '@/components/ui/toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
 import { errorService } from '@/lib/errorService';
 import { ConfirmationResult } from 'firebase/auth';
@@ -45,6 +46,7 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
   handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
+  handleGoogleRedirectResult: (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -308,7 +310,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       shouldSyncFirebaseUserRef.current = true;
-      const verified = await FirebaseAuthService.verifyOTP(confirmationResult, code);
+      const timeoutMessage = 'Verification is taking too long. Please try again.';
+      const verificationTimeout = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(timeoutMessage)), 15000);
+      });
+      const verified = await Promise.race([
+        FirebaseAuthService.verifyOTP(confirmationResult, code),
+        verificationTimeout,
+      ]) as Awaited<ReturnType<typeof FirebaseAuthService.verifyOTP>>;
       if (!verified.success || !verified.userCredential) {
         shouldSyncFirebaseUserRef.current = false;
         const errorMessage = verified.error || mapPhoneAuthError(verified.code);
@@ -327,6 +336,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           mode
         })
       });
+
+      if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' }).status === 'account_exists') {
+        const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' }).user_type || 'employer';
+        toast({
+          title: 'Account exists',
+          description: `Already registered as ${existingRole}. Sign in instead?`,
+          action: (
+            <ToastAction
+              altText="Sign in instead"
+              onClick={async () => {
+                try {
+                  setSelectedMode('login');
+                  const loginResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                      mode: 'login'
+                    })
+                  });
+                  if (loginResponse.user) {
+                    setUser(loginResponse.user);
+                    setIsFirebaseUser(true);
+                  }
+                  const resolvedUserType = loginResponse.user_type;
+                  if (resolvedUserType === 'employer') {
+                    navigate('/employer-dashboard');
+                  } else if (resolvedUserType === 'housegirl') {
+                    navigate('/housegirl-dashboard');
+                  } else {
+                    navigate('/');
+                  }
+                } catch {
+                }
+              }}
+            >
+              Yes, Sign In
+            </ToastAction>
+          ),
+        });
+        return { error: null };
+      }
+
+      if ((response as { status?: string }).status === 'not_found') {
+        toast({
+          title: 'Account not found',
+          description: 'No account found with this number. Create an account first.',
+        });
+        setSelectedMode('signup');
+        changePhoneNumber();
+        navigate('/login?mode=signup');
+        return { error: null };
+      }
 
       if ((response as { status?: string; uid?: string }).status === 'role_required') {
         const responseUid = (response as { uid?: string }).uid || verified.userCredential.user.uid;
@@ -352,6 +415,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error: unknown) {
       shouldSyncFirebaseUserRef.current = false;
       const exactError = error instanceof Error ? error.message : String(error);
+      if (exactError === 'Verification is taking too long. Please try again.') {
+        changePhoneNumber();
+      }
       return { error: exactError || 'Something went wrong. Please try again.' };
     } finally {
       setLoading(false);
@@ -393,6 +459,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           ...additionalData
         })
       });
+
+      if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' }).status === 'account_exists') {
+        const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' }).user_type || 'employer';
+        toast({
+          title: 'Account exists',
+          description: `Already registered as ${existingRole}. Sign in instead?`,
+          action: (
+            <ToastAction altText="Sign in instead" onClick={() => navigate('/login')}>
+              Yes, Sign In
+            </ToastAction>
+          ),
+        });
+        return { error: null };
+      }
+      if ((response as { status?: string }).status === 'not_found') {
+        toast({
+          title: 'Account not found',
+          description: 'No account found with this number. Create an account first.',
+        });
+        setSelectedMode('signup');
+        navigate('/login?mode=signup');
+        return { error: null };
+      }
 
       if ((response as { status?: string; uid?: string }).status === 'role_required') {
         const responseUid = (response as { uid?: string }).uid || result.user.uid;
@@ -442,6 +531,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       });
 
+      if ((response as { status?: string }).status === 'not_found') {
+        toast({
+          title: 'Account not found',
+          description: 'No account found with this number. Create an account first.',
+        });
+        setSelectedMode('signup');
+        navigate('/login?mode=signup');
+        return { error: null, user: response.user };
+      }
+
       if ((response as { status?: string; uid?: string }).status === 'role_required') {
         const responseUid = (response as { uid?: string }).uid || result.user.uid;
         navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
@@ -474,7 +573,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
-    return { error: 'Google sign in is no longer supported.' };
+    return handleGoogleSignIn();
   };
 
   const handleGoogleSignIn = async (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => {
@@ -482,7 +581,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setLoading(true);
       shouldSyncFirebaseUserRef.current = true;
       const { signInWithGoogle: firebaseSignInWithGoogle } = await import('@/lib/firebaseAuth');
-      const result = await firebaseSignInWithGoogle();
+      await firebaseSignInWithGoogle();
+      return { error: null };
+    } catch (error: unknown) {
+      shouldSyncFirebaseUserRef.current = false;
+      const exactError = error instanceof Error ? error.message : String(error);
+      toast({
+        title: 'Sign In Error',
+        description: exactError || 'Something went wrong. Please try again.',
+        variant: 'destructive'
+      });
+      return { error: exactError || 'Something went wrong. Please try again.' };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGoogleRedirectResult = async (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => {
+    try {
+      setLoading(true);
+      const { getGoogleRedirectResult } = await import('@/lib/firebaseAuth');
+      const result = await getGoogleRedirectResult();
+      if (!result?.user) {
+        return { error: null };
+      }
       const token = await result.user.getIdToken();
 
       const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
@@ -502,6 +624,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if ((response as { status?: string; uid?: string }).status === 'role_required') {
         const responseUid = (response as { uid?: string }).uid || result.user.uid;
         navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+        return { error: null, user: response.user };
+      }
+
+      if ((response as { status?: string }).status === 'not_found') {
+        toast({
+          title: 'Account not found',
+          description: 'No account found with this number. Create an account first.',
+        });
+        setSelectedMode('signup');
+        navigate('/login?mode=signup');
         return { error: null, user: response.user };
       }
 
@@ -599,6 +731,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signIn,
     signInWithGoogle,
     handleGoogleSignIn,
+    handleGoogleRedirectResult,
     signOut,
     checkSession,
     resetPassword,
