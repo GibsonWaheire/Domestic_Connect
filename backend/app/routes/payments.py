@@ -3,12 +3,25 @@ from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
 from datetime import datetime
 import uuid
+import logging
+import requests
+import base64
+import os
 
+
+logger = logging.getLogger(__name__)
 payments_bp = Blueprint('payments', __name__)
 
 CONTACT_BUNDLE_PACKAGE_ID = 'contact_unlock'
 CONTACT_BUNDLE_PRICE = 200
 CONTACT_BUNDLE_CONTACTS = 3
+
+DARAJA_BASE_URL = os.getenv('DARAJA_BASE_URL', 'https://sandbox.safaricom.co.ke')
+DARAJA_SHORTCODE = os.getenv('DARAJA_SHORTCODE', '174379')
+DARAJA_PASSKEY = os.getenv('DARAJA_PASSKEY', '')
+DARAJA_CONSUMER_KEY = os.getenv('DARAJA_CONSUMER_KEY', '')
+DARAJA_CONSUMER_SECRET = os.getenv('DARAJA_CONSUMER_SECRET', '')
+DARAJA_CALLBACK_URL = os.getenv('DARAJA_CALLBACK_URL', 'https://example.com/api/payments/mpesa-callback')
 
 def get_contact_credit_summary(user_id):
     purchases_ref = db.collection('user_purchases').where('user_id', '==', user_id).where('status', '==', 'completed').stream()
@@ -30,6 +43,47 @@ def get_contact_credit_summary(user_id):
         'used_credits': used_credits,
         'remaining_credits': remaining_credits
     }
+
+
+def get_daraja_access_token():
+    credentials = f"{DARAJA_CONSUMER_KEY}:{DARAJA_CONSUMER_SECRET}"
+    encoded_credentials = base64.b64encode(credentials.encode('utf-8')).decode('utf-8')
+    token_response = requests.get(
+        f"{DARAJA_BASE_URL}/oauth/v1/generate?grant_type=client_credentials",
+        headers={"Authorization": f"Basic {encoded_credentials}"},
+        timeout=20
+    )
+    token_response.raise_for_status()
+    token_json = token_response.json()
+    return token_json.get('access_token')
+
+
+def initiate_stk_push(phone, amount, reference):
+    # TODO: Switch to production Daraja credentials before go-live
+    access_token = get_daraja_access_token()
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    password = base64.b64encode(f"{DARAJA_SHORTCODE}{DARAJA_PASSKEY}{timestamp}".encode('utf-8')).decode('utf-8')
+    payload = {
+        "BusinessShortCode": DARAJA_SHORTCODE,
+        "Password": password,
+        "Timestamp": timestamp,
+        "TransactionType": "CustomerPayBillOnline",
+        "Amount": int(amount),
+        "PartyA": str(phone),
+        "PartyB": DARAJA_SHORTCODE,
+        "PhoneNumber": str(phone),
+        "CallBackURL": DARAJA_CALLBACK_URL,
+        "AccountReference": str(reference),
+        "TransactionDesc": "Domestic Connect contact purchase"
+    }
+    response = requests.post(
+        f"{DARAJA_BASE_URL}/mpesa/stkpush/v1/processrequest",
+        json=payload,
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=20
+    )
+    response.raise_for_status()
+    return response.json()
 
 @payments_bp.route('/packages', methods=['GET'])
 def get_payment_packages():
@@ -53,9 +107,10 @@ def get_payment_packages():
         return jsonify({'packages': result}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @payments_bp.route('/purchase', methods=['POST'])
 @firebase_auth_required
@@ -71,9 +126,10 @@ def create_purchase():
         package_id = data.get('package_id')
         amount = data.get('amount')
         payment_reference = data.get('payment_reference')
+        phone_number = data.get('phone_number')
         
-        if not package_id or not amount:
-            return jsonify({'error': 'Package ID and amount required'}), 400
+        if not package_id or not amount or not phone_number:
+            return jsonify({'error': 'Package ID, amount and phone number required'}), 400
         
         package_doc = db.collection('payment_packages').document(package_id).get()
         if not package_doc.exists:
@@ -94,7 +150,18 @@ def create_purchase():
         else:
             package_dict = package_doc.to_dict()
         
-        # Create purchase record
+        stk_response = initiate_stk_push(
+            phone=phone_number,
+            amount=amount,
+            reference=payment_reference or package_dict.get('name', 'Domestic Connect Purchase')
+        )
+        checkout_request_id = stk_response.get('CheckoutRequestID')
+        if not checkout_request_id:
+            return jsonify({
+                'error': 'Failed to initiate M-Pesa STK push',
+                'mpesa_response': stk_response
+            }), 502
+
         purchase_id = str(uuid.uuid4())
         purchase_data = {
             'id': purchase_id,
@@ -102,26 +169,85 @@ def create_purchase():
             'package_id': package_id,
             'amount': amount,
             'payment_reference': payment_reference,
-            'status': 'completed',
+            'phone_number': phone_number,
+            'status': 'pending',
+            'checkout_request_id': checkout_request_id,
+            'merchant_request_id': stk_response.get('MerchantRequestID'),
             'purchase_date': datetime.utcnow().isoformat()
         }
-        
         db.collection('user_purchases').document(purchase_id).set(purchase_data)
-
-        credit_summary = get_contact_credit_summary(getattr(user, 'id'))
         
         return jsonify({
-            'message': 'Purchase created successfully',
+            'message': 'Purchase initiated successfully',
             'purchase_id': purchase_id,
             'package_id': package_id,
-            'contacts_granted': package_dict.get('contacts_included', 0),
-            'remaining_credits': credit_summary['remaining_credits']
-        }), 201
+            'status': 'pending',
+            'checkout_request_id': checkout_request_id
+        }), 202
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
+
+
+@payments_bp.route('/mpesa-callback', methods=['POST'])
+def mpesa_callback():
+    try:
+        callback_data = request.get_json(silent=True) or {}
+        stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
+
+        result_code = stk_callback.get('ResultCode', callback_data.get('ResultCode'))
+        checkout_request_id = stk_callback.get('CheckoutRequestID', callback_data.get('CheckoutRequestID'))
+        if checkout_request_id is None:
+            return jsonify({'error': 'CheckoutRequestID is required'}), 400
+
+        purchases = list(
+            db.collection('user_purchases')
+            .where('checkout_request_id', '==', checkout_request_id)
+            .where('status', '==', 'pending')
+            .limit(1)
+            .stream()
+        )
+        if not purchases:
+            return jsonify({'message': 'No pending purchase found for callback'}), 200
+
+        purchase_doc = purchases[0]
+        purchase_data = purchase_doc.to_dict()
+
+        if int(result_code or 1) != 0:
+            db.collection('user_purchases').document(purchase_doc.id).update({
+                'status': 'failed',
+                'result_code': result_code,
+                'result_desc': stk_callback.get('ResultDesc', callback_data.get('ResultDesc')),
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            return jsonify({'message': 'Payment callback recorded as failed'}), 200
+
+        callback_items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+        metadata = {item.get('Name'): item.get('Value') for item in callback_items if isinstance(item, dict)}
+        amount = metadata.get('Amount', callback_data.get('Amount'))
+        receipt = metadata.get('MpesaReceiptNumber', callback_data.get('MpesaReceiptNumber'))
+        phone_number = metadata.get('PhoneNumber', callback_data.get('PhoneNumber'))
+
+        db.collection('user_purchases').document(purchase_doc.id).update({
+            'status': 'completed',
+            'result_code': result_code,
+            'mpesa_receipt_number': receipt,
+            'amount_paid': amount,
+            'phone_number': phone_number or purchase_data.get('phone_number'),
+            'completed_at': datetime.utcnow().isoformat(),
+            'updated_at': datetime.utcnow().isoformat()
+        })
+
+        return jsonify({
+            'message': 'Payment confirmed and credits added',
+            'checkout_request_id': checkout_request_id
+        }), 200
+    except Exception as e:
+        logger.error(f'Error processing M-Pesa callback: {str(e)}')
+        return jsonify({'error': 'Failed to process callback'}), 500
 
 @payments_bp.route('/contact-access', methods=['POST'])
 @firebase_auth_required
@@ -176,9 +302,10 @@ def unlock_contact():
         }), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @payments_bp.route('/my-purchases', methods=['GET'])
 @firebase_auth_required
@@ -213,9 +340,10 @@ def get_user_purchases():
         return jsonify({'purchases': result}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @payments_bp.route('/contact-access', methods=['GET'])
 @firebase_auth_required
@@ -238,9 +366,10 @@ def get_contact_access():
             ]
         }), 200
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @payments_bp.route('/contact-credits', methods=['GET'])
 @firebase_auth_required
@@ -253,6 +382,7 @@ def get_contact_credits():
             
         return jsonify(get_contact_credit_summary(getattr(user, 'id'))), 200
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500

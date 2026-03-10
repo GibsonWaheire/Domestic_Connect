@@ -3,7 +3,10 @@ from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
 from datetime import datetime
 import uuid
+import logging
 
+
+logger = logging.getLogger(__name__)
 employers_bp = Blueprint('employers', __name__)
 
 @employers_bp.route('/', methods=['GET'])
@@ -28,8 +31,6 @@ def get_employers():
             # We need to stitch the Profile and User data back together
             first_name = ""
             last_name = ""
-            email = ""
-            phone_number = ""
             
             profile_id = emp.get('profile_id')
             if profile_id:
@@ -43,8 +44,6 @@ def get_employers():
                             user_data = user_doc.to_dict()
                             first_name = user_data.get('first_name', '')
                             last_name = user_data.get('last_name', '')
-                            email = user_data.get('email', '')
-                            phone_number = user_data.get('phone_number', '')
 
             result.append({
                 'id': emp.get('id'),
@@ -54,8 +53,6 @@ def get_employers():
                 'description': emp.get('description'),
                 'first_name': first_name,
                 'last_name': last_name,
-                'email': email,
-                'phone_number': phone_number,
                 'created_at': emp.get('created_at'),
                 'updated_at': emp.get('updated_at')
             })
@@ -73,11 +70,13 @@ def get_employers():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @employers_bp.route('/<employer_id>', methods=['GET'])
+@firebase_auth_required
 def get_employer(employer_id):
     """Get specific employer profile"""
     try:
@@ -89,8 +88,6 @@ def get_employer(employer_id):
         
         first_name = ""
         last_name = ""
-        email = ""
-        phone_number = ""
         
         profile_id = emp.get('profile_id')
         if profile_id:
@@ -104,8 +101,6 @@ def get_employer(employer_id):
                         u_data = user_doc.to_dict()
                         first_name = u_data.get('first_name', '')
                         last_name = u_data.get('last_name', '')
-                        email = u_data.get('email', '')
-                        phone_number = u_data.get('phone_number', '')
         
         return jsonify({
             'id': emp.get('id'),
@@ -115,16 +110,15 @@ def get_employer(employer_id):
             'description': emp.get('description'),
             'first_name': first_name,
             'last_name': last_name,
-            'email': email,
-            'phone_number': phone_number,
             'created_at': emp.get('created_at'),
             'updated_at': emp.get('updated_at')
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @employers_bp.route('/', methods=['POST'])
 @firebase_auth_required
@@ -169,9 +163,10 @@ def create_employer():
         return jsonify(employer_data), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @employers_bp.route('/<employer_id>', methods=['PUT'])
 @firebase_auth_required
@@ -218,9 +213,10 @@ def update_employer(employer_id):
         return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @employers_bp.route('/<employer_id>', methods=['DELETE'])
 @firebase_auth_required
@@ -250,6 +246,7 @@ def delete_employer(employer_id):
         return jsonify({'message': 'Employer profile deleted successfully'}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
