@@ -249,6 +249,32 @@ def mpesa_callback():
         logger.error(f'Error processing M-Pesa callback: {str(e)}')
         return jsonify({'error': 'Failed to process callback'}), 500
 
+@payments_bp.route('/purchase-status/<checkout_request_id>', methods=['GET'])
+@firebase_auth_required
+def get_purchase_status(checkout_request_id):
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        user_id = getattr(user, 'id')
+        purchases = list(
+            db.collection('user_purchases')
+            .where('checkout_request_id', '==', checkout_request_id)
+            .where('user_id', '==', user_id)
+            .limit(1)
+            .stream()
+        )
+
+        if not purchases:
+            return jsonify({'error': 'Purchase not found'}), 404
+
+        purchase = purchases[0].to_dict()
+        return jsonify({'status': purchase.get('status', 'pending')}), 200
+    except Exception as e:
+        logger.error(f'Error fetching purchase status: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
 @payments_bp.route('/contact-access', methods=['POST'])
 @firebase_auth_required
 def unlock_contact():
