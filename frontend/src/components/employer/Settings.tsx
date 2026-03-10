@@ -5,6 +5,8 @@ import { Input } from '@/components/ui/input';
 import { Users, Shield, Upload, Eye, EyeOff } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 interface SettingsProps {
   stats: {
@@ -16,10 +18,12 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
   const { user } = useAuth();
   const { showSuccessNotification, showErrorNotification, showInfoNotification } = useNotificationActions();
 
-  const [firstName, setFirstName] = useState(localStorage.getItem('employer_first_name') || user?.first_name || '');
-  const [lastName, setLastName] = useState(localStorage.getItem('employer_last_name') || user?.last_name || '');
-  const [location, setLocation] = useState(localStorage.getItem('employer_location') || '');
-  const [profilePhoto, setProfilePhoto] = useState(localStorage.getItem('employer_profile_photo') || '');
+  const [firstName, setFirstName] = useState(user?.first_name || '');
+  const [lastName, setLastName] = useState(user?.last_name || '');
+  const [location, setLocation] = useState((user as { location?: string } | null)?.location || '');
+  const [phone, setPhone] = useState(user?.phone_number || '');
+  const [profilePhoto, setProfilePhoto] = useState((user as { profile_photo_url?: string } | null)?.profile_photo_url || '');
+  const [isSaving, setIsSaving] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -28,6 +32,14 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
 
   const authProvider = localStorage.getItem('dc_auth_provider');
   const isGoogleAuth = authProvider === 'google';
+
+  useEffect(() => {
+    setFirstName(user?.first_name || '');
+    setLastName(user?.last_name || '');
+    setLocation((user as { location?: string } | null)?.location || '');
+    setPhone(user?.phone_number || '');
+    setProfilePhoto((user as { profile_photo_url?: string } | null)?.profile_photo_url || '');
+  }, [user]);
 
   useEffect(() => {
     if (window.location.hash === '#employer-first-name') {
@@ -58,17 +70,42 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
     reader.readAsDataURL(file);
   };
 
-  const handleSaveProfile = () => {
-    localStorage.setItem('employer_first_name', firstName.trim());
-    localStorage.setItem('employer_last_name', lastName.trim());
-    localStorage.setItem('employer_location', location.trim());
-    if (profilePhoto) {
-      localStorage.setItem('employer_profile_photo', profilePhoto);
-    } else {
-      localStorage.removeItem('employer_profile_photo');
-    }
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const employerId = (user as { uid?: string; id?: string }).uid || user.id;
+      const response = await fetch(`${API_BASE_URL}/api/employers/${employerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          full_name: `${firstName} ${lastName}`.trim(),
+          location: location.trim(),
+          phone: phone.trim(),
+          profile_photo_url: profilePhoto || null,
+        }),
+      });
 
-    showSuccessNotification('Profile Updated', 'Your employer profile has been saved.');
+      if (response.ok) {
+        await fetch(`${API_BASE_URL}/api/employers/${employerId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        showSuccessNotification('Profile saved', 'Your employer profile has been saved.');
+      } else {
+        showErrorNotification('Failed to save profile', 'Please try again.');
+      }
+    } catch {
+      showErrorNotification('Failed to save profile', 'Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handlePasswordChange = () => {
@@ -135,6 +172,16 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
             />
           </div>
 
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Phone</label>
+            <Input
+              value={phone}
+              onChange={(event) => setPhone(event.target.value)}
+              className="bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-300"
+              placeholder="07xx xxx xxx"
+            />
+          </div>
+
           <div id="employer-photo" className="space-y-2">
             <label className="text-sm font-medium text-gray-700 block">Profile Photo (optional)</label>
             <div className="flex items-center gap-4">
@@ -156,8 +203,9 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
           <Button
             className="bg-slate-900 hover:bg-slate-800 text-white"
             onClick={handleSaveProfile}
+            disabled={isSaving}
           >
-            Save
+            {isSaving ? 'Saving...' : 'Save'}
           </Button>
         </CardContent>
       </Card>

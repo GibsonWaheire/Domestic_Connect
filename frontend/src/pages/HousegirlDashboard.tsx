@@ -120,6 +120,7 @@ const HousegirlDashboard = () => {
   const [activationPhone, setActivationPhone] = useState('');
   const [isActivating, setIsActivating] = useState(false);
   const [activationPending, setActivationPending] = useState(false);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
 
   // Get user's actual data from registration
   const getUserData = useCallback(() => {
@@ -338,14 +339,55 @@ const HousegirlDashboard = () => {
     }));
   };
 
-  const handleSaveProfile = () => {
-    // Here you would typically save to the server
-    // For now, we'll just show a success message
-    toast({
-      title: "Profile Updated!",
-      description: "Your profile has been updated successfully.",
-    });
-    setShowEditModal(false);
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const housegirlId = (user as { uid?: string; id?: string }).uid || user.id;
+      const normalizedSkills = (editFormData.skills || '')
+        .split(',')
+        .map((skill) => skill.trim())
+        .filter(Boolean);
+      const numericRate = Number((editFormData.expectedSalary || '').replace(/[^\d]/g, ''));
+
+      const response = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          role: normalizedSkills[0] || '',
+          skills: normalizedSkills,
+          monthly_rate: Number.isFinite(numericRate) ? numericRate : 0,
+          bio: editFormData.bio,
+          location: editFormData.location,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Profile saved",
+          description: "Your profile has been updated successfully.",
+        });
+        await refreshData(false);
+        setShowEditModal(false);
+      } else {
+        toast({
+          title: "Failed to save. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch {
+      toast({
+        title: "Failed to save. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
   };
 
   // Initialize edit form data when userData is available
@@ -1065,8 +1107,9 @@ const HousegirlDashboard = () => {
                 <Button
                   className="flex-1 bg-blue-600 hover:bg-blue-700"
                   onClick={handleSaveProfile}
+                  disabled={isSavingProfile}
                 >
-                  Save Changes
+                  {isSavingProfile ? 'Saving...' : 'Save Changes'}
                 </Button>
               </div>
             </div>
