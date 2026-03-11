@@ -1,18 +1,17 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback } from 'react';
+import { NavigateFunction } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { User, apiRequest } from '@/lib/authUtils';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 
 export const useGoogleAuth = (
+    navigate: NavigateFunction,
     setLoading: (loading: boolean) => void,
     setUser: (user: User | null) => void,
     setIsFirebaseUser: (isFirebase: boolean) => void,
     shouldSyncFirebaseUserRef: React.MutableRefObject<boolean>
 ) => {
-    const navigate = useNavigate();
-
-    const handleGoogleSignIn = async (userType?: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => {
+    const handleGoogleSignIn = useCallback(async (userType?: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => {
         try {
             setLoading(true);
             shouldSyncFirebaseUserRef.current = true;
@@ -35,9 +34,9 @@ export const useGoogleAuth = (
         } finally {
             setLoading(false);
         }
-    };
+    }, [setLoading, shouldSyncFirebaseUserRef]);
 
-    const handleGoogleRedirectResult = async (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => {
+    const handleGoogleRedirectResult = useCallback(async (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => {
         try {
             setLoading(true);
             const resolvedMode = mode || (sessionStorage.getItem('auth_mode') as 'login' | 'signup' | null) || 'login';
@@ -47,6 +46,7 @@ export const useGoogleAuth = (
             const { getGoogleRedirectResult } = await import('@/lib/firebaseAuth');
             const result = await getGoogleRedirectResult();
             if (!result?.user) {
+                setLoading(false);
                 return { error: null };
             }
             const token = await result.user.getIdToken();
@@ -67,7 +67,8 @@ export const useGoogleAuth = (
 
             if ((response as { status?: string; uid?: string }).status === 'role_required') {
                 const responseUid = (response as { uid?: string }).uid || result.user.uid;
-                navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+                setLoading(false);
+                navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`, { replace: true });
                 return { error: null, user: response.user };
             }
 
@@ -89,7 +90,8 @@ export const useGoogleAuth = (
 
                     if (signupResponse.status === 'role_required') {
                         const responseUid = signupResponse.uid || result.user.uid;
-                        navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+                        setLoading(false);
+                        navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`, { replace: true });
                         return { error: null, user: signupResponse.user };
                     }
 
@@ -99,31 +101,33 @@ export const useGoogleAuth = (
                     }
 
                     const signupUserType = signupResponse.user_type;
+                    setLoading(false);
                     switch (signupUserType) {
                         case 'employer':
-                            navigate('/employer-dashboard');
+                            navigate('/employer-dashboard', { replace: true });
                             break;
                         case 'housegirl':
-                            navigate('/housegirl-dashboard');
+                            navigate('/housegirl-dashboard', { replace: true });
                             break;
                         case 'agency':
-                            navigate('/agency-dashboard');
+                            navigate('/agency-dashboard', { replace: true });
                             break;
                         case 'admin':
-                            navigate('/admin-dashboard');
+                            navigate('/admin-dashboard', { replace: true });
                             break;
                         default:
-                            navigate('/login?mode=select-role');
+                            navigate('/login?mode=select-role', { replace: true });
                     }
 
                     return { error: null, user: signupResponse.user };
                 }
 
+                setLoading(false);
                 toast({
                     title: 'Account not found',
                     description: 'No account found with this number. Create an account first.',
                 });
-                navigate('/login?mode=signup');
+                navigate('/login?mode=signup', { replace: true });
                 return { error: null, user: response.user };
             }
 
@@ -133,21 +137,22 @@ export const useGoogleAuth = (
             }
 
             const resolvedUserType = response.user_type;
+            setLoading(false);
             switch (resolvedUserType) {
                 case 'employer':
-                    navigate('/employer-dashboard');
+                    navigate('/employer-dashboard', { replace: true });
                     break;
                 case 'housegirl':
-                    navigate('/housegirl-dashboard');
+                    navigate('/housegirl-dashboard', { replace: true });
                     break;
                 case 'agency':
-                    navigate('/agency-dashboard');
+                    navigate('/agency-dashboard', { replace: true });
                     break;
                 case 'admin':
-                    navigate('/admin-dashboard');
+                    navigate('/admin-dashboard', { replace: true });
                     break;
                 default:
-                    navigate('/login?mode=select-role');
+                    navigate('/login?mode=select-role', { replace: true });
             }
 
             return { error: null, user: response.user };
@@ -163,7 +168,7 @@ export const useGoogleAuth = (
         } finally {
             setLoading(false);
         }
-    };
+    }, [navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef]);
 
     return {
         handleGoogleSignIn,
