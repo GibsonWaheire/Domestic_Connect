@@ -68,17 +68,7 @@ const LoginPage = () => {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    const syncRedirectSignIn = async () => {
-      console.log('Calling handleGoogleRedirectResult');
-      const result = await handleGoogleRedirectResult();
-      console.log('handleGoogleRedirectResult done:', result);
-      if (result.error) {
-        setError(result.error);
-      }
-    };
-    syncRedirectSignIn();
-  }, []);
+
 
 
 
