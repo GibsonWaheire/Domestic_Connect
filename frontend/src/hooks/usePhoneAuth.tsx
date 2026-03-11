@@ -86,6 +86,8 @@ export const usePhoneAuth = (
                 })
             });
 
+            console.log('Phone verify response:', response);
+
             if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).status === 'account_exists') {
                 const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'employer';
                 setLoading(false);
@@ -113,6 +115,7 @@ export const usePhoneAuth = (
                                     }
                                     const resolvedUserType = loginResponse.user_type;
                                     setLoading(false);
+                                    console.log('Phone verify (existing) navigating to:', resolvedUserType);
                                     switch (resolvedUserType) {
                                         case 'employer':
                                             navigate('/employer-dashboard', { replace: true });
@@ -166,6 +169,7 @@ export const usePhoneAuth = (
 
             const resolvedUserType = response.user_type;
             setLoading(false);
+            console.log('Phone verify navigating to:', resolvedUserType);
             switch (resolvedUserType) {
                 case 'employer':
                     navigate('/employer-dashboard', { replace: true });

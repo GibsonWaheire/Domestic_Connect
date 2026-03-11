@@ -27,6 +27,7 @@ export const AuthGuard = ({
 
     // If no user is logged in, redirect to login silently
     if (!user) {
+      console.log('AuthGuard: No user, redirecting to /login');
       navigate('/login');
       return;
     }
@@ -37,20 +38,26 @@ export const AuthGuard = ({
 
     if (!isAllowed) {
       // Redirect to appropriate dashboard based on user type silently
+      console.log('AuthGuard: User not allowed for this route. User type:', userType, 'Allowed types:', allowedUserTypes);
       switch (userType) {
         case 'employer':
+          console.log('AuthGuard: Redirecting to /employer-dashboard');
           navigate('/employer-dashboard');
           break;
         case 'housegirl':
+          console.log('AuthGuard: Redirecting to /housegirl-dashboard');
           navigate('/housegirl-dashboard');
           break;
         case 'agency':
+          console.log('AuthGuard: Redirecting to /agency-dashboard');
           navigate('/agency-dashboard');
           break;
         case 'admin':
+          console.log('AuthGuard: Redirecting to /admin-dashboard');
           navigate('/admin-dashboard');
           break;
         default:
+          console.log('AuthGuard: Redirecting to default:', redirectTo);
           navigate(redirectTo);
       }
       return;
