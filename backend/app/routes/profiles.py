@@ -4,7 +4,10 @@ from app.models import User, Profile, EmployerProfile, HousegirlProfile, AgencyP
 from app.firebase_init import db
 import uuid
 from datetime import datetime
+import logging
 
+
+logger = logging.getLogger(__name__)
 profiles_bp = Blueprint('profiles', __name__)
 
 @profiles_bp.route('/', methods=['GET'])
@@ -104,9 +107,10 @@ def get_all_profiles():
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @profiles_bp.route('/<profile_id>', methods=['GET'])
 @firebase_auth_required
@@ -184,9 +188,10 @@ def get_profile(profile_id):
         return jsonify(result_data), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @profiles_bp.route('/', methods=['POST'])
 @firebase_auth_required
@@ -270,9 +275,10 @@ def create_profile():
         }), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @profiles_bp.route('/<profile_id>', methods=['PUT'])
 @firebase_auth_required
@@ -328,6 +334,7 @@ def update_profile(profile_id):
         return jsonify({'message': 'Profile updated successfully'}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500

@@ -1,7 +1,10 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
+import logging
 
+
+logger = logging.getLogger(__name__)
 cross_entity_bp = Blueprint('cross_entity', __name__)
 
 @cross_entity_bp.route('/dashboard-data', methods=['GET'])
@@ -83,9 +86,10 @@ def get_dashboard_data():
         return jsonify(dashboard_data), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 def get_housegirls_for_employer():
     """Get available housegirls for employers to view"""

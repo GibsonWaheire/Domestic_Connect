@@ -275,7 +275,7 @@ export const profilesApi = {
     }),
   update: (id: string, updates: Partial<Profile>) =>
     apiRequest<Profile>(`/api/profiles/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
@@ -301,7 +301,7 @@ export const employerProfilesApi = {
     }),
   update: (id: string, updates: Partial<EmployerProfile>) =>
     apiRequest<EmployerProfile>(`/api/employers/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
@@ -336,7 +336,7 @@ export const housegirlProfilesApi = {
     }),
   update: (id: string, updates: Partial<HousegirlProfile>) =>
     apiRequest<HousegirlProfile>(`/api/housegirls/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),
@@ -362,7 +362,7 @@ export const agencyProfilesApi = {
     }),
   update: (id: string, updates: Partial<AgencyProfile>) =>
     apiRequest<AgencyProfile>(`/api/agencies/${id}`, {
-      method: 'PATCH',
+      method: 'PUT',
       body: JSON.stringify({
         ...updates,
         updated_at: new Date().toISOString(),

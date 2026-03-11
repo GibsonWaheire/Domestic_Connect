@@ -3,7 +3,10 @@ from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
 from datetime import datetime
 import uuid
+import logging
 
+
+logger = logging.getLogger(__name__)
 agencies_bp = Blueprint('agencies', __name__)
 
 @agencies_bp.route('/health', methods=['GET'])
@@ -121,9 +124,10 @@ def get_agency(agency_id):
         }), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @agencies_bp.route('/', methods=['POST'])
 @firebase_auth_required
@@ -170,9 +174,10 @@ def create_agency():
         return jsonify(agency_data), 201
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @agencies_bp.route('/<agency_id>', methods=['PUT'])
 @firebase_auth_required
@@ -208,9 +213,10 @@ def update_agency(agency_id):
         return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @agencies_bp.route('/<agency_id>', methods=['DELETE'])
 @firebase_auth_required
@@ -230,6 +236,7 @@ def delete_agency(agency_id):
         return jsonify({'message': 'Agency deleted successfully'}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
