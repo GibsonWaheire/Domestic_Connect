@@ -78,22 +78,7 @@ const LoginPage = () => {
     syncRedirectSignIn();
   }, []);
 
-  useEffect(() => {
-    if (!user) return;
-    if (user.is_admin) {
-      navigate('/admin-dashboard', { replace: true });
-      return;
-    }
-    if (user.user_type === 'housegirl') {
-      navigate('/housegirl-dashboard', { replace: true });
-      return;
-    }
-    if (user.user_type === 'agency') {
-      navigate('/agency-dashboard', { replace: true });
-      return;
-    }
-    navigate('/employer-dashboard', { replace: true });
-  }, [user, navigate]);
+
 
   const verifyCode = async (code: string) => {
     if (isVerifyingCode || code.length !== 6) return;

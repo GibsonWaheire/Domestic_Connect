@@ -1,5 +1,5 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useCallback } from 'react';
+import { NavigateFunction } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { ToastAction } from '@/components/ui/toast';
 import { User, apiRequest, formatKenyanPhone } from '@/lib/authUtils';
@@ -8,6 +8,7 @@ import { mapPhoneAuthError } from '@/lib/authErrors';
 import { ConfirmationResult } from 'firebase/auth';
 
 export const usePhoneAuth = (
+    navigate: NavigateFunction,
     setLoading: (loading: boolean) => void,
     setUser: (user: User | null) => void,
     setIsFirebaseUser: (isFirebase: boolean) => void,
@@ -22,14 +23,13 @@ export const usePhoneAuth = (
     setSelectedMode: (mode: 'login' | 'signup') => void,
     setAuthStep: (step: 1 | 2) => void
 ) => {
-    const navigate = useNavigate();
 
-    const changePhoneNumber = () => {
+    const changePhoneNumber = useCallback(() => {
         setAuthStep(1);
         setConfirmationResult(null);
-    };
+    }, [setAuthStep, setConfirmationResult]);
 
-    const handleSendOTP = async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', mode: 'login' | 'signup' = 'login') => {
+    const handleSendOTP = useCallback(async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', mode: 'login' | 'signup' = 'login') => {
         try {
             setLoading(true);
             const formattedPhone = formatKenyanPhone(rawPhone);
@@ -48,9 +48,9 @@ export const usePhoneAuth = (
         } finally {
             setLoading(false);
         }
-    };
+    }, [setLoading, setConfirmationResult, setPhoneNumber, setSelectedUserType, setSelectedMode, setAuthStep]);
 
-    const handleVerifyOTP = async (code: string, mode?: 'login' | 'signup') => {
+    const handleVerifyOTP = useCallback(async (code: string, mode?: 'login' | 'signup') => {
         if (!confirmationResult) {
             return { error: 'Please request a code first.' };
         }
@@ -88,6 +88,7 @@ export const usePhoneAuth = (
 
             if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).status === 'account_exists') {
                 const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'employer';
+                setLoading(false);
                 toast({
                     title: 'Account exists',
                     description: `Already registered as ${existingRole}. Sign in instead?`,
@@ -111,21 +112,22 @@ export const usePhoneAuth = (
                                         setIsFirebaseUser(true);
                                     }
                                     const resolvedUserType = loginResponse.user_type;
+                                    setLoading(false);
                                     switch (resolvedUserType) {
                                         case 'employer':
-                                            navigate('/employer-dashboard');
+                                            navigate('/employer-dashboard', { replace: true });
                                             break;
                                         case 'housegirl':
-                                            navigate('/housegirl-dashboard');
+                                            navigate('/housegirl-dashboard', { replace: true });
                                             break;
                                         case 'agency':
-                                            navigate('/agency-dashboard');
+                                            navigate('/agency-dashboard', { replace: true });
                                             break;
                                         case 'admin':
-                                            navigate('/admin-dashboard');
+                                            navigate('/admin-dashboard', { replace: true });
                                             break;
                                         default:
-                                            navigate('/login?mode=select-role');
+                                            navigate('/login?mode=select-role', { replace: true });
                                     }
                                 } catch {
                                 }
@@ -139,19 +141,21 @@ export const usePhoneAuth = (
             }
 
             if ((response as { status?: string }).status === 'not_found') {
+                setLoading(false);
                 toast({
                     title: 'Account not found',
                     description: 'No account found with this number. Create an account first.',
                 });
                 setSelectedMode('signup');
                 changePhoneNumber();
-                navigate('/login?mode=signup');
+                navigate('/login?mode=signup', { replace: true });
                 return { error: null };
             }
 
             if ((response as { status?: string; uid?: string }).status === 'role_required') {
                 const responseUid = (response as { uid?: string }).uid || verified.userCredential.user.uid;
-                navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
+                setLoading(false);
+                navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`, { replace: true });
                 return { error: null };
             }
 
@@ -161,21 +165,22 @@ export const usePhoneAuth = (
             }
 
             const resolvedUserType = response.user_type;
+            setLoading(false);
             switch (resolvedUserType) {
                 case 'employer':
-                    navigate('/employer-dashboard');
+                    navigate('/employer-dashboard', { replace: true });
                     break;
                 case 'housegirl':
-                    navigate('/housegirl-dashboard');
+                    navigate('/housegirl-dashboard', { replace: true });
                     break;
                 case 'agency':
-                    navigate('/agency-dashboard');
+                    navigate('/agency-dashboard', { replace: true });
                     break;
                 case 'admin':
-                    navigate('/admin-dashboard');
+                    navigate('/admin-dashboard', { replace: true });
                     break;
                 default:
-                    navigate('/login?mode=select-role');
+                    navigate('/login?mode=select-role', { replace: true });
             }
 
             return { error: null, userType: resolvedUserType };
@@ -189,14 +194,14 @@ export const usePhoneAuth = (
         } finally {
             setLoading(false);
         }
-    };
+    }, [confirmationResult, setLoading, shouldSyncFirebaseUserRef, selectedUserType, setSelectedMode, setUser, setIsFirebaseUser, navigate, changePhoneNumber]);
 
-    const resendOTP = async () => {
+    const resendOTP = useCallback(async () => {
         if (!phoneNumber) {
             return { error: 'Please enter your number again.' };
         }
         return handleSendOTP(phoneNumber, selectedUserType, selectedMode);
-    };
+    }, [phoneNumber, handleSendOTP, selectedUserType, selectedMode]);
 
     return {
         handleSendOTP,

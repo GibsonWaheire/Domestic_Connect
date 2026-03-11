@@ -142,9 +142,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isFirebaseUser, navigate]);
 
   useInactivityTimer(user, signOut);
-  const googleAuth = useGoogleAuth(setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
-  const phoneAuth = usePhoneAuth(setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, confirmationResult, setConfirmationResult, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
-  const emailAuth = useEmailAuth(setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
+  const googleAuth = useGoogleAuth(navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
+  const phoneAuth = usePhoneAuth(navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, confirmationResult, setConfirmationResult, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
+  const emailAuth = useEmailAuth(navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
   const value = {
     user, loading, authStep, phoneNumber, formatKenyanPhone,
