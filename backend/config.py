@@ -1,8 +1,13 @@
 import os
 
+secret = os.environ.get('SECRET_KEY')
+if not secret or secret == 'dev-secret-key-change-in-production':
+    if os.environ.get('FLASK_ENV') == 'production':
+        raise RuntimeError('SECRET_KEY must be set in production')
+
 class Config:
     """Base configuration class"""
-    SECRET_KEY = os.environ.get('SECRET_KEY') or 'dev-secret-key-change-in-production'
+    SECRET_KEY = secret or 'dev-secret-key-change-in-production'
     
     # File upload configuration
     UPLOAD_FOLDER = os.environ.get('UPLOAD_FOLDER') or 'uploads'

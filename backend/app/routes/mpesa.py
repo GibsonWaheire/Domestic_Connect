@@ -7,7 +7,10 @@ from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
 import uuid
+import logging
 
+
+logger = logging.getLogger(__name__)
 mpesa_bp = Blueprint('mpesa', __name__)
 
 # M-Pesa Configuration
@@ -239,7 +242,10 @@ def mpesa_callback():
             
     except Exception as e:
         print(f"Error processing callback: {e}")
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @mpesa_bp.route('/health', methods=['GET'])
 def health_check():

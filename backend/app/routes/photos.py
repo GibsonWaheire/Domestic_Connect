@@ -5,7 +5,10 @@ import uuid
 import os
 from datetime import datetime
 from werkzeug.utils import secure_filename
+import logging
 
+
+logger = logging.getLogger(__name__)
 photos_bp = Blueprint('photos', __name__)
 
 def allowed_file(filename):
@@ -73,9 +76,10 @@ def upload_photo():
         return jsonify({'error': 'Invalid file type'}), 400
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @photos_bp.route('/<photo_id>', methods=['DELETE'])
 @firebase_auth_required
@@ -117,9 +121,10 @@ def delete_photo(photo_id):
         return jsonify({'message': 'Photo deleted successfully'}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
 
 @photos_bp.route('/profile/<profile_id>', methods=['GET'])
 def get_profile_photos(profile_id):
@@ -140,6 +145,7 @@ def get_profile_photos(profile_id):
         return jsonify({'photos': result}), 200
         
     except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return jsonify({'error': str(e)}), 500
+        logger.error(f'Error: {str(e)}')
+        return jsonify({
+            'error': 'Something went wrong. Please try again.'
+        }), 500
