@@ -9,7 +9,7 @@ import { ConfirmationResult } from 'firebase/auth';
 interface User {
   id: string;
   email: string | null;
-  user_type: 'employer' | 'housegirl' | 'agency';
+  user_type: 'employer' | 'housegirl' | 'agency' | 'admin';
   first_name: string;
   last_name: string;
   phone_number?: string;
@@ -38,15 +38,15 @@ interface AuthContextType {
   authStep: 1 | 2;
   phoneNumber: string;
   formatKenyanPhone: (phone: string) => string;
-  handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null }>;
-  handleVerifyOTP: (code: string, mode?: 'login' | 'signup') => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' }>;
+  handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => Promise<{ error: string | null }>;
+  handleVerifyOTP: (code: string, mode?: 'login' | 'signup') => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' | 'admin' }>;
   resendOTP: () => Promise<{ error: string | null }>;
   changePhoneNumber: () => void;
-  signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
-  handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
-  handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency') => Promise<{ error: string | null; user?: User }>;
+  handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
+  handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => Promise<{ error: string | null; user?: User }>;
   signOut: () => Promise<void>;
   checkSession: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -139,7 +139,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [authStep, setAuthStep] = useState<1 | 2>(1);
-  const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency'>('employer');
+  const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency' | 'admin'>('employer');
   const [selectedMode, setSelectedMode] = useState<'login' | 'signup'>('login');
   const shouldSyncFirebaseUserRef = useRef(false);
 
@@ -277,7 +277,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [handleFirebaseUser, isSigningOut, user]);
 
-  const handleSendOTP = async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency', mode: 'login' | 'signup' = 'login') => {
+  const handleSendOTP = async (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', mode: 'login' | 'signup' = 'login') => {
     try {
       setLoading(true);
       const formattedPhone = formatKenyanPhone(rawPhone);
@@ -327,7 +327,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       const token = await verified.userCredential.user.getIdToken();
 
-      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -338,8 +338,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       });
 
-      if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' }).status === 'account_exists') {
-        const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' }).user_type || 'employer';
+      if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).status === 'account_exists') {
+        const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'employer';
         toast({
           title: 'Account exists',
           description: `Already registered as ${existingRole}. Sign in instead?`,
@@ -349,7 +349,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               onClick={async () => {
                 try {
                   setSelectedMode('login');
-                  const loginResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+                  const loginResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
                     method: 'POST',
                     headers: {
                       'Authorization': `Bearer ${token}`
@@ -363,12 +363,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                     setIsFirebaseUser(true);
                   }
                   const resolvedUserType = loginResponse.user_type;
-                  if (resolvedUserType === 'employer') {
-                    navigate('/employer-dashboard');
-                  } else if (resolvedUserType === 'housegirl') {
-                    navigate('/housegirl-dashboard');
-                  } else {
-                    navigate('/');
+                  switch (resolvedUserType) {
+                    case 'employer':
+                      navigate('/employer-dashboard');
+                      break;
+                    case 'housegirl':
+                      navigate('/housegirl-dashboard');
+                      break;
+                    case 'agency':
+                      navigate('/agency-dashboard');
+                      break;
+                    case 'admin':
+                      navigate('/admin-dashboard');
+                      break;
+                    default:
+                      navigate('/login?mode=select-role');
                   }
                 } catch {
                 }
@@ -404,12 +413,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const resolvedUserType = response.user_type;
-      if (resolvedUserType === 'employer') {
-        navigate('/employer-dashboard');
-      } else if (resolvedUserType === 'housegirl') {
-        navigate('/housegirl-dashboard');
-      } else {
-        navigate('/');
+      switch (resolvedUserType) {
+        case 'employer':
+          navigate('/employer-dashboard');
+          break;
+        case 'housegirl':
+          navigate('/housegirl-dashboard');
+          break;
+        case 'agency':
+          navigate('/agency-dashboard');
+          break;
+        case 'admin':
+          navigate('/admin-dashboard');
+          break;
+        default:
+          navigate('/login?mode=select-role');
       }
 
       return { error: null, userType: resolvedUserType };
@@ -449,7 +467,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { signUpWithEmail } = await import('@/lib/firebaseAuth');
       const result = await signUpWithEmail(email, password);
       const token = await result.user.getIdToken();
-      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -461,8 +479,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         })
       });
 
-      if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' }).status === 'account_exists') {
-        const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' }).user_type || 'employer';
+      if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).status === 'account_exists') {
+        const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'employer';
         toast({
           title: 'Account exists',
           description: `Already registered as ${existingRole}. Sign in instead?`,
@@ -496,12 +514,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const resolvedUserType = response.user_type;
-      if (resolvedUserType === 'employer') {
-        navigate('/employer-dashboard');
-      } else if (resolvedUserType === 'housegirl') {
-        navigate('/housegirl-dashboard');
-      } else {
-        navigate('/');
+      switch (resolvedUserType) {
+        case 'employer':
+          navigate('/employer-dashboard');
+          break;
+        case 'housegirl':
+          navigate('/housegirl-dashboard');
+          break;
+        case 'agency':
+          navigate('/agency-dashboard');
+          break;
+        case 'admin':
+          navigate('/admin-dashboard');
+          break;
+        default:
+          navigate('/login?mode=select-role');
       }
 
       return { error: null };
@@ -522,7 +549,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { signInWithEmail } = await import('@/lib/firebaseAuth');
       const result = await signInWithEmail(email, password);
       const token = await result.user.getIdToken();
-      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -554,12 +581,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const resolvedUserType = response.user_type;
-      if (resolvedUserType === 'employer') {
-        navigate('/employer-dashboard');
-      } else if (resolvedUserType === 'housegirl') {
-        navigate('/housegirl-dashboard');
-      } else {
-        navigate('/');
+      switch (resolvedUserType) {
+        case 'employer':
+          navigate('/employer-dashboard');
+          break;
+        case 'housegirl':
+          navigate('/housegirl-dashboard');
+          break;
+        case 'agency':
+          navigate('/agency-dashboard');
+          break;
+        case 'admin':
+          navigate('/admin-dashboard');
+          break;
+        default:
+          navigate('/login?mode=select-role');
       }
 
       return { error: null, user: response.user };
@@ -606,7 +642,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       setLoading(true);
       const resolvedMode = mode || (sessionStorage.getItem('auth_mode') as 'login' | 'signup' | null) || 'login';
-      const resolvedRedirectUserType = userType || (sessionStorage.getItem('auth_user_type') as 'employer' | 'housegirl' | 'agency' | null) || undefined;
+      const resolvedRedirectUserType = userType || (sessionStorage.getItem('auth_user_type') as 'employer' | 'housegirl' | 'agency' | 'admin' | null) || undefined;
       sessionStorage.removeItem('auth_mode');
       sessionStorage.removeItem('auth_user_type');
       const { getGoogleRedirectResult } = await import('@/lib/firebaseAuth');
@@ -616,7 +652,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const token = await result.user.getIdToken();
 
-      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency'; user?: User }>('/api/auth/verify', {
+      const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -629,6 +665,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           photo_url: result.user.photoURL
         })
       });
+      if (import.meta.env.DEV) {
+        console.log('[GoogleRedirect] verify response:', response);
+      }
 
       if ((response as { status?: string; uid?: string }).status === 'role_required') {
         const responseUid = (response as { uid?: string }).uid || result.user.uid;
@@ -638,7 +677,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       if ((response as { status?: string }).status === 'not_found') {
         if (resolvedMode === 'signup') {
-          const signupResponse = await apiRequest<{ status?: string; user_type: 'employer' | 'housegirl' | 'agency'; user?: User; uid?: string }>('/api/auth/verify', {
+          const signupResponse = await apiRequest<{ status?: string; user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User; uid?: string }>('/api/auth/verify', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${token}`
@@ -651,6 +690,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               photo_url: result.user.photoURL
             })
           });
+          if (import.meta.env.DEV) {
+            console.log('[GoogleRedirect] signup retry response:', signupResponse);
+          }
 
           if (signupResponse.status === 'role_required') {
             const responseUid = signupResponse.uid || result.user.uid;
@@ -664,12 +706,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           const signupUserType = signupResponse.user_type;
-          if (signupUserType === 'employer') {
-            navigate('/employer-dashboard');
-          } else if (signupUserType === 'housegirl') {
-            navigate('/housegirl-dashboard');
-          } else {
-            navigate('/');
+          if (import.meta.env.DEV) {
+            console.log('[GoogleRedirect] user_type used for navigation (signup retry):', signupUserType);
+          }
+          switch (signupUserType) {
+            case 'employer':
+              if (import.meta.env.DEV) {
+                console.log('[GoogleRedirect] navigating to: /employer-dashboard');
+              }
+              navigate('/employer-dashboard');
+              break;
+            case 'housegirl':
+              if (import.meta.env.DEV) {
+                console.log('[GoogleRedirect] navigating to: /housegirl-dashboard');
+              }
+              navigate('/housegirl-dashboard');
+              break;
+            case 'agency':
+              navigate('/agency-dashboard');
+              break;
+            case 'admin':
+              navigate('/admin-dashboard');
+              break;
+            default:
+              if (import.meta.env.DEV) {
+                console.log('[GoogleRedirect] navigating to: /login?mode=select-role');
+              }
+              navigate('/login?mode=select-role');
           }
 
           return { error: null, user: signupResponse.user };
@@ -690,12 +753,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const resolvedUserType = response.user_type;
-      if (resolvedUserType === 'employer') {
-        navigate('/employer-dashboard');
-      } else if (resolvedUserType === 'housegirl') {
-        navigate('/housegirl-dashboard');
-      } else {
-        navigate('/');
+      if (import.meta.env.DEV) {
+        console.log('[GoogleRedirect] user_type used for navigation:', resolvedUserType);
+      }
+      switch (resolvedUserType) {
+        case 'employer':
+          if (import.meta.env.DEV) {
+            console.log('[GoogleRedirect] navigating to: /employer-dashboard');
+          }
+          navigate('/employer-dashboard');
+          break;
+        case 'housegirl':
+          if (import.meta.env.DEV) {
+            console.log('[GoogleRedirect] navigating to: /housegirl-dashboard');
+          }
+          navigate('/housegirl-dashboard');
+          break;
+        case 'agency':
+          navigate('/agency-dashboard');
+          break;
+        case 'admin':
+          navigate('/admin-dashboard');
+          break;
+        default:
+          if (import.meta.env.DEV) {
+            console.log('[GoogleRedirect] navigating to: /login?mode=select-role');
+          }
+          navigate('/login?mode=select-role');
       }
 
       return { error: null, user: response.user };
