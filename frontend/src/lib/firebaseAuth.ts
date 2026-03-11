@@ -9,8 +9,7 @@ import {
   setPersistence,
   browserLocalPersistence,
   GoogleAuthProvider,
-  signInWithRedirect,
-  getRedirectResult,
+  signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword
 } from 'firebase/auth';
@@ -178,12 +177,7 @@ export const signInWithGoogle = async () => {
   provider.setCustomParameters({
     prompt: 'select_account'
   });
-  await signInWithRedirect(auth, provider);
-  return null;
-};
-
-export const getGoogleRedirectResult = async () => {
-  return getRedirectResult(auth);
+  return await signInWithPopup(auth, provider);
 };
 
 export const signInWithEmail = async (email: string, password: string) => {

@@ -15,42 +15,19 @@ export const useGoogleAuth = (
         try {
             setLoading(true);
             shouldSyncFirebaseUserRef.current = true;
-            sessionStorage.setItem('auth_mode', mode || 'login');
-            if (userType) {
-                sessionStorage.setItem('auth_user_type', userType);
-            }
-            const { signInWithGoogle: firebaseSignInWithGoogle } = await import('@/lib/firebaseAuth');
-            await firebaseSignInWithGoogle();
-            return { error: null };
-        } catch (error: unknown) {
-            shouldSyncFirebaseUserRef.current = false;
-            const exactError = error instanceof Error ? error.message : String(error);
-            toast({
-                title: 'Sign In Error',
-                description: exactError || 'Something went wrong. Please try again.',
-                variant: 'destructive'
-            });
-            return { error: exactError || 'Something went wrong. Please try again.' };
-        } finally {
-            setLoading(false);
-        }
-    }, [setLoading, shouldSyncFirebaseUserRef]);
 
-    const handleGoogleRedirectResult = useCallback(async (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => {
-        try {
-            setLoading(true);
-            const resolvedMode = mode || (sessionStorage.getItem('auth_mode') as 'login' | 'signup' | null) || 'login';
-            const resolvedRedirectUserType = userType || (sessionStorage.getItem('auth_user_type') as 'employer' | 'housegirl' | 'agency' | 'admin' | null) || undefined;
-            sessionStorage.removeItem('auth_mode');
-            sessionStorage.removeItem('auth_user_type');
-            const { getGoogleRedirectResult } = await import('@/lib/firebaseAuth');
-            const result = await getGoogleRedirectResult();
-            console.log('Google redirect result:', result);
+            const { signInWithGoogle: firebaseSignInWithGoogle } = await import('@/lib/firebaseAuth');
+            const result = await firebaseSignInWithGoogle();
+            console.log('Google popup result:', result);
+
             if (!result?.user) {
                 setLoading(false);
-                return { error: null };
+                return { error: 'Sign in failed or was cancelled.' };
             }
+
             const token = await result.user.getIdToken();
+            const resolvedMode = mode || 'login';
+            const resolvedRedirectUserType = userType;
 
             const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
                 method: 'POST',
@@ -134,7 +111,7 @@ export const useGoogleAuth = (
                 setLoading(false);
                 toast({
                     title: 'Account not found',
-                    description: 'No account found with this number. Create an account first.',
+                    description: 'No account found. Please create an account first.',
                 });
                 console.log('Navigating to:', '/login?mode=signup');
                 navigate('/login?mode=signup', { replace: true });
@@ -184,6 +161,11 @@ export const useGoogleAuth = (
             setLoading(false);
         }
     }, [navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef]);
+
+    const handleGoogleRedirectResult = useCallback(async (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => {
+        // No-op for popup flow
+        return { error: null };
+    }, []);
 
     return {
         handleGoogleSignIn,
