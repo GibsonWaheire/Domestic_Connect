@@ -36,6 +36,7 @@ export const useEmailAuth = (
                     ...additionalData
                 })
             });
+            console.log('Email signup response:', response);
 
             if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).status === 'account_exists') {
                 const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'employer';
@@ -75,6 +76,7 @@ export const useEmailAuth = (
 
             const resolvedUserType = response.user_type;
             setLoading(false);
+            console.log('Email signup navigating to:', resolvedUserType);
             switch (resolvedUserType) {
                 case 'employer':
                     navigate('/employer-dashboard', { replace: true });
@@ -119,6 +121,7 @@ export const useEmailAuth = (
                     mode: 'login'
                 })
             });
+            console.log('Email signin response:', response);
 
             if ((response as { status?: string }).status === 'not_found') {
                 setLoading(false);
@@ -144,6 +147,7 @@ export const useEmailAuth = (
 
             const resolvedUserType = response.user_type;
             setLoading(false);
+            console.log('Email signin navigating to:', resolvedUserType);
             switch (resolvedUserType) {
                 case 'employer':
                     navigate('/employer-dashboard', { replace: true });

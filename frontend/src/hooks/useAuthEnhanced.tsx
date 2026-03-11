@@ -109,17 +109,36 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) { console.error('Firebase persistence init error:', err); }
 
       unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
+        console.log('onAuthStateChanged fire. firebaseUser:', firebaseUser?.uid);
         if (isSigningOut) { clearTimeout(fallbackTimeout); return; }
         try {
           if (firebaseUser) {
-            if (!firebaseUser.email) { setIsFirebaseUser(true); setLoading(false); clearTimeout(fallbackTimeout); return; }
-            if (!shouldSyncFirebaseUserRef.current) { setLoading(false); clearTimeout(fallbackTimeout); return; }
+            if (!firebaseUser.email) {
+              console.log('No email on firebaseUser, setting isFirebaseUser true');
+              setIsFirebaseUser(true);
+              setLoading(false);
+              clearTimeout(fallbackTimeout);
+              return;
+            }
+            if (!shouldSyncFirebaseUserRef.current) {
+              console.log('shouldSyncFirebaseUserRef is false, skipping handleFirebaseUser');
+              setLoading(false);
+              clearTimeout(fallbackTimeout);
+              return;
+            }
             if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
+              console.log('User already matches, skipping sync');
               setLoading(false); clearTimeout(fallbackTimeout); shouldSyncFirebaseUserRef.current = false; return;
             }
+            console.log('Syncing firebase user to backend...');
             await handleFirebaseUser(firebaseUser);
             shouldSyncFirebaseUserRef.current = false;
-          } else { setUser(null); setIsFirebaseUser(false); shouldSyncFirebaseUserRef.current = false; }
+          } else {
+            console.log('Firebase user is null, clearing user state');
+            setUser(null);
+            setIsFirebaseUser(false);
+            shouldSyncFirebaseUserRef.current = false;
+          }
         } finally { setLoading(false); clearTimeout(fallbackTimeout); }
       });
     };
