@@ -45,6 +45,7 @@ export const useGoogleAuth = (
             sessionStorage.removeItem('auth_user_type');
             const { getGoogleRedirectResult } = await import('@/lib/firebaseAuth');
             const result = await getGoogleRedirectResult();
+            console.log('Google redirect result:', result);
             if (!result?.user) {
                 setLoading(false);
                 return { error: null };
@@ -64,10 +65,12 @@ export const useGoogleAuth = (
                     photo_url: result.user.photoURL
                 })
             });
+            console.log('Verify response:', response);
 
             if ((response as { status?: string; uid?: string }).status === 'role_required') {
                 const responseUid = (response as { uid?: string }).uid || result.user.uid;
                 setLoading(false);
+                console.log('Navigating to:', `/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
                 navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`, { replace: true });
                 return { error: null, user: response.user };
             }
@@ -91,6 +94,7 @@ export const useGoogleAuth = (
                     if (signupResponse.status === 'role_required') {
                         const responseUid = signupResponse.uid || result.user.uid;
                         setLoading(false);
+                        console.log('Navigating to:', `/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`);
                         navigate(`/login?mode=select-role&uid=${encodeURIComponent(responseUid)}`, { replace: true });
                         return { error: null, user: signupResponse.user };
                     }
@@ -104,18 +108,23 @@ export const useGoogleAuth = (
                     setLoading(false);
                     switch (signupUserType) {
                         case 'employer':
+                            console.log('Navigating to:', '/employer-dashboard');
                             navigate('/employer-dashboard', { replace: true });
                             break;
                         case 'housegirl':
+                            console.log('Navigating to:', '/housegirl-dashboard');
                             navigate('/housegirl-dashboard', { replace: true });
                             break;
                         case 'agency':
+                            console.log('Navigating to:', '/agency-dashboard');
                             navigate('/agency-dashboard', { replace: true });
                             break;
                         case 'admin':
+                            console.log('Navigating to:', '/admin-dashboard');
                             navigate('/admin-dashboard', { replace: true });
                             break;
                         default:
+                            console.log('Navigating to:', '/login?mode=select-role');
                             navigate('/login?mode=select-role', { replace: true });
                     }
 
@@ -127,6 +136,7 @@ export const useGoogleAuth = (
                     title: 'Account not found',
                     description: 'No account found with this number. Create an account first.',
                 });
+                console.log('Navigating to:', '/login?mode=signup');
                 navigate('/login?mode=signup', { replace: true });
                 return { error: null, user: response.user };
             }
@@ -140,18 +150,23 @@ export const useGoogleAuth = (
             setLoading(false);
             switch (resolvedUserType) {
                 case 'employer':
+                    console.log('Navigating to:', '/employer-dashboard');
                     navigate('/employer-dashboard', { replace: true });
                     break;
                 case 'housegirl':
+                    console.log('Navigating to:', '/housegirl-dashboard');
                     navigate('/housegirl-dashboard', { replace: true });
                     break;
                 case 'agency':
+                    console.log('Navigating to:', '/agency-dashboard');
                     navigate('/agency-dashboard', { replace: true });
                     break;
                 case 'admin':
+                    console.log('Navigating to:', '/admin-dashboard');
                     navigate('/admin-dashboard', { replace: true });
                     break;
                 default:
+                    console.log('Navigating to:', '/login?mode=select-role');
                     navigate('/login?mode=select-role', { replace: true });
             }
 
