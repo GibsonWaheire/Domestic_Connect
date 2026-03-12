@@ -14,6 +14,23 @@ import logging
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__)
 
+@auth_bp.route('/check-phone', methods=['POST'])
+def check_phone():
+    """Check if a phone number is already registered (no auth required)."""
+    try:
+        data = request.get_json() or {}
+        phone = data.get('phone_number', '').strip()
+        if not phone:
+            return jsonify({'error': 'phone_number required'}), 400
+        users = db.collection('users').where('phone_number', '==', phone).limit(1).stream()
+        for user in users:
+            u = user.to_dict()
+            return jsonify({'exists': True, 'user_type': u.get('user_type')})
+        return jsonify({'exists': False})
+    except Exception as e:
+        logger.error(f'check-phone error: {str(e)}')
+        return jsonify({'exists': False})
+
 @auth_bp.route('/firebase_signup', methods=['POST'])
 @firebase_auth_required
 @rate_limit(max_requests=5, window_seconds=300)
