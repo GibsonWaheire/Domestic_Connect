@@ -45,9 +45,14 @@ export class FirebaseAuthService {
   static async setupRecaptcha() {
     try {
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
+        try { window.recaptchaVerifier.clear(); } catch {}
         window.recaptchaVerifier = undefined;
       }
+
+      // Always wipe the DOM container before re-rendering to prevent
+      // "reCAPTCHA has already been rendered in this element" error
+      const container = document.getElementById('recaptcha-container');
+      if (container) container.innerHTML = '';
 
       window.recaptchaVerifier =
         new RecaptchaVerifier(

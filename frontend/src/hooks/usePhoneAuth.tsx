@@ -89,7 +89,7 @@ export const usePhoneAuth = (
             console.log('Phone verify response:', response);
 
             if ((response as { status?: string; user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).status === 'account_exists') {
-                const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'employer';
+                const existingRole = (response as { user_type?: 'employer' | 'housegirl' | 'agency' | 'admin' }).user_type || 'this number';
                 setLoading(false);
                 toast({
                     title: 'Account exists',

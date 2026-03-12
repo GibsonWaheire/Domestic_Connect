@@ -132,6 +132,34 @@ const LoginPage = () => {
     try {
       const formattedPhone = formatKenyanPhone(phoneInput);
       const authMode = mode === 'signup' ? 'signup' : 'login';
+
+      // Check phone existence BEFORE sending OTP
+      try {
+        const checkRes = await fetch(`${API_BASE_URL}/api/auth/check-phone`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone_number: formattedPhone })
+        });
+        const checkData = await checkRes.json();
+
+        if (authMode === 'signup' && checkData.exists) {
+          const role = checkData.user_type || 'an account';
+          setError(`This number is already registered as ${role}. Please sign in instead.`);
+          setMode('login');
+          navigate('/login');
+          return;
+        }
+
+        if (authMode === 'login' && !checkData.exists) {
+          setError('No account found with this number. Please create an account first.');
+          setMode('signup');
+          navigate('/login?mode=signup');
+          return;
+        }
+      } catch {
+        // If check-phone fails (network/server), proceed with OTP anyway
+      }
+
       const result = await handleSendOTP(formattedPhone, userType, authMode);
       if (result.error) {
         setError(result.error);
