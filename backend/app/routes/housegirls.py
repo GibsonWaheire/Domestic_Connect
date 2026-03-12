@@ -344,17 +344,19 @@ def update_housegirl(housegirl_id):
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401
             
-        hg_doc = db.collection('housegirl_profiles').document(housegirl_id).get()
-        if not hg_doc.exists:
-            return jsonify({'error': 'Housegirl not found'}), 404
-            
-        housegirl = hg_doc.to_dict()
+        doc_ref = db.collection('housegirl_profiles').document(housegirl_id)
+        hg_doc = doc_ref.get()
+        housegirl = hg_doc.to_dict() if hg_doc.exists else {}
         
         # Check authorization
         authorized = getattr(user, 'is_admin', False)
-        if not authorized:
+        if not authorized and hg_doc.exists:
             prof_doc = db.collection('profiles').document(housegirl.get('profile_id')).get()
             if prof_doc.exists and prof_doc.to_dict().get('user_id') == getattr(user, 'id'):
+                authorized = True
+        elif not authorized and not hg_doc.exists:
+            user_ids = {getattr(user, 'id', None), getattr(user, 'firebase_uid', None)}
+            if housegirl_id in user_ids:
                 authorized = True
                 
         if not authorized:
@@ -366,19 +368,31 @@ def update_housegirl(housegirl_id):
             data.pop(field, None)
         updates = {}
         
-        fields = ['age', 'bio', 'current_location', 'location', 'education', 
-                  'experience', 'expected_salary', 'accommodation_type', 
-                  'tribe', 'profile_photo_url', 'activation_fee_paid']
+        fields = [
+            'age', 'bio', 'current_location', 'location', 'education',
+            'experience', 'expected_salary', 'accommodation_type',
+            'tribe', 'profile_photo_url', 'activation_fee_paid',
+            'full_name', 'role', 'skills', 'monthly_rate',
+            'photo_url', 'phone_number'
+        ]
                   
         for field in fields:
             if field in data:
                 updates[field] = data[field]
                 
         if updates:
-            updates['updated_at'] = datetime.utcnow().isoformat()
-            db.collection('housegirl_profiles').document(housegirl_id).update(updates)
+            timestamp = datetime.utcnow().isoformat()
+            updates['updated_at'] = timestamp
+            if hg_doc.exists:
+                doc_ref.update(updates)
+            else:
+                doc_ref.set({
+                    'id': housegirl_id,
+                    'created_at': timestamp,
+                    **updates
+                })
             
-        updated_doc = db.collection('housegirl_profiles').document(housegirl_id).get()
+        updated_doc = doc_ref.get()
         return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:

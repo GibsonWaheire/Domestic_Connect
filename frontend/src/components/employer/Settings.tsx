@@ -75,7 +75,7 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
     setIsSaving(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const employerId = (user as { uid?: string; id?: string }).uid || user.id;
+      const employerId = (user as { firebase_uid?: string; id?: string }).firebase_uid || user.id;
       const response = await fetch(`${API_BASE_URL}/api/employers/${employerId}`, {
         method: 'PUT',
         headers: {

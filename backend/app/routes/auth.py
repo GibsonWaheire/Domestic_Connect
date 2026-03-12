@@ -251,7 +251,7 @@ def verify_phone_auth():
             user_doc_ref.set(user_data)
             
             # Create role-specific profile document
-            profile_id = str(uuid.uuid4())
+            profile_id = uid
             profile_data = {
                 'id': profile_id,
                 'user_id': user_id,
@@ -263,9 +263,9 @@ def verify_phone_auth():
                 'updated_at': timestamp
             }
             if user_type == 'employer':
-                db.collection('employer_profiles').document(profile_id).set(profile_data)
+                db.collection('employer_profiles').document(uid).set(profile_data)
             elif user_type == 'housegirl':
-                db.collection('housegirl_profiles').document(profile_id).set(profile_data)
+                db.collection('housegirl_profiles').document(uid).set(profile_data)
 
             user_type_to_return = user_type
 

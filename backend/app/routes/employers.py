@@ -177,17 +177,19 @@ def update_employer(employer_id):
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401
             
-        emp_doc = db.collection('employer_profiles').document(employer_id).get()
-        if not emp_doc.exists:
-            return jsonify({'error': 'Employer not found'}), 404
-            
-        emp = emp_doc.to_dict()
+        doc_ref = db.collection('employer_profiles').document(employer_id)
+        emp_doc = doc_ref.get()
+        emp = emp_doc.to_dict() if emp_doc.exists else {}
         
         # Check authorization
         authorized = getattr(user, 'is_admin', False)
-        if not authorized:
+        if not authorized and emp_doc.exists:
             prof_doc = db.collection('profiles').document(emp.get('profile_id')).get()
             if prof_doc.exists and prof_doc.to_dict().get('user_id') == getattr(user, 'id'):
+                authorized = True
+        elif not authorized and not emp_doc.exists:
+            user_ids = {getattr(user, 'id', None), getattr(user, 'firebase_uid', None)}
+            if employer_id in user_ids:
                 authorized = True
                 
         if not authorized:
@@ -196,20 +198,25 @@ def update_employer(employer_id):
         data = request.get_json()
         updates = {}
         
-        # Update fields
-        if 'company_name' in data:
-            updates['company_name'] = data['company_name']
-        if 'location' in data:
-            updates['location'] = data['location']
-        if 'description' in data:
-            updates['description'] = data['description']
+        fields = ['company_name', 'location', 'description', 'full_name', 'phone', 'photo_url']
+        for field in fields:
+            if field in data:
+                updates[field] = data[field]
             
         if updates:
-            updates['updated_at'] = datetime.utcnow().isoformat()
-            db.collection('employer_profiles').document(employer_id).update(updates)
+            timestamp = datetime.utcnow().isoformat()
+            updates['updated_at'] = timestamp
+            if emp_doc.exists:
+                doc_ref.update(updates)
+            else:
+                doc_ref.set({
+                    'id': employer_id,
+                    'created_at': timestamp,
+                    **updates
+                })
             
         # Refetch updated
-        updated_doc = db.collection('employer_profiles').document(employer_id).get()
+        updated_doc = doc_ref.get()
         return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:
