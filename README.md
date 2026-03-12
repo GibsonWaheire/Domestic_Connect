@@ -1,108 +1,78 @@
-# Domestic Connect 🇰🇪
+# Domestic Connect
 
-**Kenya's Premier Platform for Domestic Workers & Families**
+## System Architecture
 
-## 🚀 **Live Demo**
+Domestic Connect is a full-stack platform with a React/Vite frontend and a Flask backend, backed by Firebase Authentication and Firestore.
 
-**👉 [Try it now: https://domestic-connect.co.ke/](https://domestic-connect.co.ke/)**
+- **Frontend:** `frontend/` (React + TypeScript + Vite)
+- **Backend API:** `backend/` (Flask blueprints)
+- **Primary datastore:** Firestore collections (`users`, `profiles`, `housegirl_profiles`, `employer_profiles`, `jobs`, `payments`, `contact_access`)
+- **Auth provider:** Firebase Auth (phone OTP + Google)
+- **Deployment targets:** static frontend + Python API runtime
 
-## 🛠️ **Local Development (Frontend + Backend)**
+## High-Level Data Flow
 
-Run these steps to start the API and frontend in sync.
+1. Client authenticates with Firebase (OTP or Google).
+2. Client sends Firebase ID token to backend (`Authorization: Bearer <token>`).
+3. Backend verifies token and resolves/creates `users` records.
+4. Role-specific operations use Firestore profile collections:
+   - `housegirl_profiles`
+   - `employer_profiles`
+5. Client dashboards fetch and update data through `/api/*` routes.
 
-### 1) Start backend API (`http://localhost:5000`)
+## Identity and Document IDs
 
-```bash
-cd backend
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python run.py
+- User document IDs are `user_<firebase_uid>` in `users`.
+- Role profile documents are standardized to the same ID pattern (`user_<firebase_uid>`).
+- Backend route handlers normalize incoming IDs so both raw `<uid>` and `user_<uid>` resolve to a single canonical document.
+
+## Backend Route Structure
+
+Blueprints are organized under `backend/app/routes/` by domain:
+
+- `auth.py`: Firebase verification, session checks, profile bootstrap
+- `housegirls.py`: listing, profile CRUD, visibility metadata
+- `employers.py`: employer profile CRUD
+- `jobs.py`, `payments.py`, `mpesa.py`, `profiles.py`, etc.: domain-specific operations
+
+Cross-cutting behavior is handled by middleware/services:
+
+- token verification and route guards
+- rate limiting and request validation
+- structured logging and error wrapping
+
+## Frontend Architecture
+
+Key frontend layers:
+
+- **Pages:** route-level screens under `frontend/src/pages/`
+- **Hooks:** auth/session orchestration in `frontend/src/hooks/`
+- **API utilities:** request and error handling in `frontend/src/lib/`
+- **UI components:** reusable blocks under `frontend/src/components/`
+
+Auth state is centralized in `useAuthEnhanced` and consumed by dashboards/pages for role-based routing and protected calls.
+
+## Integration Boundaries
+
+- All write operations for role profiles flow through backend `PUT` endpoints.
+- Frontend must use canonical user IDs for profile routes to avoid split writes/reads.
+- Payment and profile domains are separated by route and payload contracts.
+
+## Repository Layout
+
+```text
+Domestic_Connect/
+├── backend/
+│   ├── app/
+│   │   ├── routes/
+│   │   ├── middleware/
+│   │   └── services/
+│   └── run.py
+└── frontend/
+    ├── src/
+    │   ├── pages/
+    │   ├── hooks/
+    │   ├── components/
+    │   └── lib/
+    └── public/
 ```
-
-Health checks:
-
-- `http://localhost:5000/api/health`
-- `http://localhost:5000/api/health/detailed`
-
-### 2) Start frontend (`http://localhost:5173`)
-
-Open a second terminal:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-### 3) Confirm API base URL alignment
-
-Frontend defaults to `http://localhost:5000` in development via `frontend/src/lib/apiConfig.ts`.
-
-Optional override:
-
-```bash
-cd frontend
-echo "VITE_API_BASE_URL=http://localhost:5000" > .env.local
-```
-
-## 🏠 **What We Do**
-
-Connect Kenyan families with trusted domestic workers and professional agencies. Simple, safe, and efficient.
-
-## 👥 **For Everyone**
-
-### **👨‍👩‍👧‍👦 Families**
-- Find verified domestic workers
-- Browse by location, skills, experience
-- Secure payments with M-Pesa
-- Agency support available
-
-### **👩‍💼 Domestic Workers**
-- Create professional profiles
-- Find great job opportunities
-- Set your own rates
-- Build your reputation
-
-### **🏢 Agencies**
-- Showcase your workers
-- Manage client relationships
-- Track placements and payments
-- Grow your business
-
-## 💰 **Simple Pricing**
-
-- **Contact Workers**: KES 200 (one-time)
-- **Agency Packages**: KES 1,200 - KES 2,000
-- **Worker Profiles**: Free to create
-- **All Payments**: Secure M-Pesa integration
-
-## 🔒 **Safe & Trusted**
-
-✅ All workers verified  
-✅ Background checks  
-✅ Secure payments  
-✅ Dispute resolution  
-✅ Replacement guarantees  
-
-## 📱 **How It Works**
-
-1. **Sign Up** → Choose your role (Family/Worker/Agency)
-2. **Browse** → Find what you're looking for
-3. **Connect** → Start conversations
-4. **Hire** → Complete with secure payments
-5. **Support** → Get ongoing help
-
-## 📞 **Get Started**
-
-**Ready to find your perfect match?**
-
-👉 **[Visit Domestic Connect](https://domestic-connect.co.ke/)**
-
-**Contact Us:**
-- 📧 g.waheir00@gmail.com
-- 📱 +254 726899113
-
----
-
-**Building a better future for domestic work in Kenya** 🇰🇪
