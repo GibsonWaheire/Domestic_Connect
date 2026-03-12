@@ -49,29 +49,26 @@ export class FirebaseAuthService {
         window.recaptchaVerifier = undefined;
       }
 
-      // Always wipe the DOM container before re-rendering to prevent
-      // "reCAPTCHA has already been rendered in this element" error
       const container = document.getElementById('recaptcha-container');
-      if (container) container.innerHTML = '';
+      if (container) {
+        container.innerHTML = '';
+      }
 
       window.recaptchaVerifier =
         new RecaptchaVerifier(
           auth,
           'recaptcha-container',
-          {
-            size: 'invisible',
-            callback: () => { },
-            'expired-callback': () => {
-              window.recaptchaVerifier = undefined;
-            }
-          }
+          { size: 'invisible' }
         );
 
-      await window.recaptchaVerifier.render();
       return window.recaptchaVerifier;
 
     } catch (error) {
       window.recaptchaVerifier = undefined;
+      const container = document.getElementById('recaptcha-container');
+      if (container) {
+        container.innerHTML = '';
+      }
       throw error;
     }
   }
@@ -98,8 +95,12 @@ export class FirebaseAuthService {
     } catch (error: unknown) {
       console.error(error);
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.clear();
-        window.recaptchaVerifier = null;
+        try { window.recaptchaVerifier.clear(); } catch {}
+      }
+      window.recaptchaVerifier = undefined;
+      const container = document.getElementById('recaptcha-container');
+      if (container) {
+        container.innerHTML = '';
       }
       if (error instanceof Error && error.message === 'OTP_TIMEOUT') {
         return {
