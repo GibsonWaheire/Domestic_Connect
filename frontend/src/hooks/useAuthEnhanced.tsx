@@ -55,6 +55,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency' | 'admin'>('employer');
   const [selectedMode, setSelectedMode] = useState<'login' | 'signup'>('login');
   const shouldSyncFirebaseUserRef = useRef(false);
+  const normalizeUser = useCallback((incomingUser: User | null): User | null => {
+    if (!incomingUser) return null;
+    const userWithIds = incomingUser as User & { uid?: string; firebase_uid?: string };
+    const rawUid = userWithIds.uid || userWithIds.firebase_uid || '';
+    const normalizedId = userWithIds.id || (rawUid ? `user_${rawUid}` : '');
+    return {
+      ...incomingUser,
+      id: normalizedId || incomingUser.id,
+      uid: rawUid || userWithIds.uid,
+      firebase_uid: rawUid || userWithIds.firebase_uid,
+    };
+  }, []);
+  const setNormalizedUser = useCallback((incomingUser: User | null) => {
+    setUser(normalizeUser(incomingUser));
+  }, [normalizeUser]);
 
   const checkSession = useCallback(async () => {
     try {
@@ -65,8 +80,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
       const response = await apiRequest<{ user: User | null }>('/api/auth/check_session');
       if (response.user) {
-        setUser(response.user);
-        setIsFirebaseUser(response.user.is_firebase_user || false);
+        const normalizedUser = normalizeUser(response.user);
+        setUser(normalizedUser);
+        setIsFirebaseUser(normalizedUser?.is_firebase_user || false);
       } else {
         setUser(null);
         setIsFirebaseUser(false);
@@ -77,7 +93,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [normalizeUser]);
 
   const handleFirebaseUser = useCallback(async (firebaseUser: FirebaseUser) => {
     try {
@@ -88,7 +104,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         headers: { 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ firebase_uid: firebaseUser.uid, email: firebaseUser.email, display_name: firebaseUser.displayName })
       });
-      setUser({ ...response.user, is_firebase_user: true });
+      setNormalizedUser({ ...response.user, is_firebase_user: true });
       setIsFirebaseUser(true);
     } catch (error) {
       if (!firebaseUser.email) return;
@@ -96,7 +112,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (!user) return;
       toast({ title: "Profile Sync Required", description: "We could not verify your account role right now. Please try logging in again.", variant: "destructive" });
     }
-  }, [user]);
+  }, [setNormalizedUser, user]);
 
   useEffect(() => {
     let unsubscribe: () => void = () => { };
@@ -161,9 +177,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [isFirebaseUser, navigate]);
 
   useInactivityTimer(user, signOut);
-  const googleAuth = useGoogleAuth(navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
-  const phoneAuth = usePhoneAuth(navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, confirmationResult, setConfirmationResult, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
-  const emailAuth = useEmailAuth(navigate, setLoading, setUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
+  const googleAuth = useGoogleAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
+  const phoneAuth = usePhoneAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, confirmationResult, setConfirmationResult, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
+  const emailAuth = useEmailAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
   const value = {
     user, loading, authStep, phoneNumber, formatKenyanPhone,
