@@ -58,20 +58,9 @@ export class FirebaseAuthService {
         new RecaptchaVerifier(
           auth,
           'recaptcha-container',
-          {
-            size: 'invisible',
-            callback: () => {},
-            'expired-callback': () => {
-              window.recaptchaVerifier = undefined;
-              const expiredContainer = document.getElementById('recaptcha-container');
-              if (expiredContainer) {
-                expiredContainer.innerHTML = '';
-              }
-            }
-          }
+          { size: 'invisible' }
         );
 
-      await window.recaptchaVerifier.render();
       return window.recaptchaVerifier;
 
     } catch (error) {
