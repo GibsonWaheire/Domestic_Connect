@@ -74,6 +74,19 @@ const LoginPage = () => {
     }
   }, [searchParams]);
 
+  useEffect(() => {
+    const container = document.getElementById('recaptcha-container');
+    if (container) {
+      container.innerHTML = '';
+    }
+    if (window.recaptchaVerifier) {
+      try {
+        window.recaptchaVerifier.clear();
+      } catch {}
+      window.recaptchaVerifier = undefined;
+    }
+  }, [mode]);
+
 
 
 
