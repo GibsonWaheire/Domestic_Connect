@@ -3,22 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
 import { errorService } from '@/lib/errorService';
-import { User, apiRequest, formatKenyanPhone } from '@/lib/authUtils';
+import { User, apiRequest } from '@/lib/authUtils';
 import { useInactivityTimer } from './useInactivityTimer';
 import { useGoogleAuth } from './useGoogleAuth';
-import { usePhoneAuth } from './usePhoneAuth';
 import { useEmailAuth } from './useEmailAuth';
 
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  authStep: 1 | 2;
-  phoneNumber: string;
-  formatKenyanPhone: (phone: string) => string;
-  handleSendOTP: (rawPhone: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => Promise<{ error: string | null }>;
-  handleVerifyOTP: (code: string, mode?: 'login' | 'signup') => Promise<{ error: string | null; userType?: 'employer' | 'housegirl' | 'agency' | 'admin' }>;
-  resendOTP: () => Promise<{ error: string | null }>;
-  changePhoneNumber: () => void;
   signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
@@ -48,10 +40,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isFirebaseUser, setIsFirebaseUser] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [authStep, setAuthStep] = useState<1 | 2>(1);
-  const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency' | 'admin'>('employer');
-  const [selectedMode, setSelectedMode] = useState<'login' | 'signup'>('login');
   const shouldSyncFirebaseUserRef = useRef(false);
   const normalizeUser = useCallback((incomingUser: User | null): User | null => {
     if (!incomingUser) return null;
@@ -204,12 +192,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useInactivityTimer(user, signOut);
   const googleAuth = useGoogleAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
-  const phoneAuth = usePhoneAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
   const emailAuth = useEmailAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
   const value = {
-    user, loading, authStep, phoneNumber, formatKenyanPhone,
-    ...phoneAuth,
+    user, loading,
     ...emailAuth,
     signInWithGoogle: googleAuth.handleGoogleSignIn,
     handleGoogleSignIn: googleAuth.handleGoogleSignIn,
