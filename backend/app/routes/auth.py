@@ -5,8 +5,6 @@ from app.firebase_init import db
 from app.middleware.security import rate_limit, validate_json_input, USER_SCHEMA
 from app.middleware.performance import cache_response, compress_response
 from app.middleware.logging import log_request, log_error, log_user_action
-from app.services import sms_service
-import firebase_admin.auth as auth_admin
 import uuid
 import bcrypt
 from datetime import datetime
@@ -15,74 +13,6 @@ import logging
 
 logger = logging.getLogger(__name__)
 auth_bp = Blueprint('auth', __name__)
-
-@auth_bp.route('/send-otp', methods=['POST'])
-@rate_limit(max_requests=5, window_seconds=300)
-def send_otp():
-    """Send SMS OTP via Africa's Talking."""
-    try:
-        data = request.get_json() or {}
-        phone_number = data.get('phone_number', '').strip()
-        if not phone_number:
-            return jsonify({'error': 'phone_number required'}), 400
-        result = sms_service.send_otp(phone_number)
-        return jsonify(result), 200
-    except Exception as e:
-        logger.error(f'send-otp error: {str(e)}')
-        return jsonify({'error': 'Failed to send code. Please try again.'}), 500
-
-
-@auth_bp.route('/verify-otp', methods=['POST'])
-@rate_limit(max_requests=10, window_seconds=300)
-def verify_otp():
-    """Verify SMS OTP and return a Firebase custom token."""
-    try:
-        data = request.get_json() or {}
-        phone_number = data.get('phone_number', '').strip()
-        code = data.get('code', '').strip()
-        if not phone_number or not code:
-            return jsonify({'error': 'phone_number and code required'}), 400
-
-        result = sms_service.verify_otp(phone_number, code)
-        if not result.get('valid'):
-            return jsonify({'error': result.get('error', 'Invalid code')}), 400
-
-        try:
-            fb_user = auth_admin.get_user_by_phone_number(phone_number)
-        except auth_admin.UserNotFoundError:
-            fb_user = auth_admin.create_user(phone_number=phone_number)
-
-        custom_token = auth_admin.create_custom_token(fb_user.uid)
-        # custom_token is bytes — decode for JSON serialisation
-        if isinstance(custom_token, bytes):
-            custom_token = custom_token.decode('utf-8')
-
-        return jsonify({
-            'success': True,
-            'custom_token': custom_token,
-            'uid': fb_user.uid
-        }), 200
-    except Exception as e:
-        logger.error(f'verify-otp error: {str(e)}')
-        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
-
-
-@auth_bp.route('/check-phone', methods=['POST'])
-def check_phone():
-    """Check if a phone number is already registered (no auth required)."""
-    try:
-        data = request.get_json() or {}
-        phone = data.get('phone_number', '').strip()
-        if not phone:
-            return jsonify({'error': 'phone_number required'}), 400
-        users = db.collection('users').where('phone_number', '==', phone).limit(1).stream()
-        for user in users:
-            u = user.to_dict()
-            return jsonify({'exists': True, 'user_type': u.get('user_type')})
-        return jsonify({'exists': False})
-    except Exception as e:
-        logger.error(f'check-phone error: {str(e)}')
-        return jsonify({'exists': False})
 
 @auth_bp.route('/firebase_signup', methods=['POST'])
 @firebase_auth_required
