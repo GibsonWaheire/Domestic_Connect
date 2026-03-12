@@ -359,19 +359,24 @@ const LoginPage = () => {
                 {mode === 'signup' && (
                   <div className="flex w-full rounded-[14px] bg-white border border-gray-200 p-1.5 mb-6 shadow-sm">
                     {[
-                      { value: 'employer', label: 'Employer' },
-                      { value: 'housegirl', label: 'Housegirl' },
+                      { value: 'employer', label: 'Employer', desc: 'I want to hire house help' },
+                      { value: 'housegirl', label: 'Housegirl', desc: 'I am looking for work' },
                     ].map((option) => (
                       <button
                         key={option.value}
                         type="button"
                         onClick={() => setUserType(option.value as 'employer' | 'housegirl')}
-                        className={`flex-1 rounded-[10px] py-2.5 text-center text-sm font-semibold transition-all duration-200 ${userType === option.value
+                        className={`flex-1 rounded-[10px] py-3 text-center transition-all duration-200 ${userType === option.value
                           ? 'bg-[#111] text-white shadow-md'
                           : 'text-gray-500 hover:text-[#111] hover:bg-gray-50'
                           }`}
                       >
-                        {option.label}
+                        <div className="flex flex-col items-center">
+                          <span className="text-sm font-semibold">{option.label}</span>
+                          <span className={`text-[10px] mt-0.5 font-normal ${userType === option.value ? 'text-white/70' : 'text-gray-400'}`}>
+                            {option.desc}
+                          </span>
+                        </div>
                       </button>
                     ))}
                   </div>
@@ -499,7 +504,7 @@ const LoginPage = () => {
                     onClick={() => setShowEmailForm(true)}
                     className="mt-6 text-sm text-gray-400 underline cursor-pointer transition-all duration-200"
                   >
-                    Prefer email? Sign in with email →
+                    {mode === 'login' ? 'Prefer email? Sign in with email →' : 'Prefer email? Sign up with email →'}
                   </button>
                 )}
 
