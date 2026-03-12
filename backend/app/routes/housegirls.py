@@ -11,6 +11,8 @@ housegirls_bp = Blueprint('housegirls', __name__)
 
 
 def normalize_id(uid):
+    if not uid:
+        return None
     if uid.startswith('user_'):
         return uid
     return f'user_{uid}'
@@ -354,21 +356,12 @@ def update_housegirl(housegirl_id):
             
         doc_ref = db.collection('housegirl_profiles').document(housegirl_id)
         hg_doc = doc_ref.get()
-        housegirl = hg_doc.to_dict() if hg_doc.exists else {}
         
-        # Check authorization
-        authorized = getattr(user, 'is_admin', False)
-        if not authorized and hg_doc.exists:
-            prof_doc = db.collection('profiles').document(housegirl.get('profile_id')).get()
-            if prof_doc.exists and prof_doc.to_dict().get('user_id') == getattr(user, 'id'):
-                authorized = True
-        elif not authorized and not hg_doc.exists:
-            user_ids = {getattr(user, 'id', None), getattr(user, 'firebase_uid', None)}
-            if housegirl_id in user_ids:
-                authorized = True
-                
-        if not authorized:
-            return jsonify({'error': 'Unauthorized'}), 403
+        firebase_uid = (request.firebase_user or {}).get('uid')
+        normalized_id = normalize_id(firebase_uid)
+        is_admin = bool(getattr(user, 'is_admin', False))
+        if housegirl_id != normalized_id and not is_admin:
+            return jsonify({'error': 'Forbidden'}), 403
             
         data = request.get_json()
         BLOCKED_FIELDS = ['unlock_count', 'is_available', 'in_demand_alert']
