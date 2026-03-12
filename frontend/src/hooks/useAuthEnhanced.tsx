@@ -63,7 +63,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return {
       ...incomingUser,
       id: normalizedId || incomingUser.id,
-      uid: rawUid || userWithIds.uid,
       firebase_uid: rawUid || userWithIds.firebase_uid,
     };
   }, []);
@@ -108,6 +107,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [normalizeUser]);
 
+  useEffect(() => {
+    checkSession();
+  }, [checkSession]);
+
   const handleFirebaseUser = useCallback(async (firebaseUser: FirebaseUser) => {
     try {
       if (!firebaseUser.email) return;
@@ -145,8 +148,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             if (!firebaseUser.email) {
               if (import.meta.env.DEV) console.log('No email on firebaseUser, setting isFirebaseUser true');
               setIsFirebaseUser(true);
-              setLoading(false);
-              clearTimeout(fallbackTimeout);
+              await checkSession();
               return;
             }
             if (!shouldSyncFirebaseUserRef.current) {
@@ -188,7 +190,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     setupAuth();
     return () => { clearTimeout(fallbackTimeout); unsubscribe(); };
-  }, [handleFirebaseUser, isSigningOut, user]);
+  }, [checkSession, handleFirebaseUser, isSigningOut, user]);
 
   const signOut = useCallback(async (redirectTo = '/home') => {
     try {

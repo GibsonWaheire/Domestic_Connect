@@ -18,6 +18,40 @@ def normalize_id(uid):
     return f'user_{uid}'
 
 
+def get_profile_id_for_user(user_id):
+    profile_docs = list(
+        db.collection('profiles')
+        .where('user_id', '==', user_id)
+        .limit(1)
+        .stream()
+    )
+    if not profile_docs:
+        return None
+    return profile_docs[0].to_dict().get('id')
+
+
+def find_employer_doc_for_user(user_id):
+    by_user_id = next(
+        db.collection('employer_profiles')
+        .where('user_id', '==', user_id)
+        .limit(1)
+        .stream(),
+        None
+    )
+    if by_user_id:
+        return by_user_id
+    profile_id = get_profile_id_for_user(user_id)
+    if not profile_id:
+        return None
+    return next(
+        db.collection('employer_profiles')
+        .where('profile_id', '==', profile_id)
+        .limit(1)
+        .stream(),
+        None
+    )
+
+
 @employers_bp.route('/', methods=['GET'])
 def get_employers():
     """Get all employer profiles"""
@@ -91,8 +125,13 @@ def get_employer(employer_id):
     try:
         employer_id = normalize_id(employer_id)
         emp_doc = db.collection('employer_profiles').document(employer_id).get()
+        resolved_employer_id = employer_id
         if not emp_doc.exists:
-            return jsonify({'error': 'Employer not found'}), 404
+            fallback_doc = find_employer_doc_for_user(employer_id)
+            if not fallback_doc:
+                return jsonify({'error': 'Employer not found'}), 404
+            emp_doc = fallback_doc
+            resolved_employer_id = fallback_doc.id
             
         emp = emp_doc.to_dict()
         
@@ -113,7 +152,7 @@ def get_employer(employer_id):
                         last_name = u_data.get('last_name', '')
         
         return jsonify({
-            'id': emp.get('id'),
+            'id': emp.get('id') or resolved_employer_id,
             'profile_id': profile_id,
             'company_name': emp.get('company_name'),
             'full_name': emp.get('full_name'),
@@ -193,6 +232,11 @@ def update_employer(employer_id):
             
         doc_ref = db.collection('employer_profiles').document(employer_id)
         emp_doc = doc_ref.get()
+        if not emp_doc.exists:
+            fallback_doc = find_employer_doc_for_user(employer_id)
+            if fallback_doc:
+                doc_ref = db.collection('employer_profiles').document(fallback_doc.id)
+                emp_doc = doc_ref.get()
         emp = emp_doc.to_dict() if emp_doc.exists else {}
         
         # Check authorization
@@ -202,7 +246,10 @@ def update_employer(employer_id):
             if prof_doc.exists and prof_doc.to_dict().get('user_id') == getattr(user, 'id'):
                 authorized = True
         elif not authorized and not emp_doc.exists:
-            user_ids = {getattr(user, 'id', None), getattr(user, 'firebase_uid', None)}
+            user_ids = {
+                normalize_id(getattr(user, 'id', None)),
+                normalize_id(getattr(user, 'firebase_uid', None))
+            }
             if employer_id in user_ids:
                 authorized = True
                 
@@ -237,15 +284,7 @@ def update_employer(employer_id):
             if emp_doc.exists:
                 doc_ref.update(updates)
             else:
-                profile_id = None
-                profile_docs = list(
-                    db.collection('profiles')
-                    .where('user_id', '==', getattr(user, 'id'))
-                    .limit(1)
-                    .stream()
-                )
-                if profile_docs:
-                    profile_id = profile_docs[0].to_dict().get('id')
+                profile_id = get_profile_id_for_user(getattr(user, 'id'))
                 doc_ref.set({
                     'id': employer_id,
                     'user_id': getattr(user, 'id'),

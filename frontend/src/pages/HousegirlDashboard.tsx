@@ -125,20 +125,28 @@ const HousegirlDashboard = () => {
 
   // Get user's actual data from registration
   const getUserData = useCallback(() => {
+    const normalizedSkills = (editFormData.skills || '')
+      .split(',')
+      .map((skill) => skill.trim())
+      .filter(Boolean);
+    const normalizedLanguages = (editFormData.languages || '')
+      .split(',')
+      .map((language) => language.trim())
+      .filter(Boolean);
     return {
       age: user?.age || '',
-      location: user?.location || '',
-      experience: user?.experience || '',
-      education: user?.education || '',
-      expectedSalary: user?.expectedSalary || '',
-      accommodationType: user?.accommodationType || '',
-      community: user?.community || '',
-      skills: user?.skills || [],
-      languages: user?.languages || [],
-      bio: user?.bio || '',
-      photoUrl: (user as { photo_url?: string; profile_photo_url?: string } | null)?.photo_url || (user as { photo_url?: string; profile_photo_url?: string } | null)?.profile_photo_url || ''
+      location: editFormData.location || user?.location || '',
+      experience: editFormData.experience || user?.experience || '',
+      education: editFormData.education || user?.education || '',
+      expectedSalary: editFormData.expectedSalary || user?.expectedSalary || '',
+      accommodationType: editFormData.accommodationType || user?.accommodationType || '',
+      community: editFormData.community || user?.community || '',
+      skills: normalizedSkills.length > 0 ? normalizedSkills : (user?.skills || []),
+      languages: normalizedLanguages.length > 0 ? normalizedLanguages : (user?.languages || []),
+      bio: editFormData.bio || user?.bio || '',
+      photoUrl: profilePhoto || (user as { photo_url?: string; profile_photo_url?: string } | null)?.photo_url || (user as { photo_url?: string; profile_photo_url?: string } | null)?.profile_photo_url || ''
     };
-  }, [user]);
+  }, [editFormData, profilePhoto, user]);
 
   // Use real-time data hook
   const {
