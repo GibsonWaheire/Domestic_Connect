@@ -503,13 +503,6 @@ const LoginPage = () => {
                   </button>
                 )}
 
-                <div className="mt-8 text-center text-sm font-medium">
-                  {mode === 'login' ? (
-                    <p className="text-gray-500">Don't have an account? <button type="button" onClick={() => { setMode('signup'); navigate('/login?mode=signup'); }} className="text-[#F59E0B] font-bold hover:text-amber-600 transition-all duration-200 ml-1">Join Today</button></p>
-                  ) : (
-                    <p className="text-gray-500">Already have an account? <button type="button" onClick={() => { setMode('login'); navigate('/login'); }} className="text-[#F59E0B] font-bold hover:text-amber-600 transition-all duration-200 ml-1">Sign In</button></p>
-                  )}
-                </div>
               </form>
             ) : (
               <form onSubmit={handleVerifySubmit} className="flex flex-col items-center animate-in fade-in zoom-in-95 duration-300">
