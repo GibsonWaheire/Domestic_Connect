@@ -230,6 +230,7 @@ const HousegirlDashboard = () => {
 
     try {
       const token = await FirebaseAuthService.getIdToken();
+      const userId = (user as { firebase_uid?: string; id?: string } | null)?.firebase_uid || user?.id;
       const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
         method: 'POST',
         headers: {
@@ -272,7 +273,7 @@ const HousegirlDashboard = () => {
         throw new Error('Payment not confirmed. Please try again.');
       }
 
-      const resetResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlProfileId}`, {
+      const resetResponse = await fetch(`${API_BASE_URL}/api/housegirls/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -320,7 +321,8 @@ const HousegirlDashboard = () => {
     if (!user) return;
     try {
       const token = await FirebaseAuthService.getIdToken();
-      await fetch(`/api/housegirls/${user.id}`, {
+      const userId = (user as { firebase_uid?: string; id?: string }).firebase_uid || user.id;
+      await fetch(`/api/housegirls/${userId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -344,7 +346,7 @@ const HousegirlDashboard = () => {
     setIsSavingProfile(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const housegirlId = (user as { uid?: string; id?: string }).uid || user.id;
+      const housegirlId = (user as { firebase_uid?: string; id?: string }).firebase_uid || user.id;
       const normalizedSkills = (editFormData.skills || '')
         .split(',')
         .map((skill) => skill.trim())
