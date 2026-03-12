@@ -321,8 +321,7 @@ const HousegirlDashboard = () => {
     if (!user) return;
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const userId = (user as { firebase_uid?: string; id?: string }).firebase_uid || user.id;
-      await fetch(`/api/housegirls/${userId}`, {
+      await fetch(`/api/housegirls/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -346,14 +345,13 @@ const HousegirlDashboard = () => {
     setIsSavingProfile(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const housegirlId = (user as { firebase_uid?: string; id?: string }).firebase_uid || user.id;
       const normalizedSkills = (editFormData.skills || '')
         .split(',')
         .map((skill) => skill.trim())
         .filter(Boolean);
       const numericRate = Number((editFormData.expectedSalary || '').replace(/[^\d]/g, ''));
 
-      const response = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/housegirls/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
