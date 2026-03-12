@@ -1,7 +1,8 @@
 export const mapPhoneAuthError = (code?: string, message?: string) => {
     if (code === 'auth/too-many-requests') return 'Too many attempts. Please wait a few minutes before trying again.';
     if (code === 'auth/invalid-phone-number') return 'Please enter a valid Kenyan number e.g. 0712 345 678';
-    if (code === 'auth/captcha-check-failed') return 'Verification failed. Please refresh the page and try again.';
+    if (code === 'auth/captcha-check-failed') return 'Phone verification is not available locally. Please test on the live site or use Google/email instead.';
+    if (code === 'OTP_TIMEOUT') return 'Taking too long. Please check your number and try again.';
     if (code === 'auth/invalid-verification-code') return 'Wrong code. Please check your SMS.';
     if (code === 'auth/code-expired') return 'Code expired. Please request a new one.';
     if (code === 'auth/network-request-failed') return 'Phone sign in is temporarily unavailable. Please use Google or email instead.';

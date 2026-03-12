@@ -72,6 +72,10 @@ export class FirebaseAuthService {
   }
 
   static async sendOTP(phoneNumber: string) {
+    // In local development, phone auth via reCAPTCHA is unreliable.
+    // Firebase's appVerificationDisabledForTesting is set, but if reCAPTCHA
+    // still fires (e.g. domain not whitelisted), we catch it and surface a
+    // clear dev-only message.
     try {
       const recaptchaVerifier = await this.setupRecaptcha();
       const otpPromise = signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
@@ -95,11 +99,29 @@ export class FirebaseAuthService {
       if (error instanceof Error && error.message === 'OTP_TIMEOUT') {
         return {
           success: false,
-          error: 'Could not send code. Check your number and try again.'
+          code: 'OTP_TIMEOUT',
+          error: 'Taking too long. Please check your number and try again.'
         };
       }
+      const errorCode = typeof error === 'object' && error !== null && 'code' in error
+        ? String((error as { code: unknown }).code)
+        : undefined;
       const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code.';
-      const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
+
+      // In local dev, captcha failures get a specific helpful message
+      if (
+        import.meta.env.DEV &&
+        (errorCode === 'auth/captcha-check-failed' ||
+          errorCode === 'auth/internal-error' ||
+          (errorMessage && errorMessage.toLowerCase().includes('recaptcha')))
+      ) {
+        return {
+          success: false,
+          code: 'auth/captcha-check-failed',
+          error: 'Phone verification is not available locally. Please test on the live site or use Google/email instead.'
+        };
+      }
+
       return {
         success: false,
         error: errorMessage,
