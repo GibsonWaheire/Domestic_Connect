@@ -217,10 +217,21 @@ def get_housegirls():
 def get_housegirl(housegirl_id):
     """Get specific housegirl profile"""
     try:
-        housegirl_id = normalize_id(housegirl_id)
-        hg_doc = db.collection('housegirl_profiles').document(housegirl_id).get()
+        normalized_id = normalize_id(housegirl_id)
+        hg_doc = db.collection('housegirl_profiles').document(normalized_id).get()
+        housegirl_id = normalized_id
         if not hg_doc.exists:
-            return jsonify({'error': 'Housegirl not found'}), 404
+            firebase_uid = normalized_id.replace('user_', '', 1) if normalized_id else ''
+            fallback_results = (
+                db.collection('housegirl_profiles')
+                .where('user_id', '==', f'user_{firebase_uid}')
+                .limit(1)
+                .stream()
+            )
+            hg_doc = next(fallback_results, None)
+            if not hg_doc:
+                return jsonify({'error': 'Housegirl not found'}), 404
+            housegirl_id = hg_doc.id
             
         housegirl = hg_doc.to_dict()
         
