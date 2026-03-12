@@ -12,9 +12,17 @@ interface SettingsProps {
   stats: {
     activeJobs: number;
   };
+  profileData?: {
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    location?: string;
+    phone?: string;
+    profile_photo_url?: string;
+  } | null;
 }
 
-export const Settings = ({ stats: _stats }: SettingsProps) => {
+export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
   const { user } = useAuth();
   const { showSuccessNotification, showErrorNotification, showInfoNotification } = useNotificationActions();
 
@@ -33,13 +41,65 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
   const authProvider = localStorage.getItem('dc_auth_provider');
   const isGoogleAuth = authProvider === 'google';
 
+  const applyProfileData = (data: {
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    location?: string;
+    phone?: string;
+    profile_photo_url?: string;
+  }) => {
+    const fullName = (data.full_name || '').trim();
+    const [firstFromFull = '', ...rest] = fullName.split(' ');
+    const lastFromFull = rest.join(' ').trim();
+    setFirstName(data.first_name || firstFromFull || '');
+    setLastName(data.last_name || lastFromFull || '');
+    setLocation(data.location || '');
+    setPhone(data.phone || '');
+    setProfilePhoto(data.profile_photo_url || '');
+  };
+
   useEffect(() => {
+    if (profileData) {
+      applyProfileData(profileData);
+      return;
+    }
     setFirstName(user?.first_name || '');
     setLastName(user?.last_name || '');
     setLocation((user as { location?: string } | null)?.location || '');
     setPhone(user?.phone_number || '');
     setProfilePhoto((user as { profile_photo_url?: string } | null)?.profile_photo_url || '');
-  }, [user]);
+  }, [user, profileData]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+
+    const loadProfile = async () => {
+      try {
+        const token = await FirebaseAuthService.getIdToken();
+        const res = await fetch(
+          `${API_BASE_URL}/api/employers/${user.id}`,
+          {
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          }
+        );
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted) {
+          applyProfileData(data);
+        }
+      } catch {
+      }
+    };
+
+    loadProfile();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
 
   useEffect(() => {
     if (window.location.hash === '#employer-first-name') {

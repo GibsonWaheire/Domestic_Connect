@@ -11,6 +11,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Building2, LogOut, Phone, RefreshCw, Settings as SettingsIcon, Users } from 'lucide-react';
 
@@ -62,6 +63,14 @@ const EmployerDashboard = () => {
 
   // State for real data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
+  const [employerProfileData, setEmployerProfileData] = useState<{
+    full_name?: string;
+    first_name?: string;
+    last_name?: string;
+    location?: string;
+    phone?: string;
+    profile_photo_url?: string;
+  } | null>(null);
 
   // Use real-time data hook
   const {
@@ -76,6 +85,33 @@ const EmployerDashboard = () => {
     enabled: !!user
   });
 
+  useEffect(() => {
+    if (!user?.id) return;
+    let mounted = true;
+
+    const loadProfile = async () => {
+      try {
+        const token = await FirebaseAuthService.getIdToken();
+        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/employers/${user.id}`, {
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (mounted) {
+          setEmployerProfileData(data);
+        }
+      } catch {
+      }
+    };
+
+    loadProfile();
+    return () => {
+      mounted = false;
+    };
+  }, [user?.id]);
+
   // Transform dashboard data when it changes
   useEffect(() => {
     const apiHousegirls = dashboardData?.available_data.housegirls || [];
@@ -89,7 +125,7 @@ const EmployerDashboard = () => {
       salary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
       status: hg.is_available ? 'available' : 'unavailable',
       bio: hg.bio,
-      skills: ['Cooking', 'Cleaning', 'Laundry'], // Default skills
+      skills: Array.isArray(hg.skills) && hg.skills.length > 0 ? hg.skills : ['Cooking', 'Cleaning', 'Laundry'],
       rating: 4.5, // Default rating since it's not in API yet
       reviews: 12, // Default reviews
       contactUnlocked: Boolean(
@@ -184,25 +220,25 @@ const EmployerDashboard = () => {
       key: 'first-name',
       label: 'Add your first name',
       weight: 25,
-      completed: Boolean((user?.first_name || '').trim()),
+      completed: Boolean((employerProfileData?.first_name || user?.first_name || '').trim()),
     },
     {
       key: 'last-name',
       label: 'Add your last name',
       weight: 25,
-      completed: Boolean((user?.last_name || '').trim()),
+      completed: Boolean((employerProfileData?.last_name || user?.last_name || '').trim()),
     },
     {
       key: 'location',
       label: 'Add your location',
       weight: 25,
-      completed: Boolean(((user as { location?: string } | null)?.location || '').trim()),
+      completed: Boolean((employerProfileData?.location || (user as { location?: string } | null)?.location || '').trim()),
     },
     {
       key: 'photo',
       label: 'Upload a profile photo',
       weight: 25,
-      completed: Boolean((user as { profile_photo_url?: string } | null)?.profile_photo_url),
+      completed: Boolean(employerProfileData?.profile_photo_url || (user as { profile_photo_url?: string } | null)?.profile_photo_url),
     },
   ] as const;
 
@@ -343,6 +379,7 @@ const EmployerDashboard = () => {
         return (
           <Settings
             stats={stats}
+            profileData={employerProfileData}
           />
         );
       case 'agency':

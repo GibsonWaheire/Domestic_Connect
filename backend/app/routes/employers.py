@@ -11,6 +11,8 @@ employers_bp = Blueprint('employers', __name__)
 
 
 def normalize_id(uid):
+    if not uid:
+        return None
     if uid.startswith('user_'):
         return uid
     return f'user_{uid}'
@@ -114,8 +116,11 @@ def get_employer(employer_id):
             'id': emp.get('id'),
             'profile_id': profile_id,
             'company_name': emp.get('company_name'),
+            'full_name': emp.get('full_name'),
+            'phone': emp.get('phone'),
             'location': emp.get('location'),
             'description': emp.get('description'),
+            'profile_photo_url': emp.get('profile_photo_url') or emp.get('photo_url'),
             'first_name': first_name,
             'last_name': last_name,
             'created_at': emp.get('created_at'),
@@ -207,10 +212,12 @@ def update_employer(employer_id):
         data = request.get_json()
         updates = {}
         
-        fields = ['company_name', 'location', 'description', 'full_name', 'phone', 'photo_url']
+        fields = ['company_name', 'location', 'description', 'full_name', 'phone']
         for field in fields:
             if field in data:
                 updates[field] = data[field]
+        if 'profile_photo_url' in data or 'photo_url' in data:
+            updates['profile_photo_url'] = data.get('profile_photo_url') or data.get('photo_url')
             
         if updates:
             timestamp = datetime.utcnow().isoformat()
