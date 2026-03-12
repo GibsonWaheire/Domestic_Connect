@@ -240,7 +240,7 @@ const HousegirlDashboard = () => {
       }
     };
     loadProfilePhoto();
-  }, [activationPhone, getUserData, resolvedUserId, user]);
+  }, [resolvedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleActivationPayment = async () => {
     if (!housegirlProfileId || !activationPhone) {
