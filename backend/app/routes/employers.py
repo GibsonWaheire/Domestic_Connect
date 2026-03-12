@@ -9,6 +9,13 @@ import logging
 logger = logging.getLogger(__name__)
 employers_bp = Blueprint('employers', __name__)
 
+
+def normalize_id(uid):
+    if uid.startswith('user_'):
+        return uid
+    return f'user_{uid}'
+
+
 @employers_bp.route('/', methods=['GET'])
 def get_employers():
     """Get all employer profiles"""
@@ -80,6 +87,7 @@ def get_employers():
 def get_employer(employer_id):
     """Get specific employer profile"""
     try:
+        employer_id = normalize_id(employer_id)
         emp_doc = db.collection('employer_profiles').document(employer_id).get()
         if not emp_doc.exists:
             return jsonify({'error': 'Employer not found'}), 404
@@ -173,6 +181,7 @@ def create_employer():
 def update_employer(employer_id):
     """Update employer profile"""
     try:
+        employer_id = normalize_id(employer_id)
         user = request.current_user
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401
@@ -230,6 +239,7 @@ def update_employer(employer_id):
 def delete_employer(employer_id):
     """Delete employer profile"""
     try:
+        employer_id = normalize_id(employer_id)
         user = request.current_user
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401

@@ -10,6 +10,12 @@ logger = logging.getLogger(__name__)
 housegirls_bp = Blueprint('housegirls', __name__)
 
 
+def normalize_id(uid):
+    if uid.startswith('user_'):
+        return uid
+    return f'user_{uid}'
+
+
 def get_authenticated_user_id_from_request():
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
@@ -209,6 +215,7 @@ def get_housegirls():
 def get_housegirl(housegirl_id):
     """Get specific housegirl profile"""
     try:
+        housegirl_id = normalize_id(housegirl_id)
         hg_doc = db.collection('housegirl_profiles').document(housegirl_id).get()
         if not hg_doc.exists:
             return jsonify({'error': 'Housegirl not found'}), 404
@@ -340,6 +347,7 @@ def create_housegirl():
 def update_housegirl(housegirl_id):
     """Update housegirl profile"""
     try:
+        housegirl_id = normalize_id(housegirl_id)
         user = request.current_user
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401
@@ -406,6 +414,7 @@ def update_housegirl(housegirl_id):
 def delete_housegirl(housegirl_id):
     """Delete housegirl profile"""
     try:
+        housegirl_id = normalize_id(housegirl_id)
         user = request.current_user
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401

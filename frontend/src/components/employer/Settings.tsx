@@ -75,8 +75,7 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
     setIsSaving(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const employerId = (user as { firebase_uid?: string; id?: string }).firebase_uid || user.id;
-      const response = await fetch(`${API_BASE_URL}/api/employers/${employerId}`, {
+      const response = await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -91,7 +90,7 @@ export const Settings = ({ stats: _stats }: SettingsProps) => {
       });
 
       if (response.ok) {
-        await fetch(`${API_BASE_URL}/api/employers/${employerId}`, {
+        await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
