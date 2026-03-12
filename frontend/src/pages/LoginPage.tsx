@@ -33,6 +33,7 @@ const LoginPage = () => {
   const [isVerifyingCode, setIsVerifyingCode] = useState(false);
   const [lastSubmittedCode, setLastSubmittedCode] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [otpSuccess, setOtpSuccess] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
@@ -40,6 +41,11 @@ const LoginPage = () => {
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
   const [pendingUid, setPendingUid] = useState('');
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+
+  // Derived: does the error suggest using Google or email?
+  const errorSuggestsGoogle = !!error && error.toLowerCase().includes('google or email');
+  // Derived: does the error have a "try again" action?
+  const errorCanRetry = !!error && error.toLowerCase().includes('try again');
 
   const maskPhoneForDisplay = (phone: string) => {
     const digits = phone.replace(/\D/g, '');
@@ -121,6 +127,7 @@ const LoginPage = () => {
   const handleSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setOtpSuccess(false);
     setOtpLoading(true);
     try {
       const formattedPhone = formatKenyanPhone(phoneInput);
@@ -130,6 +137,7 @@ const LoginPage = () => {
         setError(result.error);
         return;
       }
+      setOtpSuccess(true);
       setOtpCode('');
       setLastSubmittedCode('');
     } finally {
@@ -324,9 +332,35 @@ const LoginPage = () => {
               </div>
             )}
 
+            {/* OTP sent success banner */}
+            {otpSuccess && !error && (
+              <div className="mb-4 rounded-xl border border-green-200 bg-green-50/80 px-4 py-3 text-sm text-green-700 font-medium flex items-center gap-2 shadow-sm">
+                <span>✅</span>
+                <span>Code sent! Check your SMS.</span>
+              </div>
+            )}
+
+            {/* Error display */}
             {error && (
-              <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium text-center shadow-sm">
-                {error}
+              <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium shadow-sm">
+                <div className="flex items-start gap-2">
+                  <span className="shrink-0 mt-0.5">⚠️</span>
+                  <span className="flex-1">{error}</span>
+                </div>
+                {errorCanRetry && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setError(null);
+                      setOtpSuccess(false);
+                      setOtpCode('');
+                      setLastSubmittedCode('');
+                    }}
+                    className="mt-2 ml-6 text-xs font-semibold text-red-600 underline underline-offset-2 hover:text-red-800 transition-colors"
+                  >
+                    Retry
+                  </button>
+                )}
               </div>
             )}
 
@@ -336,7 +370,7 @@ const LoginPage = () => {
                   type="button"
                   onClick={() => handleSelectRole('employer')}
                   disabled={isUpdatingRole}
-                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300"
+                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <div className="text-lg font-semibold text-gray-900">👔 I am an Employer</div>
                   <div className="mt-1 text-sm text-gray-500">I am looking for house help</div>
@@ -345,13 +379,19 @@ const LoginPage = () => {
                   type="button"
                   onClick={() => handleSelectRole('housegirl')}
                   disabled={isUpdatingRole}
-                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300"
+                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <div className="text-lg font-semibold text-gray-900">👩 I am a Housegirl</div>
                   <div className="mt-1 text-sm text-gray-500">I am looking for work</div>
                 </button>
                 {isUpdatingRole && (
-                  <p className="text-sm text-gray-500 text-center mt-2">Saving your role...</p>
+                  <div className="flex items-center justify-center gap-2 mt-2 text-sm text-gray-500">
+                    <svg className="animate-spin h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                    </svg>
+                    <span>Setting up your account...</span>
+                  </div>
                 )}
               </div>
             ) : authStep === 1 ? (
@@ -426,7 +466,7 @@ const LoginPage = () => {
                     type="button"
                     disabled={googleLoading}
                     onClick={handleGoogleClick}
-                    className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 text-[#111] rounded-xl h-14 text-base font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm"
+                    className={`w-full flex items-center justify-center gap-3 bg-white text-[#111] rounded-xl h-14 text-base font-medium hover:bg-gray-50 transition-all duration-200 shadow-sm border ${errorSuggestsGoogle ? 'border-amber-400 ring-1 ring-amber-300' : 'border-gray-200'}`}
                   >
                     <svg width="22" height="22" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />

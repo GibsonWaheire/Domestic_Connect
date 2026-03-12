@@ -99,7 +99,7 @@ export const useEmailAuth = (
             shouldSyncFirebaseUserRef.current = false;
             const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
             const fallbackMessage = error instanceof Error ? error.message : String(error);
-            return { error: mapEmailAuthError(errorCode) || fallbackMessage };
+            return { error: mapEmailAuthError(errorCode) || fallbackMessage || 'Something went wrong. Please try again.' };
         } finally {
             setLoading(false);
         }
@@ -170,7 +170,7 @@ export const useEmailAuth = (
             shouldSyncFirebaseUserRef.current = false;
             const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
             const fallbackMessage = error instanceof Error ? error.message : String(error);
-            return { error: mapEmailAuthError(errorCode) || fallbackMessage };
+            return { error: mapEmailAuthError(errorCode) || fallbackMessage || 'Something went wrong. Please try again.' };
         } finally {
             setLoading(false);
         }
