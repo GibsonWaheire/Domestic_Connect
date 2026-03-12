@@ -36,7 +36,9 @@ def get_dashboard_data():
         }
         
         if user_type == 'employer' or is_admin:
-            dashboard_data['available_data']['housegirls'] = get_housegirls_for_employer()
+            dashboard_data['available_data']['housegirls'] = get_housegirls_for_employer(
+                include_unavailable=is_admin
+            )
             dashboard_data['available_data']['job_postings'] = get_job_postings_for_employer(user_id)
             dashboard_data['available_data']['agencies'] = get_agencies_for_employer()
             
@@ -63,7 +65,9 @@ def get_dashboard_data():
             dashboard_data['available_data']['clients'] = get_clients_for_agency(user_id)
             dashboard_data['available_data']['workers'] = get_workers_for_agency(user_id)
             dashboard_data['available_data']['all_employers'] = get_all_employers_for_agency()
-            dashboard_data['available_data']['all_housegirls'] = get_all_housegirls_for_agency()
+            dashboard_data['available_data']['all_housegirls'] = get_all_housegirls_for_agency(
+                include_unavailable=is_admin
+            )
             
             dashboard_data['stats'].update({
                 'total_clients': len(dashboard_data['available_data']['clients']),
@@ -91,9 +95,12 @@ def get_dashboard_data():
             'error': 'Something went wrong. Please try again.'
         }), 500
 
-def get_housegirls_for_employer():
+def get_housegirls_for_employer(include_unavailable=False):
     """Get available housegirls for employers to view"""
-    hg_docs = db.collection('housegirl_profiles').where('is_available', '==', True).stream()
+    query = db.collection('housegirl_profiles')
+    if not include_unavailable:
+        query = query.where('is_available', '==', True)
+    hg_docs = query.stream()
     
     result = []
     for doc in hg_docs:
@@ -124,6 +131,7 @@ def get_housegirls_for_employer():
             'location': housegirl.get('location'),
             'education': housegirl.get('education'),
             'experience': housegirl.get('experience'),
+            'skills': housegirl.get('skills', []),
             'expected_salary': housegirl.get('expected_salary'),
             'accommodation_type': housegirl.get('accommodation_type'),
             'tribe': housegirl.get('tribe'),
@@ -372,8 +380,8 @@ def get_workers_for_agency(agency_id):
 def get_all_employers_for_agency():
     return get_employers_for_housegirl()
 
-def get_all_housegirls_for_agency():
-    return get_housegirls_for_employer()
+def get_all_housegirls_for_agency(include_unavailable=False):
+    return get_housegirls_for_employer(include_unavailable=include_unavailable)
 
 def get_all_users_for_admin():
     users_docs = db.collection('users').stream()

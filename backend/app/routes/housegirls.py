@@ -217,10 +217,21 @@ def get_housegirls():
 def get_housegirl(housegirl_id):
     """Get specific housegirl profile"""
     try:
-        housegirl_id = normalize_id(housegirl_id)
-        hg_doc = db.collection('housegirl_profiles').document(housegirl_id).get()
+        normalized_id = normalize_id(housegirl_id)
+        hg_doc = db.collection('housegirl_profiles').document(normalized_id).get()
+        housegirl_id = normalized_id
         if not hg_doc.exists:
-            return jsonify({'error': 'Housegirl not found'}), 404
+            firebase_uid = normalized_id.replace('user_', '', 1) if normalized_id else ''
+            fallback_results = (
+                db.collection('housegirl_profiles')
+                .where('user_id', '==', f'user_{firebase_uid}')
+                .limit(1)
+                .stream()
+            )
+            hg_doc = next(fallback_results, None)
+            if not hg_doc:
+                return jsonify({'error': 'Housegirl not found'}), 404
+            housegirl_id = hg_doc.id
             
         housegirl = hg_doc.to_dict()
         
@@ -363,10 +374,16 @@ def update_housegirl(housegirl_id):
         if housegirl_id != normalized_id and not is_admin:
             return jsonify({'error': 'Forbidden'}), 403
             
-        data = request.get_json()
+        data = request.get_json() or {}
         BLOCKED_FIELDS = ['unlock_count', 'is_available', 'in_demand_alert']
         for field in BLOCKED_FIELDS:
             data.pop(field, None)
+        if 'monthly_rate' in data and 'expected_salary' not in data:
+            data['expected_salary'] = data.get('monthly_rate')
+        if 'photo_url' in data and 'profile_photo_url' not in data:
+            data['profile_photo_url'] = data.get('photo_url')
+        if 'community' in data and 'tribe' not in data:
+            data['tribe'] = data.get('community')
         updates = {}
         
         fields = [
@@ -374,7 +391,7 @@ def update_housegirl(housegirl_id):
             'experience', 'expected_salary', 'accommodation_type',
             'tribe', 'profile_photo_url', 'activation_fee_paid',
             'full_name', 'role', 'skills', 'monthly_rate',
-            'photo_url', 'phone_number'
+            'photo_url', 'phone_number', 'languages'
         ]
                   
         for field in fields:
@@ -384,6 +401,29 @@ def update_housegirl(housegirl_id):
         if updates:
             timestamp = datetime.utcnow().isoformat()
             updates['updated_at'] = timestamp
+            user_updates = {}
+            full_name = (data.get('full_name') or '').strip()
+            if full_name:
+                name_parts = full_name.split(' ')
+                user_updates['first_name'] = name_parts[0]
+                user_updates['last_name'] = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+            if 'phone_number' in data:
+                user_updates['phone_number'] = data.get('phone_number')
+            if user_updates:
+                user_updates['updated_at'] = timestamp
+                db.collection('users').document(getattr(user, 'id')).set(user_updates, merge=True)
+
+            profile_docs = list(
+                db.collection('profiles')
+                .where('user_id', '==', getattr(user, 'id'))
+                .limit(1)
+                .stream()
+            )
+            if profile_docs and not (hg_doc.to_dict() if hg_doc.exists else {}).get('profile_id'):
+                updates['profile_id'] = profile_docs[0].to_dict().get('id')
+            if not hg_doc.exists:
+                updates['user_id'] = getattr(user, 'id')
+
             if hg_doc.exists:
                 doc_ref.update(updates)
             else:

@@ -206,12 +206,25 @@ const HousegirlDashboard = () => {
         if (!response.ok) return;
         const result = await response.json();
         const apiPhoto = result?.profile_photo_url || result?.photo_url || '';
+        const apiSkills = Array.isArray(result?.skills) ? result.skills : [];
+        const apiLanguages = Array.isArray(result?.languages) ? result.languages : [];
         if (apiPhoto) {
           setProfilePhoto(apiPhoto);
         }
         setHousegirlProfileId(String(result?.id || ''));
         setUnlockCount(Number(result?.unlock_count) || 0);
         setActivationFeePaid(Boolean(result?.activation_fee_paid));
+        setEditFormData({
+          bio: result?.bio || '',
+          expectedSalary: result?.expected_salary ? String(result.expected_salary) : '',
+          location: result?.location || result?.current_location || '',
+          experience: result?.experience || '',
+          education: result?.education || '',
+          accommodationType: result?.accommodation_type || '',
+          community: result?.tribe || '',
+          skills: apiSkills.join(', '),
+          languages: apiLanguages.join(', ')
+        });
         if (!activationPhone && user.phone_number) {
           setActivationPhone(user.phone_number);
         }
@@ -350,6 +363,10 @@ const HousegirlDashboard = () => {
         .split(',')
         .map((skill) => skill.trim())
         .filter(Boolean);
+      const normalizedLanguages = (editFormData.languages || '')
+        .split(',')
+        .map((language) => language.trim())
+        .filter(Boolean);
       const numericRate = Number((editFormData.expectedSalary || '').replace(/[^\d]/g, ''));
 
       const response = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
@@ -362,13 +379,38 @@ const HousegirlDashboard = () => {
           full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
           role: normalizedSkills[0] || '',
           skills: normalizedSkills,
+          languages: normalizedLanguages,
+          expected_salary: Number.isFinite(numericRate) ? numericRate : 0,
           monthly_rate: Number.isFinite(numericRate) ? numericRate : 0,
           bio: editFormData.bio,
           location: editFormData.location,
+          current_location: editFormData.location,
+          experience: editFormData.experience,
+          education: editFormData.education,
+          accommodation_type: editFormData.accommodationType,
+          tribe: editFormData.community,
+          profile_photo_url: profilePhoto || null,
         }),
       });
 
       if (response.ok) {
+        const saved = await response.json().catch(() => ({}));
+        const savedSkills = Array.isArray(saved?.skills) ? saved.skills : normalizedSkills;
+        const savedLanguages = Array.isArray(saved?.languages) ? saved.languages : normalizedLanguages;
+        setEditFormData({
+          bio: saved?.bio || editFormData.bio,
+          expectedSalary: saved?.expected_salary ? String(saved.expected_salary) : editFormData.expectedSalary,
+          location: saved?.location || editFormData.location,
+          experience: saved?.experience || editFormData.experience,
+          education: saved?.education || editFormData.education,
+          accommodationType: saved?.accommodation_type || editFormData.accommodationType,
+          community: saved?.tribe || editFormData.community,
+          skills: savedSkills.join(', '),
+          languages: savedLanguages.join(', ')
+        });
+        if (saved?.profile_photo_url) {
+          setProfilePhoto(saved.profile_photo_url);
+        }
         toast({
           title: "Profile saved",
           description: "Your profile has been updated successfully.",

@@ -1,7 +1,10 @@
 import json
 import os
+import logging
 import firebase_admin
 from firebase_admin import credentials, firestore
+
+logger = logging.getLogger(__name__)
 
 def initialize_firebase():
     if not firebase_admin._apps:
@@ -30,6 +33,8 @@ def initialize_firebase():
             cred = credentials.Certificate(cred_path)
         
         firebase_admin.initialize_app(cred)
+        app = firebase_admin.get_app()
+        logger.info(f'Firebase initialized: {app.project_id}')
     return firestore.client()
 
 db = initialize_firebase()

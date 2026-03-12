@@ -11,6 +11,8 @@ employers_bp = Blueprint('employers', __name__)
 
 
 def normalize_id(uid):
+    if not uid:
+        return None
     if uid.startswith('user_'):
         return uid
     return f'user_{uid}'
@@ -114,8 +116,11 @@ def get_employer(employer_id):
             'id': emp.get('id'),
             'profile_id': profile_id,
             'company_name': emp.get('company_name'),
+            'full_name': emp.get('full_name'),
+            'phone': emp.get('phone'),
             'location': emp.get('location'),
             'description': emp.get('description'),
+            'profile_photo_url': emp.get('profile_photo_url') or emp.get('photo_url'),
             'first_name': first_name,
             'last_name': last_name,
             'created_at': emp.get('created_at'),
@@ -204,22 +209,47 @@ def update_employer(employer_id):
         if not authorized:
             return jsonify({'error': 'Unauthorized'}), 403
             
-        data = request.get_json()
+        data = request.get_json() or {}
         updates = {}
         
-        fields = ['company_name', 'location', 'description', 'full_name', 'phone', 'photo_url']
+        fields = ['company_name', 'location', 'description', 'full_name', 'phone']
         for field in fields:
             if field in data:
                 updates[field] = data[field]
+        if 'profile_photo_url' in data or 'photo_url' in data:
+            updates['profile_photo_url'] = data.get('profile_photo_url') or data.get('photo_url')
             
         if updates:
             timestamp = datetime.utcnow().isoformat()
             updates['updated_at'] = timestamp
+            user_updates = {}
+            full_name = (data.get('full_name') or '').strip()
+            if full_name:
+                name_parts = full_name.split(' ')
+                user_updates['first_name'] = name_parts[0]
+                user_updates['last_name'] = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+            if 'phone' in data:
+                user_updates['phone_number'] = data.get('phone')
+            if user_updates:
+                user_updates['updated_at'] = timestamp
+                db.collection('users').document(getattr(user, 'id')).set(user_updates, merge=True)
+
             if emp_doc.exists:
                 doc_ref.update(updates)
             else:
+                profile_id = None
+                profile_docs = list(
+                    db.collection('profiles')
+                    .where('user_id', '==', getattr(user, 'id'))
+                    .limit(1)
+                    .stream()
+                )
+                if profile_docs:
+                    profile_id = profile_docs[0].to_dict().get('id')
                 doc_ref.set({
                     'id': employer_id,
+                    'user_id': getattr(user, 'id'),
+                    'profile_id': profile_id,
                     'created_at': timestamp,
                     **updates
                 })
