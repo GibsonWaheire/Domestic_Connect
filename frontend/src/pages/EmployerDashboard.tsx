@@ -92,7 +92,7 @@ const EmployerDashboard = () => {
     const loadProfile = async () => {
       try {
         const token = await FirebaseAuthService.getIdToken();
-        const res = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}/api/employers/${user.id}`, {
+        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/employers/${user.id}`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },

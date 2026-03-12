@@ -55,6 +55,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency' | 'admin'>('employer');
   const [selectedMode, setSelectedMode] = useState<'login' | 'signup'>('login');
   const shouldSyncFirebaseUserRef = useRef(false);
+  const userRef = useRef<User | null>(null);
+  useEffect(() => { userRef.current = user; }, [user]);
   const normalizeUser = useCallback((incomingUser: User | null): User | null => {
     if (!incomingUser) return null;
     const userWithIds = incomingUser as User & { uid?: string; firebase_uid?: string };
@@ -125,10 +127,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       if (!firebaseUser.email) return;
       errorService.logError(error instanceof Error ? error : new Error(String(error)), 'Firebase user sync', 'medium');
-      if (!user) return;
+      if (!userRef.current) return;
       toast({ title: "Profile Sync Required", description: "We could not verify your account role right now. Please try logging in again.", variant: "destructive" });
     }
-  }, [setNormalizedUser, user]);
+  }, [setNormalizedUser]);
 
   useEffect(() => {
     let unsubscribe: () => void = () => { };
@@ -190,7 +192,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
     setupAuth();
     return () => { clearTimeout(fallbackTimeout); unsubscribe(); };
-  }, [checkSession, handleFirebaseUser, isSigningOut, user]);
+  }, [checkSession, handleFirebaseUser, isSigningOut]);
 
   const signOut = useCallback(async (redirectTo = '/home') => {
     try {
