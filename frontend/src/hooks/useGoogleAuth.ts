@@ -3,6 +3,7 @@ import { NavigateFunction } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { User, apiRequest } from '@/lib/authUtils';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { mapGoogleAuthError } from '@/lib/authErrors';
 
 export const useGoogleAuth = (
     navigate: NavigateFunction,
@@ -22,7 +23,7 @@ export const useGoogleAuth = (
 
             if (!result?.user) {
                 setLoading(false);
-                return { error: 'Sign in failed or was cancelled.' };
+                return { error: 'Sign in was cancelled.' };
             }
 
             const token = await result.user.getIdToken();
@@ -150,13 +151,21 @@ export const useGoogleAuth = (
             return { error: null, user: response.user };
         } catch (error: unknown) {
             shouldSyncFirebaseUserRef.current = false;
-            const exactError = error instanceof Error ? error.message : String(error);
-            toast({
-                title: 'Sign In Error',
-                description: exactError || 'Something went wrong. Please try again.',
-                variant: 'destructive'
-            });
-            return { error: exactError || 'Something went wrong. Please try again.' };
+            const errorCode = typeof error === 'object' && error !== null && 'code' in error
+                ? String((error as { code: unknown }).code)
+                : undefined;
+            const friendlyMessage = mapGoogleAuthError(errorCode);
+
+            // Don't show a toast for silent cancellations
+            const isSilent = errorCode === 'auth/popup-closed-by-user' || errorCode === 'auth/cancelled-popup-request';
+            if (!isSilent) {
+                toast({
+                    title: 'Google Sign In Failed',
+                    description: friendlyMessage,
+                    variant: 'destructive'
+                });
+            }
+            return { error: friendlyMessage };
         } finally {
             setLoading(false);
         }

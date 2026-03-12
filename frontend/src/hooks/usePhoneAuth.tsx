@@ -36,7 +36,7 @@ export const usePhoneAuth = (
             const otpResult = await FirebaseAuthService.sendOTP(formattedPhone);
 
             if (!otpResult.success || !otpResult.confirmationResult) {
-                const errorMessage = otpResult.error || mapPhoneAuthError(otpResult.code);
+                const errorMessage = otpResult.error || mapPhoneAuthError(otpResult.code, otpResult.error || undefined) || 'Something went wrong. Please try again.';
                 return { error: errorMessage };
             }
             setConfirmationResult(otpResult.confirmationResult);
@@ -44,7 +44,7 @@ export const usePhoneAuth = (
             setSelectedUserType(userType);
             setSelectedMode(mode);
             setAuthStep(2);
-            return { error: null };
+            return { error: null, otpSent: true };
         } finally {
             setLoading(false);
         }
@@ -190,11 +190,13 @@ export const usePhoneAuth = (
             return { error: null, userType: resolvedUserType };
         } catch (error: unknown) {
             shouldSyncFirebaseUserRef.current = false;
+            const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
             const exactError = error instanceof Error ? error.message : String(error);
-            if (exactError === 'Verification is taking too long. Please try again.') {
+            const friendlyMessage = mapPhoneAuthError(errorCode, exactError) || exactError || 'Something went wrong. Please try again.';
+            if (exactError && exactError.includes('taking too long')) {
                 changePhoneNumber();
             }
-            return { error: exactError || 'Something went wrong. Please try again.' };
+            return { error: friendlyMessage };
         } finally {
             setLoading(false);
         }
