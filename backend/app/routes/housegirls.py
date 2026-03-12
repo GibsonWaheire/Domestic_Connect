@@ -18,6 +18,40 @@ def normalize_id(uid):
     return f'user_{uid}'
 
 
+def get_profile_id_for_user(user_id):
+    profile_docs = list(
+        db.collection('profiles')
+        .where('user_id', '==', user_id)
+        .limit(1)
+        .stream()
+    )
+    if not profile_docs:
+        return None
+    return profile_docs[0].to_dict().get('id')
+
+
+def find_housegirl_doc_for_user(user_id):
+    by_user_id = next(
+        db.collection('housegirl_profiles')
+        .where('user_id', '==', user_id)
+        .limit(1)
+        .stream(),
+        None
+    )
+    if by_user_id:
+        return by_user_id
+    profile_id = get_profile_id_for_user(user_id)
+    if not profile_id:
+        return None
+    return next(
+        db.collection('housegirl_profiles')
+        .where('profile_id', '==', profile_id)
+        .limit(1)
+        .stream(),
+        None
+    )
+
+
 def get_authenticated_user_id_from_request():
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
@@ -221,17 +255,11 @@ def get_housegirl(housegirl_id):
         hg_doc = db.collection('housegirl_profiles').document(normalized_id).get()
         housegirl_id = normalized_id
         if not hg_doc.exists:
-            firebase_uid = normalized_id.replace('user_', '', 1) if normalized_id else ''
-            fallback_results = (
-                db.collection('housegirl_profiles')
-                .where('user_id', '==', f'user_{firebase_uid}')
-                .limit(1)
-                .stream()
-            )
-            hg_doc = next(fallback_results, None)
-            if not hg_doc:
+            fallback_doc = find_housegirl_doc_for_user(normalized_id)
+            if not fallback_doc:
                 return jsonify({'error': 'Housegirl not found'}), 404
-            housegirl_id = hg_doc.id
+            hg_doc = fallback_doc
+            housegirl_id = fallback_doc.id
             
         housegirl = hg_doc.to_dict()
         
@@ -367,6 +395,11 @@ def update_housegirl(housegirl_id):
             
         doc_ref = db.collection('housegirl_profiles').document(housegirl_id)
         hg_doc = doc_ref.get()
+        if not hg_doc.exists:
+            fallback_doc = find_housegirl_doc_for_user(housegirl_id)
+            if fallback_doc:
+                doc_ref = db.collection('housegirl_profiles').document(fallback_doc.id)
+                hg_doc = doc_ref.get()
         
         firebase_uid = (request.firebase_user or {}).get('uid')
         normalized_id = normalize_id(firebase_uid)
