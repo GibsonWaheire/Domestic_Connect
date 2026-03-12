@@ -93,16 +93,6 @@ Connect Kenyan families with trusted domestic workers and professional agencies.
 4. **Hire** → Complete with secure payments
 5. **Support** → Get ongoing help
 
-## 🧪 **Test Accounts**
-
-For testing purposes, use these accounts:
-
-| Role | Email | Password |
-|------|-------|----------|
-| Housegirl | `housegirl1@test.com` | `testpassword123` |
-| Employer | `employer1@test.com` | `testpassword123` |
-| Agency | `agency1@test.com` | `testpassword123` |
-
 ## 📞 **Get Started**
 
 **Ready to find your perfect match?**

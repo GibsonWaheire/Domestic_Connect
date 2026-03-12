@@ -360,18 +360,7 @@ def init_database():
         print(f"Created {PaymentPackage.query.count()} payment packages")
         print(f"Created {JobPosting.query.count()} job postings")
         
-        print("\nSample accounts created:")
-        print("Employers:")
-        print(f"  - john.doe@example.com (password: password123)")
-        print(f"  - jane.smith@example.com (password: password123)")
-        print("Housegirls:")
-        print(f"  - sarah.wanjiku@example.com (password: password123)")
-        print(f"  - grace.akinyi@example.com (password: password123)")
-        print(f"  - mary.muthoni@example.com (password: password123)")
-        print("Agency:")
-        print(f"  - admin@domesticconnect.co.ke (password: password123)")
-        print("Admin:")
-        print(f"  - admin@admin.com (password: password123)")
+        print("\nDatabase initialization completed successfully.")
 
 if __name__ == '__main__':
     init_database()

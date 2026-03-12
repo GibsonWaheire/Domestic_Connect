@@ -95,7 +95,7 @@ def test_admin_api():
         click.echo("=" * 40)
         
         # Test admin user exists
-        admin_users = User.query.filter(User.email.in_(['admin@domesticconnect.ke', 'admin@test.com'])).all()
+        admin_users = User.query.filter(User.email.in_(['admin@domesticconnect.ke'])).all()
         click.echo(f"Admin users found: {len(admin_users)}")
         
         for admin in admin_users:
