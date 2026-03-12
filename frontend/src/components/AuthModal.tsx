@@ -401,7 +401,6 @@ const AuthModal = ({
               </div>
             </CardContent>
           </Card>
-          <div id="recaptcha-container"></div>
         </div>
       </div>
     </div>
