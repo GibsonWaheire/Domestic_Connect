@@ -1,8 +1,4 @@
 import {
-  signInWithPhoneNumber,
-  RecaptchaVerifier,
-  ConfirmationResult,
-  PhoneAuthProvider,
   signOut,
   onAuthStateChanged,
   User,
@@ -14,22 +10,9 @@ import {
   createUserWithEmailAndPassword
 } from 'firebase/auth';
 import { auth } from './firebase';
-import app from './firebase';
-
 
 // Ensure authentication state persists across page reloads
 setPersistence(auth, browserLocalPersistence).catch(console.error);
-
-if (import.meta.env.DEV) {
-  // Disable app verification for testing
-  auth.settings.appVerificationDisabledForTesting = true;
-}
-
-declare global {
-  interface Window {
-    recaptchaVerifier?: RecaptchaVerifier | null;
-  }
-}
 
 // Authentication service class
 export class FirebaseAuthService {
@@ -42,130 +25,12 @@ export class FirebaseAuthService {
     return cleaned;
   }
 
-  static async setupRecaptcha() {
-    try {
-      if (window.recaptchaVerifier) {
-        try { window.recaptchaVerifier.clear(); } catch {}
-        window.recaptchaVerifier = undefined;
-      }
-
-      const container = document.getElementById('recaptcha-container');
-      if (container) {
-        container.innerHTML = '';
-      }
-
-      window.recaptchaVerifier =
-        new RecaptchaVerifier(
-          auth,
-          'recaptcha-container',
-          { size: 'invisible' }
-        );
-
-      return window.recaptchaVerifier;
-
-    } catch (error) {
-      window.recaptchaVerifier = undefined;
-      const container = document.getElementById('recaptcha-container');
-      if (container) {
-        container.innerHTML = '';
-      }
-      throw error;
-    }
-  }
-
-  static async sendOTP(phoneNumber: string) {
-    // In local development, phone auth via reCAPTCHA is unreliable.
-    // Firebase's appVerificationDisabledForTesting is set, but if reCAPTCHA
-    // still fires (e.g. domain not whitelisted), we catch it and surface a
-    // clear dev-only message.
-    try {
-      const recaptchaVerifier = await this.setupRecaptcha();
-      const otpPromise = signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('OTP_TIMEOUT')), 15000)
-      );
-      const confirmationResult = await Promise.race([
-        otpPromise,
-        timeoutPromise
-      ]) as ConfirmationResult;
-      return {
-        success: true,
-        confirmationResult
-      };
-    } catch (error: unknown) {
-      console.error(error);
-      if (window.recaptchaVerifier) {
-        try { window.recaptchaVerifier.clear(); } catch {}
-      }
-      window.recaptchaVerifier = undefined;
-      const container = document.getElementById('recaptcha-container');
-      if (container) {
-        container.innerHTML = '';
-      }
-      if (error instanceof Error && error.message === 'OTP_TIMEOUT') {
-        return {
-          success: false,
-          code: 'OTP_TIMEOUT',
-          error: 'Taking too long. Please check your number and try again.'
-        };
-      }
-      const errorCode = typeof error === 'object' && error !== null && 'code' in error
-        ? String((error as { code: unknown }).code)
-        : undefined;
-      const errorMessage = error instanceof Error ? error.message : 'Failed to send verification code.';
-
-      // In local dev, captcha failures get a specific helpful message
-      if (
-        import.meta.env.DEV &&
-        (errorCode === 'auth/captcha-check-failed' ||
-          errorCode === 'auth/internal-error' ||
-          (errorMessage && errorMessage.toLowerCase().includes('recaptcha')))
-      ) {
-        return {
-          success: false,
-          code: 'auth/captcha-check-failed',
-          error: 'Phone verification is not available locally. Please test on the live site or use Google/email instead.'
-        };
-      }
-
-      return {
-        success: false,
-        error: errorMessage,
-        code: errorCode
-      };
-    }
-  }
-
-  static async verifyOTP(confirmationResult: ConfirmationResult, code: string) {
-    try {
-      if (!PhoneAuthProvider) {
-        throw new Error('Phone authentication is unavailable.');
-      }
-      const userCredential = await confirmationResult.confirm(code);
-      return {
-        success: true,
-        userCredential
-      };
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to verify code.';
-      const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
-      return {
-        success: false,
-        error: errorMessage,
-        code: errorCode
-      };
-    }
-  }
-
   static async signOut() {
     try {
       await signOut(auth);
       return { success: true };
     } catch (error: any) {
-      return {
-        success: false,
-        error: error.message
-      };
+      return { success: false, error: error.message };
     }
   }
 
@@ -202,9 +67,7 @@ export type AuthResult = {
 
 export const signInWithGoogle = async () => {
   const provider = new GoogleAuthProvider();
-  provider.setCustomParameters({
-    prompt: 'select_account'
-  });
+  provider.setCustomParameters({ prompt: 'select_account' });
   return await signInWithPopup(auth, provider);
 };
 
