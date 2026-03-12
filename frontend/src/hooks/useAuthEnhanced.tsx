@@ -74,9 +74,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkSession = useCallback(async () => {
     try {
       setLoading(true);
-      if (FirebaseAuthService.getCurrentUser()) {
-        setLoading(false);
-        return;
+      const firebaseCurrentUser = FirebaseAuthService.getCurrentUser();
+      if (firebaseCurrentUser) {
+        const token = await FirebaseAuthService.getIdToken();
+        if (token) {
+          const firebaseResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: JSON.stringify({ mode: 'login' })
+          });
+          if (firebaseResponse.user) {
+            const normalizedUser = normalizeUser(firebaseResponse.user);
+            setUser(normalizedUser);
+            setIsFirebaseUser(true);
+            return;
+          }
+        }
       }
       const response = await apiRequest<{ user: User | null }>('/api/auth/check_session');
       if (response.user) {
@@ -137,7 +150,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
             if (!shouldSyncFirebaseUserRef.current) {
-              if (import.meta.env.DEV) console.log('shouldSyncFirebaseUserRef is false, skipping handleFirebaseUser');
+              const firebaseMatchesUser =
+                user &&
+                (
+                  user.firebase_uid === firebaseUser.uid ||
+                  user.id === firebaseUser.uid ||
+                  user.id === `user_${firebaseUser.uid}`
+                );
+              if (firebaseMatchesUser) {
+                if (import.meta.env.DEV) console.log('Firebase user already synced');
+                setLoading(false);
+                clearTimeout(fallbackTimeout);
+                return;
+              }
+              if (import.meta.env.DEV) console.log('Hydrating firebase user from backend');
+              await handleFirebaseUser(firebaseUser);
+              shouldSyncFirebaseUserRef.current = false;
               setLoading(false);
               clearTimeout(fallbackTimeout);
               return;

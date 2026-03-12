@@ -209,7 +209,7 @@ def update_employer(employer_id):
         if not authorized:
             return jsonify({'error': 'Unauthorized'}), 403
             
-        data = request.get_json()
+        data = request.get_json() or {}
         updates = {}
         
         fields = ['company_name', 'location', 'description', 'full_name', 'phone']
@@ -222,11 +222,34 @@ def update_employer(employer_id):
         if updates:
             timestamp = datetime.utcnow().isoformat()
             updates['updated_at'] = timestamp
+            user_updates = {}
+            full_name = (data.get('full_name') or '').strip()
+            if full_name:
+                name_parts = full_name.split(' ')
+                user_updates['first_name'] = name_parts[0]
+                user_updates['last_name'] = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+            if 'phone' in data:
+                user_updates['phone_number'] = data.get('phone')
+            if user_updates:
+                user_updates['updated_at'] = timestamp
+                db.collection('users').document(getattr(user, 'id')).set(user_updates, merge=True)
+
             if emp_doc.exists:
                 doc_ref.update(updates)
             else:
+                profile_id = None
+                profile_docs = list(
+                    db.collection('profiles')
+                    .where('user_id', '==', getattr(user, 'id'))
+                    .limit(1)
+                    .stream()
+                )
+                if profile_docs:
+                    profile_id = profile_docs[0].to_dict().get('id')
                 doc_ref.set({
                     'id': employer_id,
+                    'user_id': getattr(user, 'id'),
+                    'profile_id': profile_id,
                     'created_at': timestamp,
                     **updates
                 })
