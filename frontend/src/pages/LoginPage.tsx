@@ -74,18 +74,6 @@ const LoginPage = () => {
     }
   }, [searchParams]);
 
-  useEffect(() => {
-    const container = document.getElementById('recaptcha-container');
-    if (container) {
-      container.innerHTML = '';
-    }
-    if (window.recaptchaVerifier) {
-      try {
-        window.recaptchaVerifier.clear();
-      } catch {}
-      window.recaptchaVerifier = undefined;
-    }
-  }, [mode]);
 
 
 
@@ -630,7 +618,6 @@ const LoginPage = () => {
               </form>
             )}
 
-            <div id="recaptcha-container" style={{ display: 'none' }}></div>
           </div>
         </div>
       </div>

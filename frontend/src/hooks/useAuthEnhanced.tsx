@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService, FirebaseUser } from '@/lib/firebaseAuth';
 import { errorService } from '@/lib/errorService';
-import { ConfirmationResult } from 'firebase/auth';
 import { User, apiRequest, formatKenyanPhone } from '@/lib/authUtils';
 import { useInactivityTimer } from './useInactivityTimer';
 import { useGoogleAuth } from './useGoogleAuth';
@@ -49,7 +48,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isFirebaseUser, setIsFirebaseUser] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [authStep, setAuthStep] = useState<1 | 2>(1);
   const [selectedUserType, setSelectedUserType] = useState<'employer' | 'housegirl' | 'agency' | 'admin'>('employer');
@@ -206,7 +204,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   useInactivityTimer(user, signOut);
   const googleAuth = useGoogleAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
-  const phoneAuth = usePhoneAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, confirmationResult, setConfirmationResult, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
+  const phoneAuth = usePhoneAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef, phoneNumber, setPhoneNumber, selectedUserType, setSelectedUserType, selectedMode, setSelectedMode, setAuthStep);
   const emailAuth = useEmailAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
   const value = {
