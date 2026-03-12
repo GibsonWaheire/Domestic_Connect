@@ -271,17 +271,21 @@ def verify_phone_auth():
 
         session['user_id'] = user_id
         session['user_type'] = user_type_to_return
+        final_user_data = user_doc_ref.get().to_dict() or {}
+        final_user_data['id'] = user_id
+        final_user_data['uid'] = uid
+        final_user_data['firebase_uid'] = uid
+        final_user_data['user_type'] = user_type_to_return
+        if not final_user_data.get('display_name'):
+            final_user_data['display_name'] = (
+                display_name_safe or f"{final_user_data.get('first_name', '')} {final_user_data.get('last_name', '')}".strip()
+            )
 
         return jsonify({
             'message': 'Phone verification successful',
             'status': 'ok',
             'user_type': user_type_to_return,
-            'user': {
-                'uid': uid,
-                'user_type': user_type_to_return,
-                'email': email_safe,
-                'display_name': display_name_safe or f"{first_name} {last_name}".strip()
-            }
+            'user': final_user_data
         }), 200
     except Exception as e:
         logger.error(f'Error: {str(e)}')

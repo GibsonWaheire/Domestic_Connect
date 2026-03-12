@@ -72,6 +72,7 @@ interface EditFormData {
 const HousegirlDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
+  const resolvedUserId = user?.id || ((user as { uid?: string; firebase_uid?: string } | null)?.uid ? `user_${(user as { uid?: string; firebase_uid?: string } | null)?.uid}` : (user as { uid?: string; firebase_uid?: string } | null)?.firebase_uid ? `user_${(user as { uid?: string; firebase_uid?: string } | null)?.firebase_uid}` : '');
 
   // Additional auth check - ensure only housegirls can access this dashboard
   useEffect(() => {
@@ -189,14 +190,14 @@ const HousegirlDashboard = () => {
 
   useEffect(() => {
     const loadProfilePhoto = async () => {
-      if (!user || user.user_type !== 'housegirl') return;
+      if (!user || user.user_type !== 'housegirl' || !resolvedUserId) return;
       const userData = getUserData();
       if (userData.photoUrl) {
         setProfilePhoto(userData.photoUrl);
       }
       try {
         const token = await FirebaseAuthService.getIdToken();
-        const response = await fetch(`/api/housegirls/${user.id}`, {
+        const response = await fetch(`/api/housegirls/${resolvedUserId}`, {
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -218,7 +219,7 @@ const HousegirlDashboard = () => {
       }
     };
     loadProfilePhoto();
-  }, [activationPhone, user, getUserData]);
+  }, [activationPhone, getUserData, resolvedUserId, user]);
 
   const handleActivationPayment = async () => {
     if (!housegirlProfileId || !activationPhone) {
@@ -318,10 +319,10 @@ const HousegirlDashboard = () => {
 
   const handlePhotoUpload = async (photoUrl: string) => {
     setProfilePhoto(photoUrl);
-    if (!user) return;
+    if (!user || !resolvedUserId) return;
     try {
       const token = await FirebaseAuthService.getIdToken();
-      await fetch(`/api/housegirls/${user.id}`, {
+      await fetch(`/api/housegirls/${resolvedUserId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -341,7 +342,7 @@ const HousegirlDashboard = () => {
   };
 
   const handleSaveProfile = async () => {
-    if (!user) return;
+    if (!user || !resolvedUserId) return;
     setIsSavingProfile(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
@@ -351,7 +352,7 @@ const HousegirlDashboard = () => {
         .filter(Boolean);
       const numericRate = Number((editFormData.expectedSalary || '').replace(/[^\d]/g, ''));
 
-      const response = await fetch(`${API_BASE_URL}/api/housegirls/${user.id}`, {
+      const response = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
