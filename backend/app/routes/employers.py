@@ -129,7 +129,22 @@ def get_employer(employer_id):
         if not emp_doc.exists:
             fallback_doc = find_employer_doc_for_user(employer_id)
             if not fallback_doc:
-                return jsonify({'error': 'Employer not found'}), 404
+                empty_profile = {
+                    'id': employer_id,
+                    'user_id': employer_id,
+                    'full_name': '',
+                    'company_name': '',
+                    'location': '',
+                    'description': '',
+                    'phone': '',
+                    'profile_photo_url': '',
+                    'photo_url': '',
+                    'created_at': datetime.utcnow().isoformat(),
+                    'updated_at': datetime.utcnow().isoformat(),
+                }
+                db.collection('employer_profiles').document(employer_id).set(empty_profile)
+                logger.info(f'Created empty employer profile: employer_profiles/{employer_id}')
+                return jsonify(empty_profile), 200
             emp_doc = fallback_doc
             resolved_employer_id = fallback_doc.id
             

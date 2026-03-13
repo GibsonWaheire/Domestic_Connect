@@ -198,6 +198,24 @@ def verify_phone_auth():
                 
             user_doc_ref.set(user_data, merge=True)
             user_type_to_return = stored_user_type
+
+            # Ensure role-specific profile doc exists for returning users
+            if stored_user_type in ('employer', 'housegirl'):
+                collection = 'employer_profiles' if stored_user_type == 'employer' else 'housegirl_profiles'
+                role_doc = db.collection(collection).document(user_id).get()
+                if not role_doc.exists:
+                    role_profile = {
+                        'id': user_id,
+                        'user_id': user_id,
+                        'first_name': existing_data.get('first_name', ''),
+                        'last_name': existing_data.get('last_name', ''),
+                        'email': email_safe,
+                        'phone_number': phone_number,
+                        'created_at': timestamp,
+                        'updated_at': timestamp,
+                    }
+                    db.collection(collection).document(user_id).set(role_profile)
+                    logger.info(f'Created missing profile doc: {collection}/{user_id}')
         else:
             if mode == 'login':
                 return jsonify({

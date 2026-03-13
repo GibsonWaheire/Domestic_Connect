@@ -218,7 +218,21 @@ const HousegirlDashboard = () => {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
-        if (!response.ok) return;
+        if (!response.ok) {
+          // Profile not found — leave form at defaults so user can still edit
+          setEditFormData({
+            bio: '',
+            expectedSalary: '',
+            location: '',
+            experience: '',
+            education: '',
+            accommodationType: '',
+            community: '',
+            skills: '',
+            languages: '',
+          });
+          return;
+        }
         const result = await response.json();
         const apiPhoto = result?.profile_photo_url || result?.photo_url || '';
         const apiSkills = Array.isArray(result?.skills) ? result.skills : [];
