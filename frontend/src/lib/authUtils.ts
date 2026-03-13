@@ -24,7 +24,7 @@ export interface User {
     is_firebase_user?: boolean;
 }
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+import { API_BASE_URL } from './apiConfig';
 export const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
 
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

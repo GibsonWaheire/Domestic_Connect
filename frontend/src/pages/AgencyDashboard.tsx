@@ -18,6 +18,7 @@ import {
   Search, 
   Plus, 
   Eye, 
+  EyeOff,
   Edit, 
   Trash2, 
   Phone, 
@@ -87,7 +88,7 @@ interface Housegirl {
   earnings: number;
 }
 
-interface JobPosting {
+interface LocalJobPosting {
   id: string;
   title: string;
   client: string;
@@ -101,13 +102,13 @@ interface JobPosting {
   placementFee: number;
 }
 
-interface Client {
+interface LocalClient {
   id: string;
   name: string;
   email: string;
   phone: string;
   location: string;
-  status: 'active' | 'inactive' | 'premium';
+  status: string;
   totalSpent: number;
   lastContact: string;
   photo: string;
@@ -189,7 +190,14 @@ const AgencyDashboard = () => {
   const [agencyPhone, setAgencyPhone] = useState('');
   const [agencyDescription, setAgencyDescription] = useState('');
   const [isSavingAgency, setIsSavingAgency] = useState(false);
+  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const agencyFormInitialized = useRef(false);
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   // Use real-time data hook
   const { 
@@ -223,11 +231,16 @@ const AgencyDashboard = () => {
       });
 
       // Initialize agency profile form once
-      if (!agencyFormInitialized.current) {
-        setAgencyName(`${dashboardData.user.first_name} ${dashboardData.user.last_name}`.trim());
-        agencyFormInitialized.current = true;
+        if (!agencyFormInitialized.current) {
+          setAgencyName(`${dashboardData.user.first_name} ${dashboardData.user.last_name}`.trim());
+          agencyFormInitialized.current = true;
+        }
+
+        // Check if agency profile exists
+        if (dashboardData.user.user_type === 'agency') {
+          setHasProfile(!!dashboardData.stats && Object.keys(dashboardData.stats).length > 0);
+        }
       }
-    }
   }, [dashboardData]);
 
   // Show error if data fetching fails
@@ -275,6 +288,54 @@ const AgencyDashboard = () => {
       toast({ title: 'Failed to save', description: 'Please try again.', variant: 'destructive' });
     } finally {
       setIsSavingAgency(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast({
+        title: "Missing Fields",
+        description: "Enter and confirm your new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Weak Password",
+        description: "New password must be at least 8 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "New password and confirmation do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await FirebaseAuthService.updatePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      toast({
+        title: "Password Updated",
+        description: "Your password has been changed successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update password.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -341,10 +402,22 @@ const AgencyDashboard = () => {
   }));
 
   // Real job opportunities from dashboard data
-  const activeJobs: JobPosting[] = dashboardData?.available_data.job_postings?.slice(0, 3) || [];
+  const activeJobs: LocalJobPosting[] = (dashboardData?.available_data.job_postings || []).slice(0, 3).map(job => ({
+    id: job.id,
+    title: job.title,
+    client: job.employer?.name || 'N/A',
+    location: job.location,
+    salary: `KES ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`,
+    postedDate: new Date(job.created_at).toLocaleDateString(),
+    status: job.status === 'closed' ? 'expired' : (job.status as any),
+    applications: job.applications_count || 0,
+    requirements: job.skills_required || [],
+    commission: 5000,
+    placementFee: 10000
+  }));
 
   // Real clients from dashboard data
-  const topClients: Client[] = agencyClients.slice(0, 3).map(client => ({
+  const topClients: LocalClient[] = agencyClients.slice(0, 3).map(client => ({
     id: client.id,
     name: client.name,
     email: client.email,
@@ -443,10 +516,33 @@ const AgencyDashboard = () => {
             </CardContent>
           </Card>
 
-          {/* Overview Tab */}
-          {activeTab === 'overview' && (
-            <div className="space-y-6">
-              {dataLoading ? (
+          {/* Overview Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {hasProfile === false && (
+              <Card className="bg-blue-50 border-blue-200">
+                <CardHeader>
+                  <CardTitle className="text-blue-800 flex items-center gap-2">
+                    <AlertCircle className="h-5 w-5" />
+                    Complete Agency Profile
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-blue-800 mb-4 text-sm">
+                    Complete your agency profile to start listing housegirls and receiving job requests.
+                  </p>
+                  <Button
+                    className="bg-blue-600 hover:bg-blue-700"
+                    onClick={() => setActiveTab('settings')}
+                  >
+                    Set Up Profile
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Quick Stats */}
+            {dataLoading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
                   <span className="ml-2 text-gray-600">Loading agency data...</span>
@@ -943,9 +1039,89 @@ const AgencyDashboard = () => {
                       onClick={handleSaveAgencyProfile}
                       disabled={isSavingAgency}
                     >
-                      {isSavingAgency ? 'Saving...' : 'Save'}
+                      {isSavingAgency ? 'Saving...' : 'Save Profile'}
                     </Button>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-slate-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5 text-blue-600" />
+                    Account Security
+                  </CardTitle>
+                  <CardDescription>Update your password and manage account security</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 max-w-md">
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">New Password</label>
+                      <div className="relative">
+                        <Input
+                          type={showNewPassword ? "text" : "password"}
+                          className="pr-10"
+                          placeholder="Min 8 characters"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                          onClick={() => setShowNewPassword(!showNewPassword)}
+                        >
+                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Confirm Password</label>
+                      <div className="relative">
+                        <Input
+                          type={showConfirmPassword ? "text" : "password"}
+                          className="pr-10"
+                          placeholder="Re-enter password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                        />
+                        <button
+                          type="button"
+                          className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <Button 
+                      className="w-full bg-slate-900 hover:bg-slate-800 text-white"
+                      onClick={handlePasswordChange}
+                      disabled={isUpdatingPassword}
+                    >
+                      {isUpdatingPassword ? (
+                        <>
+                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                          Updating...
+                        </>
+                      ) : 'Update Password'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border border-red-200 shadow-sm">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-red-600">
+                    <AlertCircle className="h-5 w-5" />
+                    Danger Zone
+                  </CardTitle>
+                  <CardDescription>Irreversible account actions</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-gray-600 mb-4">Deleting your agency account will remove all registered housegirls and client records linked to your agency.</p>
+                  <Button variant="destructive" size="sm">
+                    Delete Account
+                  </Button>
                 </CardContent>
               </Card>
             </div>

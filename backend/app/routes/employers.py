@@ -153,6 +153,7 @@ def get_employer(employer_id):
         
         first_name = ""
         last_name = ""
+        profile_photo_url = emp.get('profile_photo_url') or emp.get('photo_url')
         
         profile_id = emp.get('profile_id')
         if profile_id:
@@ -166,7 +167,15 @@ def get_employer(employer_id):
                         u_data = user_doc.to_dict()
                         first_name = u_data.get('first_name', '')
                         last_name = u_data.get('last_name', '')
+                        if not profile_photo_url:
+                            profile_photo_url = u_data.get('profile_photo_url') or u_data.get('photo_url')
         
+        # Fallback to fields stored on the employer doc if multi-hop lookup yields empty names
+        if not first_name and emp.get('full_name'):
+            name_parts = emp.get('full_name').strip().split(' ')
+            first_name = name_parts[0]
+            last_name = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+
         return jsonify({
             'id': emp.get('id') or resolved_employer_id,
             'profile_id': profile_id,
@@ -175,7 +184,7 @@ def get_employer(employer_id):
             'phone': emp.get('phone'),
             'location': emp.get('location'),
             'description': emp.get('description'),
-            'profile_photo_url': emp.get('profile_photo_url') or emp.get('photo_url'),
+            'profile_photo_url': profile_photo_url,
             'first_name': first_name,
             'last_name': last_name,
             'created_at': emp.get('created_at'),
@@ -293,6 +302,8 @@ def update_employer(employer_id):
                 user_updates['last_name'] = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
             if 'phone' in data:
                 user_updates['phone_number'] = data.get('phone')
+            if 'profile_photo_url' in updates or 'photo_url' in updates:
+                user_updates['profile_photo_url'] = updates.get('profile_photo_url')
             if user_updates:
                 user_updates['updated_at'] = timestamp
                 db.collection('users').document(getattr(user, 'id')).set(user_updates, merge=True)

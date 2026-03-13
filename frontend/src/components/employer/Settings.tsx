@@ -2,11 +2,12 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Users, Shield, Upload, Eye, EyeOff } from 'lucide-react';
+import { Users, Shield, Upload, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { API_BASE_URL } from '@/lib/apiConfig';
+import { uploadPhoto } from '@/lib/photoUpload';
 
 interface SettingsProps {
   stats: {
@@ -32,11 +33,13 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
   const [phone, setPhone] = useState(user?.phone_number || '');
   const [profilePhoto, setProfilePhoto] = useState((user as { profile_photo_url?: string } | null)?.profile_photo_url || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
 
   const authProvider = localStorage.getItem('dc_auth_provider');
   const isGoogleAuth = authProvider === 'google';
@@ -84,18 +87,26 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
     }
   }, []);
 
-  const handleProfilePhotoChange = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleProfilePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) {
+    if (!file || !user) {
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === 'string' ? reader.result : '';
-      setProfilePhoto(result);
-    };
-    reader.readAsDataURL(file);
+    setIsUploadingPhoto(true);
+    try {
+      const result = await uploadPhoto(file, user.id);
+      if (result.success && result.photoUrl) {
+        setProfilePhoto(result.photoUrl);
+        showSuccessNotification('Photo uploaded', 'Press Save to update your profile.');
+      } else {
+        showErrorNotification('Upload failed', result.error || 'Please try again.');
+      }
+    } catch {
+      showErrorNotification('Upload failed', 'Please try again.');
+    } finally {
+      setIsUploadingPhoto(false);
+    }
   };
 
   const handleSaveProfile = async () => {
@@ -139,7 +150,7 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
     }
   };
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!newPassword || !confirmPassword) {
       showErrorNotification('Missing Fields', 'Enter and confirm your new password.');
       return;
@@ -155,9 +166,17 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
       return;
     }
 
-    setNewPassword('');
-    setConfirmPassword('');
-    showInfoNotification('Password Updated', 'Your password has been changed.');
+    setIsUpdatingPassword(true);
+    try {
+      await FirebaseAuthService.updatePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      showSuccessNotification('Password Updated', 'Your password has been changed successfully.');
+    } catch (error: any) {
+      showErrorNotification('Update Failed', error.message || 'Failed to update password.');
+    } finally {
+      setIsUpdatingPassword(false);
+    }
   };
 
   return (
@@ -223,10 +242,10 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
                   <span>Avatar</span>
                 )}
               </div>
-              <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
-                <Upload className="h-4 w-4" />
-                Upload
-                <input type="file" accept="image/*" className="hidden" onChange={handleProfilePhotoChange} />
+              <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+                {isUploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                {isUploadingPhoto ? 'Uploading...' : 'Upload'}
+                <input type="file" accept="image/*" className="hidden" onChange={handleProfilePhotoChange} disabled={isUploadingPhoto} />
               </label>
             </div>
           </div>
@@ -236,7 +255,12 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
             onClick={handleSaveProfile}
             disabled={isSaving}
           >
-            {isSaving ? 'Saving...' : 'Save'}
+            {isSaving ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Saving...
+              </>
+            ) : 'Save Profile'}
           </Button>
         </CardContent>
       </Card>
@@ -264,12 +288,14 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
                     onChange={(event) => setNewPassword(event.target.value)}
                     className="bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-300 pr-10"
                     placeholder="Enter new password"
+                    disabled={isUpdatingPassword}
                   />
                   <button
                     type="button"
                     className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700"
                     onClick={() => setShowNewPassword((value) => !value)}
                     aria-label={showNewPassword ? 'Hide new password' : 'Show new password'}
+                    disabled={isUpdatingPassword}
                   >
                     {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -285,20 +311,33 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
                     onChange={(event) => setConfirmPassword(event.target.value)}
                     className="bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-300 pr-10"
                     placeholder="Confirm new password"
+                    disabled={isUpdatingPassword}
                   />
                   <button
                     type="button"
                     className="absolute inset-y-0 right-0 px-3 text-gray-500 hover:text-gray-700"
                     onClick={() => setShowConfirmPassword((value) => !value)}
                     aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                    disabled={isUpdatingPassword}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
-              <Button variant="outline" className="hover:bg-green-50 hover:border-green-300" onClick={handlePasswordChange}>
-                Change Password
+              <Button 
+                variant="outline" 
+                className="hover:bg-green-50 hover:border-green-300" 
+                onClick={handlePasswordChange}
+                disabled={isUpdatingPassword}
+                id="change-password-button"
+              >
+                {isUpdatingPassword ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : 'Change Password'}
               </Button>
             </>
           )}
