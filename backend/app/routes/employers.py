@@ -95,6 +95,7 @@ def get_employer(employer_id):
             return jsonify({'error': 'Employer not found'}), 404
             
         emp = emp_doc.to_dict()
+        logger.info(f'Profile read: {emp_doc.reference.path}')
         
         first_name = ""
         last_name = ""
@@ -237,15 +238,7 @@ def update_employer(employer_id):
             if emp_doc.exists:
                 doc_ref.update(updates)
             else:
-                profile_id = None
-                profile_docs = list(
-                    db.collection('profiles')
-                    .where('user_id', '==', getattr(user, 'id'))
-                    .limit(1)
-                    .stream()
-                )
-                if profile_docs:
-                    profile_id = profile_docs[0].to_dict().get('id')
+                profile_id = get_profile_id_for_user(getattr(user, 'id'))
                 doc_ref.set({
                     'id': employer_id,
                     'user_id': getattr(user, 'id'),
@@ -253,6 +246,7 @@ def update_employer(employer_id):
                     'created_at': timestamp,
                     **updates
                 })
+            logger.info(f'Profile saved: {doc_ref.path} -> {updates}')
             
         # Refetch updated
         updated_doc = doc_ref.get()

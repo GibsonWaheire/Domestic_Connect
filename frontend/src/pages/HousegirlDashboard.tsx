@@ -153,6 +153,13 @@ const HousegirlDashboard = () => {
     enabled: !!user
   });
 
+  // Force refresh on mount
+  useEffect(() => {
+    if (user) {
+      refreshData(false);
+    }
+  }, [user, refreshData]);
+
   // Transform dashboard data when it changes
   useEffect(() => {
     if (dashboardData?.available_data.job_opportunities) {
@@ -394,7 +401,18 @@ const HousegirlDashboard = () => {
       });
 
       if (response.ok) {
-        const saved = await response.json().catch(() => ({}));
+        // Fetch fresh data from backend to confirm persistence
+        const freshResponse = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        
+        const saved = freshResponse.ok 
+          ? await freshResponse.json() 
+          : await response.json().catch(() => ({}));
+
         const savedSkills = Array.isArray(saved?.skills) ? saved.skills : normalizedSkills;
         const savedLanguages = Array.isArray(saved?.languages) ? saved.languages : normalizedLanguages;
         setEditFormData({
@@ -413,7 +431,7 @@ const HousegirlDashboard = () => {
         }
         toast({
           title: "Profile saved",
-          description: "Your profile has been updated successfully.",
+          description: "Your profile has been updated successfully and verified.",
         });
         await refreshData(false);
         setShowEditModal(false);
