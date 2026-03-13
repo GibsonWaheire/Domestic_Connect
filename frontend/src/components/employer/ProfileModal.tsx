@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -39,10 +40,11 @@ export const ProfileModal = ({
           {/* Profile Header */}
           <div className="flex items-start space-x-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
             <div className="relative">
-              <img
-                src={housegirl.profileImage || '/placeholder.svg'}
-                alt={housegirl.name}
-                className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
+              <UserAvatar
+                src={housegirl.profileImage}
+                name={housegirl.name}
+                size="xl"
+                className="w-24 h-24 border-4 border-white shadow-lg"
               />
               {housegirl.rating && (
                 <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-white text-sm rounded-full px-2 py-1 flex items-center shadow-lg">

@@ -55,6 +55,8 @@ class User(BaseModel):
             'is_active': getattr(self, 'is_active', True),
             'is_admin': getattr(self, 'is_admin', False),
             'is_firebase_user': getattr(self, 'is_firebase_user', False),
+            'profile_photo_url': getattr(self, 'profile_photo_url', None),
+            'photo_url': getattr(self, 'profile_photo_url', None),
             'created_at': getattr(self, 'created_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'created_at', None), datetime) else getattr(self, 'created_at', datetime.utcnow().isoformat()),
             'updated_at': getattr(self, 'updated_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'updated_at', None), datetime) else getattr(self, 'updated_at', datetime.utcnow().isoformat()),
             'password_hash': getattr(self, 'password_hash', None)

@@ -3,11 +3,15 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuthEnhanced';
+import UserAvatar from '@/components/ui/UserAvatar';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const heroImage = '/woooies.avif';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [featuredHousegirls, setFeaturedHousegirls] = useState<any[]>([]);
+  const [loadingHousegirls, setLoadingHousegirls] = useState(true);
   const { user } = useAuth();
   const localBusinessSchema = {
     "@context": "https://schema.org",
@@ -70,6 +74,27 @@ const LandingPage = () => {
       window.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    const fetchFeatured = async () => {
+      try {
+        const res = await fetch(`${API_BASE_URL}/api/housegirls/`);
+        if (res.ok) {
+          const data = await res.json();
+          // Filter out those without names and limit to 4
+          const girls = (data.housegirls || [])
+            .filter((g: any) => g.first_name)
+            .slice(0, 4);
+          setFeaturedHousegirls(girls);
+        }
+      } catch (err) {
+        console.error('Error fetching featured housegirls:', err);
+      } finally {
+        setLoadingHousegirls(false);
+      }
+    };
+    fetchFeatured();
+  }, []);
 
   return (
     <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
@@ -246,39 +271,46 @@ const LandingPage = () => {
                 <p className="text-sm text-gray-600">Verified profiles across Kenya</p>
               </div>
             </div>
-            <div className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-center gap-3">
-              <img src="/housegirls.webp" alt="Mary profile" className="h-12 w-12 rounded-full object-cover border border-gray-200" />
-              <div>
-                <p className="text-base font-bold text-[#111]">Mary W.</p>
-                <p className="text-sm text-gray-600">House Help · Nairobi</p>
+            
+            {loadingHousegirls ? (
+              // Loading skeletons
+              [1, 2, 3].map((i) => (
+                <div key={i} className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-center gap-3 animate-pulse">
+                  <div className="h-12 w-12 rounded-full bg-gray-200" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-gray-200 rounded w-1/4" />
+                    <div className="h-3 bg-gray-200 rounded w-1/2" />
+                  </div>
+                </div>
+              ))
+            ) : featuredHousegirls.length > 0 ? (
+              featuredHousegirls.map((girl) => (
+                <div key={girl.id} className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-center gap-3">
+                  <UserAvatar
+                    src={girl.profile_photo_url}
+                    name={`${girl.first_name} ${girl.last_name || ''}`}
+                    size="md"
+                    isAvailable={girl.is_available}
+                  />
+                  <div>
+                    <p className="text-base font-bold text-[#111]">{girl.first_name} {girl.last_name?.charAt(0)}.</p>
+                    <p className="text-sm text-gray-600">
+                      {girl.experience || 'House Help'} · {girl.location || 'Kenya'}
+                    </p>
+                  </div>
+                  <div className="ml-auto inline-flex items-center gap-2 text-sm text-green-700 font-medium">
+                    <span className={`h-2.5 w-2.5 rounded-full ${girl.is_available ? 'bg-green-500' : 'bg-gray-400'}`} />
+                    {girl.is_available ? 'Available' : 'Unavailable'}
+                  </div>
+                </div>
+              ))
+            ) : (
+              // Fallback to placeholders if no real girls found (unlikely)
+              <div className="w-full rounded-2xl border border-gray-200 bg-white p-6 shadow-sm text-center">
+                <p className="text-sm text-gray-500 italic">Finding available help near you...</p>
+                <Button onClick={() => navigate('/housegirls')} variant="link">Browse Directory</Button>
               </div>
-              <div className="ml-auto inline-flex items-center gap-2 text-sm text-green-700 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                Available
-              </div>
-            </div>
-            <div className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-center gap-3">
-              <img src="/housegirls.webp" alt="Grace profile" className="h-12 w-12 rounded-full object-cover border border-gray-200" />
-              <div>
-                <p className="text-base font-bold text-[#111]">Grace A.</p>
-                <p className="text-sm text-gray-600">Nanny · Mombasa</p>
-              </div>
-              <div className="ml-auto inline-flex items-center gap-2 text-sm text-green-700 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                Available
-              </div>
-            </div>
-            <div className="w-full rounded-2xl border border-gray-200 bg-white p-4 shadow-sm flex items-center gap-3">
-              <img src="/housegirls.webp" alt="Faith profile" className="h-12 w-12 rounded-full object-cover border border-gray-200" />
-              <div>
-                <p className="text-base font-bold text-[#111]">Faith C.</p>
-                <p className="text-sm text-gray-600">Cleaner · Kisumu</p>
-              </div>
-              <div className="ml-auto inline-flex items-center gap-2 text-sm text-green-700 font-medium">
-                <span className="h-2.5 w-2.5 rounded-full bg-green-500" />
-                Available
-              </div>
-            </div>
+            )}
           </div>
         </div>
       </section>

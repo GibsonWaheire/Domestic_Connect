@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuthEnhanced';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { Lock, MapPin, Menu, Phone, Search } from 'lucide-react';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 const bgImage = '/housegirls.webp';
 
@@ -649,25 +650,11 @@ const HousegirlsListPage = () => {
                     >
                       <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
                         <div className="relative flex-shrink-0 mx-auto md:mx-0">
-                          {profile.avatar ? (
-                            <img
-                              src={profile.avatar}
-                              alt={profile.name}
-                              className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full object-cover border border-gray-200"
-                            />
-                          ) : (
-                            <div className="w-14 h-14 md:w-[72px] md:h-[72px] rounded-full bg-[#4b5563] text-white font-semibold text-xl md:text-2xl flex items-center justify-center text-center">
-                              {profile.name
-                                .split(' ')
-                                .filter(Boolean)
-                                .slice(0, 2)
-                                .map((namePart) => namePart[0]?.toUpperCase())
-                                .join('')}
-                            </div>
-                          )}
-                          <span
-                            className={`absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white ${profile.available ? 'bg-[#22c55e]' : 'bg-[#9ca3af]'
-                              }`}
+                          <UserAvatar
+                            src={profile.avatar}
+                            name={profile.name}
+                            size="xl"
+                            isAvailable={profile.available}
                           />
                         </div>
 

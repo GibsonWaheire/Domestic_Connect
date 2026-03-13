@@ -96,69 +96,81 @@ def get_dashboard_data():
         }), 500
 
 def get_housegirls_for_employer(include_unavailable=False):
-    """Get available housegirls for employers to view"""
-    query = db.collection('housegirl_profiles')
-    if not include_unavailable:
-        query = query.where('is_available', '==', True)
-    hg_docs = query.stream()
+    """Get available housegirls for employers to view with super-universal visibility"""
+    try:
+        user_docs_map = {}
+        users_ref = db.collection('users')
+        
+        # 1. Start with 'users' collection
+        users_query = users_ref.where('user_type', '==', 'housegirl')
+        for doc in users_query.stream():
+            user_docs_map[doc.id] = {'user_data': doc.to_dict(), 'hg_profile': {}}
+            
+        # 2. Also check 'housegirl_profiles' collection
+        hg_profiles_ref = db.collection('housegirl_profiles')
+        for doc in hg_profiles_ref.stream():
+            hg_data = doc.to_dict()
+            doc_id = doc.id
+            uid = hg_data.get('user_id') or doc_id
+            
+            if uid not in user_docs_map:
+                u_doc = users_ref.document(uid).get()
+                user_docs_map[uid] = {
+                    'user_data': u_doc.to_dict() if u_doc.exists else {},
+                    'hg_profile': hg_data
+                }
+            else:
+                user_docs_map[uid]['hg_profile'] = hg_data
 
-    result = []
-    for doc in hg_docs:
-        housegirl = doc.to_dict()
-        hg_id = housegirl.get('id') or doc.id
-        pid = housegirl.get('profile_id')
-        first_name = ""
-        last_name = ""
-        phone = ""
-        email = ""
+        result = []
+        for user_id, data_bundle in user_docs_map.items():
+            user_data = data_bundle['user_data']
+            hg_profile = data_bundle['hg_profile']
+            
+            # Visibility/Availability logic
+            profile_is_available = hg_profile.get('is_available', True)
+            
+            # If not admin and not available, we honor the flag (but default to True)
+            if not include_unavailable and not profile_is_available:
+                continue
 
-        if not pid:
-            logger.warning(f'get_housegirls_for_employer: housegirl doc {hg_id} missing profile_id')
-        else:
-            prof_doc = db.collection('profiles').document(pid).get()
-            if prof_doc.exists:
-                user_id = prof_doc.to_dict().get('user_id')
-                if not user_id:
-                    logger.warning(f'get_housegirls_for_employer: profile {pid} missing user_id')
-                else:
-                    user_doc = db.collection('users').document(user_id).get()
-                    if user_doc.exists:
-                        u = user_doc.to_dict()
-                        first_name = u.get('first_name', '')
-                        last_name = u.get('last_name', '')
-                        phone = u.get('phone_number', '')
-                        email = u.get('email', '')
+            first_name = user_data.get('first_name') or hg_profile.get('first_name', '')
+            last_name = user_data.get('last_name') or hg_profile.get('last_name', '')
+            
+            # Count unlocks
+            unlock_count = len(list(
+                db.collection('contact_access')
+                .where('housegirl_id', '==', user_id)
+                .stream()
+            ))
 
-        unlock_count = len(list(
-            db.collection('contact_access')
-            .where('housegirl_id', '==', hg_id)
-            .stream()
-        ))
-
-        result.append({
-            'id': hg_id,
-            'profile_id': pid,
-            'age': housegirl.get('age'),
-            'bio': housegirl.get('bio'),
-            'current_location': housegirl.get('current_location'),
-            'location': housegirl.get('location'),
-            'education': housegirl.get('education'),
-            'experience': housegirl.get('experience'),
-            'skills': housegirl.get('skills', []),
-            'expected_salary': housegirl.get('expected_salary'),
-            'accommodation_type': housegirl.get('accommodation_type'),
-            'tribe': housegirl.get('tribe'),
-            'is_available': housegirl.get('is_available'),
-            'profile_photo_url': housegirl.get('profile_photo_url'),
-            'first_name': first_name,
-            'last_name': last_name,
-            'email': email,
-            'phone_number': phone,
-            'unlock_count': unlock_count,
-            'created_at': housegirl.get('created_at'),
-            'updated_at': housegirl.get('updated_at')
-        })
-    return result
+            result.append({
+                'id': user_id,
+                'profile_id': hg_profile.get('profile_id') or user_id,
+                'age': hg_profile.get('age'),
+                'bio': hg_profile.get('bio'),
+                'current_location': hg_profile.get('current_location') or user_data.get('location'),
+                'location': hg_profile.get('location') or user_data.get('location'),
+                'education': hg_profile.get('education'),
+                'experience': hg_profile.get('experience'),
+                'skills': hg_profile.get('skills', []),
+                'expected_salary': hg_profile.get('expected_salary'),
+                'accommodation_type': hg_profile.get('accommodation_type'),
+                'tribe': hg_profile.get('tribe'),
+                'is_available': profile_is_available,
+                'profile_photo_url': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': user_data.get('email', ''),
+                'phone_number': user_data.get('phone_number', ''),
+                'unlock_count': unlock_count,
+                'created_at': hg_profile.get('created_at') or user_data.get('created_at'),
+                'updated_at': hg_profile.get('updated_at') or user_data.get('updated_at')
+            })
+        return result
+    except Exception as e:
+        logger.error(f'get_housegirls_for_employer error: {str(e)}')
+        return []
 
 def get_job_postings_for_employer(employer_id):
     """Get job postings created by specific employer"""
