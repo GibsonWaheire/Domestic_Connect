@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
+import { useRealTimeData } from '@/hooks/useRealTimeData';
+import { jobsApi, JobPosting, crossEntityApi, DashboardData } from '@/lib/api';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { Separator } from '@/components/ui/separator';
 import {
   Heart,
@@ -41,8 +43,6 @@ import {
 } from 'lucide-react';
 import PhotoUpload from '@/components/PhotoUpload';
 import ReturnToHome from '@/components/ReturnToHome';
-import { jobsApi, JobPosting, crossEntityApi, DashboardData } from '@/lib/api';
-import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { API_BASE_URL } from '@/lib/apiConfig';
 
@@ -129,6 +129,7 @@ const HousegirlDashboard = () => {
   const [isActivating, setIsActivating] = useState(false);
   const [activationPending, setActivationPending] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null); // null means checking
 
   // Get user's actual data from registration
@@ -371,6 +372,50 @@ const HousegirlDashboard = () => {
     setProfilePhoto(photoUrl);
   };
 
+  const handleSavePhoto = async () => {
+    if (!user || !resolvedUserId || !profilePhoto) {
+      toast({
+        title: "No photo selected",
+        description: "Please upload a photo before saving.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    setIsSavingPhoto(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          profile_photo_url: profilePhoto,
+        }),
+      });
+
+      if (response.ok) {
+        toast({
+          title: "Photo saved",
+          description: "Your profile photo has been updated and saved to the database.",
+        });
+        await refreshData(false);
+      } else {
+        throw new Error('Failed to save photo');
+      }
+    } catch (error) {
+      toast({
+        title: "Save failed",
+        description: "There was an error saving your photo. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSavingPhoto(false);
+    }
+  };
+
   const handleFormChange = (field: string, value: string) => {
     setEditFormData(prev => ({
       ...prev,
@@ -425,9 +470,9 @@ const HousegirlDashboard = () => {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
-        
-        const saved = freshResponse.ok 
-          ? await freshResponse.json() 
+
+        const saved = freshResponse.ok
+          ? await freshResponse.json()
           : await response.json().catch(() => ({}));
 
         const savedSkills = Array.isArray(saved?.skills) ? saved.skills : normalizedSkills;
@@ -688,12 +733,12 @@ const HousegirlDashboard = () => {
           </div>
 
           <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-            <Avatar className="h-12 w-12 border-2 border-gray-100">
-              <AvatarImage src={profilePhoto || undefined} />
-              <AvatarFallback className="bg-gray-100 text-gray-700 font-bold">
-                {user?.first_name ? user.first_name.charAt(0).toUpperCase() : 'U'}
-              </AvatarFallback>
-            </Avatar>
+            <UserAvatar
+              src={profilePhoto}
+              name={`${user.first_name || ''} ${user.last_name || ''}`}
+              size="lg"
+              className="border-2 border-gray-100"
+            />
             <div className="text-left">
               <p className="text-sm font-medium text-gray-900">My Profile</p>
               <Button
@@ -707,28 +752,47 @@ const HousegirlDashboard = () => {
             </div>
           </div>
         </div>
-
-        {/* Profile Completion Banner */}
-        {housegirlProfileCompletion < 60 && (
-          <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
-              <div>
-                <h3 className="text-sm font-semibold text-red-900">Profile Hidden ({housegirlProfileCompletion}% Complete)</h3>
-                <p className="text-sm text-red-800 mt-1">
-                  Your profile is hidden from employers. Complete it to get discovered.
-                </p>
-              </div>
+        {/* Status Banner - Dynamic Logic */}
+        <div className={`mb-6 rounded-xl border p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${
+          housegirlProfileCompletion < 100 
+            ? 'border-pink-200 bg-pink-50' 
+            : 'border-blue-200 bg-blue-50'
+        }`}>
+          <div className="flex items-start gap-3">
+            {housegirlProfileCompletion < 100 ? (
+              <AlertCircle className="h-5 w-5 text-pink-600 shrink-0 mt-0.5" />
+            ) : (
+              <CheckCircle2 className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+            )}
+            <div>
+              <h3 className={`text-sm font-semibold ${
+                housegirlProfileCompletion < 100 ? 'text-pink-900' : 'text-blue-900'
+              }`}>
+                {housegirlProfileCompletion < 100 
+                  ? `Profile Hidden (${housegirlProfileCompletion}% Complete)` 
+                  : `Profile Live (100%)`}
+              </h3>
+              <p className={`text-sm mt-1 ${
+                housegirlProfileCompletion < 100 ? 'text-pink-800' : 'text-blue-800'
+              }`}>
+                {housegirlProfileCompletion < 100 
+                  ? 'Your profile is hidden from employers. Complete it to get discovered.'
+                  : 'You are appearing in searches! Your profile is now visible to all employers.'}
+              </p>
             </div>
-            <Button
-              onClick={() => setActiveTab('profile')}
-              className="bg-red-600 hover:bg-red-700 text-white shrink-0"
-              size="sm"
-            >
-              Complete Profile →
-            </Button>
           </div>
-        )}
+          <Button
+            onClick={() => setActiveTab('profile')}
+            className={`shrink-0 ${
+              housegirlProfileCompletion < 100 
+                ? 'bg-pink-600 hover:bg-pink-700 text-white' 
+                : 'bg-blue-600 hover:bg-blue-700 text-white'
+            }`}
+            size="sm"
+          >
+            {housegirlProfileCompletion < 100 ? 'Complete Profile →' : 'Edit Profile'}
+          </Button>
+        </div>
 
         {/* Navigation Tabs */}
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -774,10 +838,10 @@ const HousegirlDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <p className="text-blue-800 mb-4 text-sm">
-                    Complete your profile to start appearing in employer searches and receive job matches. 
+                    Complete your profile to start appearing in employer searches and receive job matches.
                     It only takes a few minutes!
                   </p>
-                  <Button 
+                  <Button
                     className="bg-blue-600 hover:bg-blue-700"
                     onClick={() => setActiveTab('profile')}
                   >
@@ -942,6 +1006,28 @@ const HousegirlDashboard = () => {
                     <PhotoUpload
                       onPhotoUploaded={handlePhotoUpload}
                     />
+                    <div className="mt-4 flex flex-col items-center gap-2">
+                      <Button 
+                        onClick={handleSavePhoto}
+                        disabled={isSavingPhoto || !profilePhoto}
+                        className="bg-green-600 hover:bg-green-700 text-white px-8"
+                      >
+                        {isSavingPhoto ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Save Photo
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-gray-500 italic">
+                        Note: The photo must be of a real person to be approved.
+                      </p>
+                    </div>
                   </div>
 
                   <Separator />
@@ -1127,7 +1213,7 @@ const HousegirlDashboard = () => {
                       </button>
                     </div>
                   </div>
-                  <Button 
+                  <Button
                     className="w-full bg-blue-600 hover:bg-blue-700"
                     onClick={handlePasswordChange}
                     disabled={isUpdatingPassword}

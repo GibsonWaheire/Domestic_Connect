@@ -122,31 +122,51 @@ def get_housegirls():
         max_salary = request.args.get('max_salary', type=int)
         is_available_param = request.args.get('is_available')
         
-        # We start with the 'users' collection to ensure universal visibility
-        # of all accounts registered as housegirls.
-        users_query = db.collection('users').where('user_type', '==', 'housegirl')
-        user_docs = users_query.stream()
+        # Super-Universal Visibility Logic:
+        # We merge results from both 'users' collection (filtered by type) 
+        # and 'housegirl_profiles' collection (all entries).
+        
+        user_docs_map = {}
+        
+        # 1. Start with 'users' collection
+        users_ref = db.collection('users')
+        users_query = users_ref.where('user_type', '==', 'housegirl')
+        for doc in users_query.stream():
+            user_docs_map[doc.id] = {'user_data': doc.to_dict(), 'hg_profile': {}}
+            
+        # 2. Also check 'housegirl_profiles' collection to catch those missing the 'user_type' link
+        hg_profiles_ref = db.collection('housegirl_profiles')
+        for doc in hg_profiles_ref.stream():
+            hg_data = doc.to_dict()
+            doc_id = doc.id
+            uid = hg_data.get('user_id') or doc_id
+            
+            if uid not in user_docs_map:
+                # Catch case where user doc exists but type is wrong or missing
+                u_doc = users_ref.document(uid).get()
+                user_docs_map[uid] = {
+                    'user_data': u_doc.to_dict() if u_doc.exists else {},
+                    'hg_profile': hg_data
+                }
+            else:
+                user_docs_map[uid]['hg_profile'] = hg_data
+
+        logger.info(f"get_housegirls: Found {len(user_docs_map)} unique housegirl candidate IDs")
         
         all_results = []
         current_user_id = get_authenticated_user_id_from_request()
         
-        for user_doc in user_docs:
-            user_data = user_doc.to_dict()
-            user_id = user_doc.id
-            
-            # Try to fetch the enriched housegirl profile
-            # We look up by doc ID (which should be user_id) or via profile_id link
-            hg_profile_doc = db.collection('housegirl_profiles').document(user_id).get()
-            hg_profile = hg_profile_doc.to_dict() if hg_profile_doc.exists else {}
+        for user_id, data_bundle in user_docs_map.items():
+            user_data = data_bundle['user_data']
+            hg_profile = data_bundle['hg_profile']
             
             if not hg_profile:
-                # Fallback: check if there's a profile doc via profile_id in cross-reference
-                # though our recent fixes make user_id the doc ID, let's be robust.
+                # Final check for profile via profile_id link
                 fallback_profile = find_housegirl_doc_for_user(user_id)
                 if fallback_profile:
                     hg_profile = fallback_profile.to_dict()
             
-            # Combine data
+            # Combine data attributes
             first_name = user_data.get('first_name') or hg_profile.get('first_name', '')
             last_name = user_data.get('last_name') or hg_profile.get('last_name', '')
             full_name = f"{first_name} {last_name}".strip()

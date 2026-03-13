@@ -57,6 +57,10 @@ export interface HousegirlProfile {
   last_name: string;
   phone_number: string | null;
   email: string | null;
+  skills: string[];
+  unlock_count?: number;
+  activation_fee_paid?: boolean;
+  in_demand_alert?: boolean;
   created_at: string;
   updated_at: string;
 }

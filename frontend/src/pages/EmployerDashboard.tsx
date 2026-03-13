@@ -270,12 +270,6 @@ const EmployerDashboard = () => {
   };
 
   const handleUnlockAttempt = (housegirl: Housegirl) => {
-    if (employerProfileCompletion < 60) {
-      setUnlockRestrictionMessage(
-        'Complete at least 60% of your profile to unlock contacts.'
-      );
-      return;
-    }
     setUnlockRestrictionMessage(null);
     setHousegirlToUnlock(housegirl);
     setShowUnlockModal(true);
@@ -479,24 +473,22 @@ const EmployerDashboard = () => {
               </div>
             </div>
 
-            {/* Profile Completion Banner */}
-            {employerProfileCompletion < 60 && (
-              <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-amber-900">Incomplete Profile ({employerProfileCompletion}%)</h3>
-                  <p className="text-sm text-amber-800 mt-1">
-                    Complete your profile to unlock all features, including viewing contact details.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => setActiveSection('settings')}
-                  className="bg-amber-600 hover:bg-amber-700 text-white shrink-0"
-                  size="sm"
-                >
-                  Complete Profile →
-                </Button>
+            {/* Status Banner - Informative */}
+            <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900">Profile Live ({employerProfileCompletion}%)</h3>
+                <p className="text-sm text-blue-800 mt-1">
+                  You can now unlock contacts and post jobs! Add more details to your profile to stand out to candidates.
+                </p>
               </div>
-            )}
+              <Button
+                onClick={() => setActiveSection('settings')}
+                className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                size="sm"
+              >
+                {employerProfileCompletion < 100 ? 'Add Details →' : 'Edit Profile'}
+              </Button>
+            </div>
 
             <div className="mb-4 flex flex-wrap items-center gap-2 bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
               <div className="flex overflow-x-auto hide-scrollbar gap-2 w-full md:w-auto flex-1">
@@ -540,18 +532,6 @@ const EmployerDashboard = () => {
               <p className="mb-3 text-xs text-gray-500 mt-2 w-full">Last updated: {lastUpdated.toLocaleTimeString()}</p>
             )}
 
-            {activeSection === 'housegirls' && unlockRestrictionMessage && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-                Complete at least 60% of your profile to unlock contacts.{' '}
-                <button
-                  type="button"
-                  className="underline font-medium"
-                  onClick={() => jumpToEmployerProfileSection('first-name')}
-                >
-                  Complete now →
-                </button>
-              </div>
-            )}
             {renderSection()}
           </main>
 
