@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { agenciesApi, housegirlProfilesApi, employerProfilesApi, crossEntityApi, DashboardData } from '@/lib/api';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { API_BASE_URL } from '@/lib/apiConfig';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { 
   Users, 
@@ -153,7 +155,6 @@ const AgencyDashboard = () => {
   
   const [activeTab, setActiveTab] = useState<'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings'>('overview');
   const [searchTerm, setSearchTerm] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
   const [agencyData, setAgencyData] = useState<{
     name: string;
     email: string;
@@ -182,8 +183,13 @@ const AgencyDashboard = () => {
     agency_fee: number;
     created_at: string;
   }>>([]);
-  const [showNotification, setShowNotification] = useState(false);
-  const [showChat, setShowChat] = useState(false);
+  // Agency profile form state
+  const [agencyName, setAgencyName] = useState('');
+  const [agencyLocation, setAgencyLocation] = useState('');
+  const [agencyPhone, setAgencyPhone] = useState('');
+  const [agencyDescription, setAgencyDescription] = useState('');
+  const [isSavingAgency, setIsSavingAgency] = useState(false);
+  const agencyFormInitialized = useRef(false);
 
   // Use real-time data hook
   const { 
@@ -215,8 +221,12 @@ const AgencyDashboard = () => {
         email: dashboardData.user.email,
         stats: dashboardData.stats
       });
-      
-      setIsLoading(false);
+
+      // Initialize agency profile form once
+      if (!agencyFormInitialized.current) {
+        setAgencyName(`${dashboardData.user.first_name} ${dashboardData.user.last_name}`.trim());
+        agencyFormInitialized.current = true;
+      }
     }
   }, [dashboardData]);
 
@@ -237,6 +247,36 @@ const AgencyDashboard = () => {
       navigate('/agencies');
     }
   }, [user, loading, navigate]);
+
+  const handleSaveAgencyProfile = async () => {
+    if (!user) return;
+    setIsSavingAgency(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/api/agencies/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: agencyName.trim(),
+          location: agencyLocation.trim(),
+          phone: agencyPhone.trim(),
+          description: agencyDescription.trim(),
+        }),
+      });
+      if (response.ok) {
+        toast({ title: 'Profile saved', description: 'Agency profile updated successfully.' });
+      } else {
+        toast({ title: 'Failed to save', description: 'Please try again.', variant: 'destructive' });
+      }
+    } catch {
+      toast({ title: 'Failed to save', description: 'Please try again.', variant: 'destructive' });
+    } finally {
+      setIsSavingAgency(false);
+    }
+  };
 
   const handleSignOut = async () => {
     await signOut();
@@ -318,28 +358,6 @@ const AgencyDashboard = () => {
     satisfaction: 4
   }));
 
-  const recentPlacements: Placement[] = [
-    {
-      id: '1',
-      housegirlName: 'Grace Akinyi',
-      clientName: 'John & Mary Smith',
-      placementDate: '2024-01-15',
-      salary: 'KES 22,000',
-      commission: 2200,
-      status: 'active',
-      duration: '2 months'
-    },
-    {
-      id: '2',
-      housegirlName: 'Faith Muthoni',
-      clientName: 'Dr. Sarah Johnson',
-      placementDate: '2024-01-10',
-      salary: 'KES 18,000',
-      commission: 1800,
-      status: 'active',
-      duration: '1 month'
-    }
-  ];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -371,11 +389,9 @@ const AgencyDashboard = () => {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setShowNotification(!showNotification)}
                 className="relative"
               >
                 <Bell className="h-5 w-5" />
-                <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full"></span>
               </Button>
 
             </div>
@@ -883,17 +899,52 @@ const AgencyDashboard = () => {
             <div className="space-y-6">
               <Card className="border border-slate-200 shadow-sm">
                 <CardHeader>
-                  <CardTitle>Agency Settings</CardTitle>
-                  <CardDescription>Manage your agency profile, preferences, and system configuration</CardDescription>
+                  <CardTitle>Agency Profile</CardTitle>
+                  <CardDescription>Update your agency information</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-center py-12">
-                    <Settings className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Agency Settings</h3>
-                    <p className="text-slate-600 mb-4">
-                      Update your agency information, manage notifications, and configure your preferences.
-                    </p>
-                    <Button>Update Settings</Button>
+                  <div className="space-y-4 max-w-md">
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Agency Name</label>
+                      <Input
+                        value={agencyName}
+                        onChange={(e) => setAgencyName(e.target.value)}
+                        placeholder="Agency name"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Location</label>
+                      <Input
+                        value={agencyLocation}
+                        onChange={(e) => setAgencyLocation(e.target.value)}
+                        placeholder="Nairobi, Kenya"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Phone</label>
+                      <Input
+                        value={agencyPhone}
+                        onChange={(e) => setAgencyPhone(e.target.value)}
+                        placeholder="07xx xxx xxx"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
+                      <textarea
+                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
+                        rows={3}
+                        value={agencyDescription}
+                        onChange={(e) => setAgencyDescription(e.target.value)}
+                        placeholder="Brief description of your agency"
+                      />
+                    </div>
+                    <Button
+                      className="bg-slate-900 hover:bg-slate-800 text-white"
+                      onClick={handleSaveAgencyProfile}
+                      disabled={isSavingAgency}
+                    >
+                      {isSavingAgency ? 'Saving...' : 'Save'}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
