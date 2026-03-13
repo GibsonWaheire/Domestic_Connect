@@ -40,6 +40,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [isFirebaseUser, setIsFirebaseUser] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [authReady, setAuthReady] = useState({ firebase: false, session: false });
   const shouldSyncFirebaseUserRef = useRef(false);
   const userRef = useRef<User | null>(null);
   useEffect(() => { userRef.current = user; }, [user]);
@@ -91,7 +92,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUser(null);
       setIsFirebaseUser(false);
     } finally {
-      setLoading(false);
+      setAuthReady(prev => ({ ...prev, session: true }));
     }
   }, [normalizeUser]);
 
@@ -173,12 +174,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             setIsFirebaseUser(false);
             shouldSyncFirebaseUserRef.current = false;
           }
-        } finally { setLoading(false); clearTimeout(fallbackTimeout); }
+        } finally { 
+          setAuthReady(prev => ({ ...prev, firebase: true }));
+          clearTimeout(fallbackTimeout); 
+        }
       });
     };
     setupAuth();
     return () => { clearTimeout(fallbackTimeout); unsubscribe(); };
   }, [checkSession, handleFirebaseUser, isSigningOut]);
+
+  // Unified loading state
+  useEffect(() => {
+    if (authReady.firebase && authReady.session) {
+      setLoading(false);
+    }
+  }, [authReady]);
 
   const signOut = useCallback(async (redirectTo = '/home') => {
     try {

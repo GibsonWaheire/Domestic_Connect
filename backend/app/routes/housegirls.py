@@ -290,6 +290,7 @@ def get_housegirl(housegirl_id):
         last_name = ""
         phone_number = ""
         email = ""
+        profile_photo_url = housegirl.get('profile_photo_url') or housegirl.get('photo_url')
         
         profile_id = housegirl.get('profile_id')
         if profile_id:
@@ -305,6 +306,15 @@ def get_housegirl(housegirl_id):
                         last_name = u_data.get('last_name', '')
                         phone_number = u_data.get('phone_number', '')
                         email = u_data.get('email', '')
+                        if not profile_photo_url:
+                            profile_photo_url = u_data.get('profile_photo_url') or u_data.get('photo_url')
+
+        # Fallback to fields stored on the housegirl doc if multi-hop lookup yields empty names
+        if not first_name and housegirl.get('full_name'):
+            name_parts = housegirl.get('full_name').strip().split(' ')
+            first_name = name_parts[0]
+            last_name = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+
         current_user_id = get_authenticated_user_id_from_request()
         can_view_contact = has_contact_access(current_user_id, housegirl_id)
         unlock_count = get_unlock_count(housegirl_id, profile_id)
@@ -314,10 +324,10 @@ def get_housegirl(housegirl_id):
             'id': housegirl.get('id'),
             'profile_id': profile_id,
             'name': f"{first_name} {last_name}".strip(),
-            'role': 'housegirl',
+            'role': housegirl.get('role', 'housegirl'),
             'skills': housegirl.get('skills', []),
             'rate': housegirl.get('expected_salary'),
-            'photo': housegirl.get('profile_photo_url'),
+            'photo': profile_photo_url,
             'availability': computed_is_available,
             'age': housegirl.get('age'),
             'bio': housegirl.get('bio'),
@@ -332,7 +342,7 @@ def get_housegirl(housegirl_id):
             'unlock_count': unlock_count,
             'in_demand_alert': housegirl.get('in_demand_alert', False),
             'activation_fee_paid': housegirl.get('activation_fee_paid', False),
-            'profile_photo_url': housegirl.get('profile_photo_url'),
+            'profile_photo_url': profile_photo_url,
             'first_name': first_name,
             'last_name': last_name,
             'phone': phone_number if can_view_contact else 'Unlock to view',
@@ -465,6 +475,8 @@ def update_housegirl(housegirl_id):
                 user_updates['last_name'] = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
             if 'phone_number' in data:
                 user_updates['phone_number'] = data.get('phone_number')
+            if 'profile_photo_url' in updates or 'photo_url' in updates:
+                user_updates['profile_photo_url'] = updates.get('profile_photo_url')
             if user_updates:
                 user_updates['updated_at'] = timestamp
                 db.collection('users').document(getattr(user, 'id')).set(user_updates, merge=True)

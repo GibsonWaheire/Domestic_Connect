@@ -7,7 +7,8 @@ import {
   GoogleAuthProvider,
   signInWithPopup,
   signInWithEmailAndPassword,
-  createUserWithEmailAndPassword
+  createUserWithEmailAndPassword,
+  updatePassword
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -48,6 +49,12 @@ export class FirebaseAuthService {
 
   static onAuthStateChanged(callback: (user: User | null) => void) {
     return onAuthStateChanged(auth, callback);
+  }
+
+  static async updatePassword(newPassword: string) {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No authenticated user found');
+    return await updatePassword(user, newPassword);
   }
 }
 

@@ -9,12 +9,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { adminApi, AdminDashboardStats, AdminUser, AdminAgency } from '@/lib/api';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { useAuth } from '@/hooks/useAuthEnhanced';
-import { Users, Building2, DollarSign, TrendingUp, RefreshCw, Shield, Eye } from 'lucide-react';
+import { Users, Building2, DollarSign, TrendingUp, RefreshCw, Shield, Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const AdminDashboard: React.FC = () => {
-  const { user, token } = useAuth();
+  const { user } = useAuth();
+  const [token, setToken] = useState<string | null>(null);
   const navigate = useNavigate();
   
   // Additional auth check - ensure only admins can access this dashboard
@@ -52,6 +54,20 @@ const AdminDashboard: React.FC = () => {
   const [userTypeFilter, setUserTypeFilter] = useState('');
   const [agencySearch, setAgencySearch] = useState('');
   const [agencyStatusFilter, setAgencyStatusFilter] = useState('');
+
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+
+  useEffect(() => {
+    const getToken = async () => {
+      const t = await FirebaseAuthService.getIdToken();
+      setToken(t);
+    };
+    getToken();
+  }, []);
 
   useEffect(() => {
     if (token) {
@@ -137,6 +153,54 @@ const AdminDashboard: React.FC = () => {
         description: "Failed to verify agency",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    if (!newPassword || !confirmPassword) {
+      toast({
+        title: "Missing Fields",
+        description: "Enter and confirm your new password.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      toast({
+        title: "Weak Password",
+        description: "New password must be at least 8 characters long.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Password Mismatch",
+        description: "New password and confirmation do not match.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUpdatingPassword(true);
+    try {
+      await FirebaseAuthService.updatePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      toast({
+        title: "Password Updated",
+        description: "Your password has been changed successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Update Failed",
+        description: error.message || "Failed to update password.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingPassword(false);
     }
   };
 
@@ -269,6 +333,7 @@ const AdminDashboard: React.FC = () => {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="agencies">Agencies</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
           <TabsContent value="users" className="space-y-6">
@@ -475,6 +540,88 @@ const AdminDashboard: React.FC = () => {
                   <Building2 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                   <p className="text-gray-600">Analytics dashboard coming soon...</p>
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Shield className="h-5 w-5 text-blue-600" />
+                  Account Security
+                </CardTitle>
+                <CardDescription>Update your administrator password and manage account security</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 max-w-md">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">New Password</label>
+                    <div className="relative">
+                      <Input
+                        type={showNewPassword ? "text" : "password"}
+                        className="pr-10"
+                        placeholder="Min 8 characters"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                      >
+                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 mb-1 block">Confirm Password</label>
+                    <div className="relative">
+                      <Input
+                        type={showConfirmPassword ? "text" : "password"}
+                        className="pr-10"
+                        placeholder="Re-enter password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
+                  </div>
+                  <Button 
+                    className="w-full bg-blue-600 hover:bg-blue-700"
+                    onClick={handlePasswordChange}
+                    disabled={isUpdatingPassword}
+                  >
+                    {isUpdatingPassword ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                        Updating...
+                      </>
+                    ) : 'Update Password'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="border border-red-200">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2 text-red-600">
+                  <AlertCircle className="h-5 w-5" />
+                  Danger Zone
+                </CardTitle>
+                <CardDescription>Critical administrator actions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-gray-600 mb-4">Deleting your administrator account is restricted. Contact system support for assistance.</p>
+                <Button variant="destructive" disabled size="sm">
+                  Delete Account
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>

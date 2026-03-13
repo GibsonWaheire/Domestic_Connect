@@ -25,43 +25,42 @@ export const AuthGuard = ({
     // Don't redirect while loading
     if (loading) return;
 
-    // If no user is logged in, redirect to login silently
-    if (!user) {
-      console.log('AuthGuard: No user, redirecting to /login');
-      navigate('/login');
-      return;
-    }
-
-    // Check if user type is allowed
-    const userType = user.is_admin ? 'admin' : user.user_type;
-    const isAllowed = allowedUserTypes.includes(userType);
-
-    if (!isAllowed) {
-      // Redirect to appropriate dashboard based on user type silently
-      console.log('AuthGuard: User not allowed for this route. User type:', userType, 'Allowed types:', allowedUserTypes);
-      switch (userType) {
-        case 'employer':
-          console.log('AuthGuard: Redirecting to /employer-dashboard');
-          navigate('/employer-dashboard');
-          break;
-        case 'housegirl':
-          console.log('AuthGuard: Redirecting to /housegirl-dashboard');
-          navigate('/housegirl-dashboard');
-          break;
-        case 'agency':
-          console.log('AuthGuard: Redirecting to /agency-dashboard');
-          navigate('/agency-dashboard');
-          break;
-        case 'admin':
-          console.log('AuthGuard: Redirecting to /admin-dashboard');
-          navigate('/admin-dashboard');
-          break;
-        default:
-          console.log('AuthGuard: Redirecting to default:', redirectTo);
-          navigate(redirectTo);
+    // Small delay to ensure any secondary auth syncs have completed
+    const timer = setTimeout(() => {
+      // If no user is logged in, redirect to login silently
+      if (!user) {
+        console.log('AuthGuard: No user, redirecting to /login');
+        navigate('/login');
+        return;
       }
-      return;
-    }
+
+      // Check if user type is allowed
+      const userType = user.is_admin ? 'admin' : user.user_type;
+      const isAllowed = allowedUserTypes.includes(userType);
+
+      if (!isAllowed) {
+        // Redirect to appropriate dashboard based on user type silently
+        console.log('AuthGuard: User not allowed for this route. User type:', userType, 'Allowed types:', allowedUserTypes);
+        switch (userType) {
+          case 'employer':
+            navigate('/employer-dashboard');
+            break;
+          case 'housegirl':
+            navigate('/housegirl-dashboard');
+            break;
+          case 'agency':
+            navigate('/agency-dashboard');
+            break;
+          case 'admin':
+            navigate('/admin-dashboard');
+            break;
+          default:
+            navigate(redirectTo);
+        }
+      }
+    }, 100);
+
+    return () => clearTimeout(timer);
   }, [user, loading, allowedUserTypes, navigate, redirectTo]);
 
   // Show loading while checking authentication
