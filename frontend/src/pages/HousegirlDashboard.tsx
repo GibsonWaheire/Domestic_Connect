@@ -58,6 +58,64 @@ interface JobOpportunity {
   matchScore: number;
 }
 
+const KENYA_CITIES = [
+  'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
+  'Malindi', 'Kitale', 'Garissa', 'Kakamega', 'Nyeri', 'Machakos',
+  'Meru', 'Kisii', 'Kericho', 'Embu', 'Migori', 'Homa Bay',
+  'Bungoma', 'Kilifi', 'Other',
+];
+
+const SALARY_RANGES = [
+  'KES 10,000 - 15,000',
+  'KES 15,000 - 20,000',
+  'KES 20,000 - 25,000',
+  'KES 25,000 - 30,000',
+  'KES 30,000 - 35,000',
+  'KES 35,000+',
+];
+
+const EXPERIENCE_OPTIONS = [
+  '0-2 years',
+  '3-5 years',
+  '6-8 years',
+  '9-12 years',
+  '12+ years',
+];
+
+const COMMUNITY_OPTIONS = [
+  'Kikuyu', 'Luo', 'Kamba', 'Luhya', 'Kisii', 'Meru',
+  'Kalenjin', 'Taita', 'Mijikenda', 'Pokot', 'Turkana', 'Samburu',
+  'Maasai', 'Embu', 'Tharaka', 'Other',
+];
+
+const ROLE_OPTIONS = [
+  'House Help', 'Nanny', 'Cook', 'Caregiver', 'Cleaner',
+];
+
+const SKILLS_OPTIONS = [
+  'Cooking', 'Cleaning', 'Childcare', 'Eldercare', 'Laundry',
+  'Ironing', 'Gardening', 'Driving', 'Shopping', 'Pet Care', 'First Aid',
+];
+
+const WORK_TYPE_OPTIONS = [
+  'Lives in', 'Day job', 'Part-time', 'Weekend only',
+];
+
+function salaryToRange(salary: number): string {
+  if (salary >= 35000) return 'KES 35,000+';
+  if (salary >= 30000) return 'KES 30,000 - 35,000';
+  if (salary >= 25000) return 'KES 25,000 - 30,000';
+  if (salary >= 20000) return 'KES 20,000 - 25,000';
+  if (salary >= 15000) return 'KES 15,000 - 20,000';
+  if (salary >= 10000) return 'KES 10,000 - 15,000';
+  return '';
+}
+
+function salaryRangeToNumber(range: string): number {
+  const nums = range.replace(/[^0-9]/g, ' ').trim().split(/\s+/).map(Number).filter(Boolean);
+  return nums[0] || 0;
+}
+
 interface EditFormData {
   bio: string;
   expectedSalary: string;
@@ -66,8 +124,10 @@ interface EditFormData {
   education: string;
   accommodationType: string;
   community: string;
-  skills: string;
+  skills: string[];
   languages: string;
+  role: string;
+  age: string;
 }
 
 const HousegirlDashboard = () => {
@@ -109,8 +169,10 @@ const HousegirlDashboard = () => {
     education: '',
     accommodationType: '',
     community: '',
-    skills: '',
-    languages: ''
+    skills: [],
+    languages: '',
+    role: '',
+    age: '',
   });
 
   const [newPassword, setNewPassword] = useState('');
@@ -134,10 +196,7 @@ const HousegirlDashboard = () => {
 
   // Get user's actual data from registration
   const getUserData = useCallback(() => {
-    const normalizedSkills = (editFormData.skills || '')
-      .split(',')
-      .map((skill) => skill.trim())
-      .filter(Boolean);
+    const normalizedSkills = editFormData.skills;
     const normalizedLanguages = (editFormData.languages || '')
       .split(',')
       .map((language) => language.trim())
@@ -254,14 +313,16 @@ const HousegirlDashboard = () => {
         setActivationFeePaid(Boolean(result?.activation_fee_paid));
         setEditFormData({
           bio: result?.bio || '',
-          expectedSalary: result?.expected_salary ? String(result.expected_salary) : '',
+          expectedSalary: result?.expected_salary ? salaryToRange(Number(result.expected_salary)) : '',
           location: result?.location || result?.current_location || '',
           experience: result?.experience || '',
           education: result?.education || '',
           accommodationType: result?.accommodation_type || '',
           community: result?.tribe || '',
-          skills: apiSkills.join(', '),
-          languages: apiLanguages.join(', ')
+          skills: apiSkills,
+          languages: apiLanguages.join(', '),
+          role: result?.role || '',
+          age: result?.age ? String(result.age) : '',
         });
         if (!activationPhone && user.phone_number) {
           setActivationPhone(user.phone_number);
@@ -423,20 +484,43 @@ const HousegirlDashboard = () => {
     }));
   };
 
+  const handleSkillToggle = (skill: string) => {
+    setEditFormData(prev => ({
+      ...prev,
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill],
+    }));
+  };
+
   const handleSaveProfile = async () => {
     if (!user || !resolvedUserId) return;
+
+    const requiredFields = [
+      { key: 'role', label: 'Role' },
+      { key: 'location', label: 'Location' },
+      { key: 'expectedSalary', label: 'Expected Salary' },
+      { key: 'experience', label: 'Experience' },
+      { key: 'accommodationType', label: 'Work type' },
+    ] as const;
+    const missing = requiredFields.filter(f => !editFormData[f.key]);
+    if (missing.length > 0) {
+      toast({
+        title: "Please fill in all required fields",
+        description: missing.map(f => f.label).join(', '),
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsSavingProfile(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const normalizedSkills = (editFormData.skills || '')
-        .split(',')
-        .map((skill) => skill.trim())
-        .filter(Boolean);
       const normalizedLanguages = (editFormData.languages || '')
         .split(',')
         .map((language) => language.trim())
         .filter(Boolean);
-      const numericRate = Number((editFormData.expectedSalary || '').replace(/[^\d]/g, ''));
+      const numericRate = salaryRangeToNumber(editFormData.expectedSalary);
 
       const response = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
         method: 'PUT',
@@ -446,11 +530,11 @@ const HousegirlDashboard = () => {
         },
         body: JSON.stringify({
           full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-          role: normalizedSkills[0] || '',
-          skills: normalizedSkills,
+          role: editFormData.role,
+          skills: editFormData.skills,
           languages: normalizedLanguages,
-          expected_salary: Number.isFinite(numericRate) ? numericRate : 0,
-          monthly_rate: Number.isFinite(numericRate) ? numericRate : 0,
+          expected_salary: numericRate,
+          monthly_rate: numericRate,
           bio: editFormData.bio,
           location: editFormData.location,
           current_location: editFormData.location,
@@ -458,12 +542,12 @@ const HousegirlDashboard = () => {
           education: editFormData.education,
           accommodation_type: editFormData.accommodationType,
           tribe: editFormData.community,
+          age: editFormData.age ? Number(editFormData.age) : null,
           profile_photo_url: profilePhoto || null,
         }),
       });
 
       if (response.ok) {
-        // Fetch fresh data from backend to confirm persistence
         const freshResponse = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
           headers: {
             'Content-Type': 'application/json',
@@ -475,18 +559,20 @@ const HousegirlDashboard = () => {
           ? await freshResponse.json()
           : await response.json().catch(() => ({}));
 
-        const savedSkills = Array.isArray(saved?.skills) ? saved.skills : normalizedSkills;
+        const savedSkills = Array.isArray(saved?.skills) ? saved.skills : editFormData.skills;
         const savedLanguages = Array.isArray(saved?.languages) ? saved.languages : normalizedLanguages;
         setEditFormData({
           bio: saved?.bio || editFormData.bio,
-          expectedSalary: saved?.expected_salary ? String(saved.expected_salary) : editFormData.expectedSalary,
+          expectedSalary: saved?.expected_salary ? salaryToRange(Number(saved.expected_salary)) : editFormData.expectedSalary,
           location: saved?.location || editFormData.location,
           experience: saved?.experience || editFormData.experience,
           education: saved?.education || editFormData.education,
           accommodationType: saved?.accommodation_type || editFormData.accommodationType,
           community: saved?.tribe || editFormData.community,
-          skills: savedSkills.join(', '),
-          languages: savedLanguages.join(', ')
+          skills: savedSkills,
+          languages: savedLanguages.join(', '),
+          role: saved?.role || editFormData.role,
+          age: saved?.age ? String(saved.age) : editFormData.age,
         });
         if (saved?.profile_photo_url) {
           setProfilePhoto(saved.profile_photo_url);
@@ -575,10 +661,7 @@ const HousegirlDashboard = () => {
   }
 
   const userData = getUserData();
-  const parsedSkills = (editFormData.skills || '')
-    .split(',')
-    .map((skill) => skill.trim())
-    .filter(Boolean);
+  const parsedSkills = editFormData.skills;
 
   const housegirlCompletionItems = [
     {
@@ -1266,50 +1349,100 @@ const HousegirlDashboard = () => {
               </div>
 
               <div className="space-y-6">
-                {/* Basic Information */}
+                {/* Row 1: Role + Age */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Location</label>
-                    <input
-                      type="text"
+                    <label className="text-sm font-medium text-gray-700">
+                      Role <span className="text-red-500">*</span>
+                    </label>
+                    <select
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                      placeholder="e.g., Nairobi"
-                      value={editFormData.location || ''}
-                      onChange={(e) => handleFormChange('location', e.target.value)}
-                    />
+                      value={editFormData.role || ''}
+                      onChange={(e) => handleFormChange('role', e.target.value)}
+                    >
+                      <option value="">Select Role</option>
+                      {ROLE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Expected Salary</label>
+                    <label className="text-sm font-medium text-gray-700">Age</label>
                     <input
-                      type="text"
+                      type="number"
+                      min={18}
+                      max={70}
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                      placeholder="e.g., KSh 15,000"
-                      value={editFormData.expectedSalary || ''}
-                      onChange={(e) => handleFormChange('expectedSalary', e.target.value)}
+                      placeholder="e.g., 25"
+                      value={editFormData.age || ''}
+                      onChange={(e) => handleFormChange('age', e.target.value)}
                     />
                   </div>
                 </div>
 
-                {/* Experience & Education */}
+                {/* Row 2: Location + Expected Salary */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">Experience</label>
+                    <label className="text-sm font-medium text-gray-700">
+                      Location <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.location || ''}
+                      onChange={(e) => handleFormChange('location', e.target.value)}
+                    >
+                      <option value="">Select City</option>
+                      {KENYA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Expected Salary <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.expectedSalary || ''}
+                      onChange={(e) => handleFormChange('expectedSalary', e.target.value)}
+                    >
+                      <option value="">Select Salary Range</option>
+                      {SALARY_RANGES.map(r => <option key={r} value={r}>{r}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 3: Experience + Work Type */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Experience <span className="text-red-500">*</span>
+                    </label>
                     <select
                       className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
                       value={editFormData.experience || ''}
                       onChange={(e) => handleFormChange('experience', e.target.value)}
                     >
                       <option value="">Select Experience</option>
-                      <option value="No Experience">No Experience</option>
-                      <option value="1 Year">1 Year</option>
-                      <option value="2 Years">2 Years</option>
-                      <option value="3 Years">3 Years</option>
-                      <option value="4 Years">4 Years</option>
-                      <option value="5+ Years">5+ Years</option>
+                      {EXPERIENCE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
 
+                  <div>
+                    <label className="text-sm font-medium text-gray-700">
+                      Work Type <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                      value={editFormData.accommodationType || ''}
+                      onChange={(e) => handleFormChange('accommodationType', e.target.value)}
+                    >
+                      <option value="">Select Work Type</option>
+                      {WORK_TYPE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Row 4: Education + Community */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Education</label>
                     <select
@@ -1326,23 +1459,6 @@ const HousegirlDashboard = () => {
                       <option value="Degree">Degree</option>
                     </select>
                   </div>
-                </div>
-
-                {/* Accommodation & Community */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Accommodation Type</label>
-                    <select
-                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                      value={editFormData.accommodationType || ''}
-                      onChange={(e) => handleFormChange('accommodationType', e.target.value)}
-                    >
-                      <option value="">Select Accommodation</option>
-                      <option value="Live-in">Live-in</option>
-                      <option value="Live-out">Live-out</option>
-                      <option value="Both">Both</option>
-                    </select>
-                  </div>
 
                   <div>
                     <label className="text-sm font-medium text-gray-700">Community</label>
@@ -1352,40 +1468,45 @@ const HousegirlDashboard = () => {
                       onChange={(e) => handleFormChange('community', e.target.value)}
                     >
                       <option value="">Select Community</option>
-                      <option value="Kikuyu">Kikuyu</option>
-                      <option value="Luo">Luo</option>
-                      <option value="Luhya">Luhya</option>
-                      <option value="Kamba">Kamba</option>
-                      <option value="Kisii">Kisii</option>
-                      <option value="Meru">Meru</option>
-                      <option value="Other">Other</option>
+                      {COMMUNITY_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
                     </select>
                   </div>
                 </div>
 
-                {/* Skills & Languages */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Skills (comma separated)</label>
-                    <input
-                      type="text"
-                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                      placeholder="e.g., Cooking, Cleaning, Childcare"
-                      value={editFormData.skills || ''}
-                      onChange={(e) => handleFormChange('skills', e.target.value)}
-                    />
+                {/* Skills multi-select */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-2">Skills</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SKILLS_OPTIONS.map(skill => {
+                      const selected = editFormData.skills.includes(skill);
+                      return (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => handleSkillToggle(skill)}
+                          className={`px-3 py-1 rounded-full text-sm border transition-colors ${
+                            selected
+                              ? 'bg-black text-white border-black'
+                              : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+                          }`}
+                        >
+                          {skill}
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-sm font-medium text-gray-700">Languages (comma separated)</label>
-                    <input
-                      type="text"
-                      className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
-                      placeholder="e.g., English, Swahili"
-                      value={editFormData.languages || ''}
-                      onChange={(e) => handleFormChange('languages', e.target.value)}
-                    />
-                  </div>
+                {/* Languages */}
+                <div>
+                  <label className="text-sm font-medium text-gray-700">Languages (comma separated)</label>
+                  <input
+                    type="text"
+                    className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                    placeholder="e.g., English, Swahili"
+                    value={editFormData.languages || ''}
+                    onChange={(e) => handleFormChange('languages', e.target.value)}
+                  />
                 </div>
 
                 {/* Bio */}

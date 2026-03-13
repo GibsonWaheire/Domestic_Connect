@@ -65,15 +65,11 @@ def get_dashboard_data():
             dashboard_data['available_data']['clients'] = get_clients_for_agency(user_id)
             dashboard_data['available_data']['workers'] = get_workers_for_agency(user_id)
             dashboard_data['available_data']['all_employers'] = get_all_employers_for_agency()
-            dashboard_data['available_data']['all_housegirls'] = get_all_housegirls_for_agency(
-                include_unavailable=is_admin
-            )
-            
+
             dashboard_data['stats'].update({
                 'total_clients': len(dashboard_data['available_data']['clients']),
                 'total_workers': len(dashboard_data['available_data']['workers']),
                 'available_employers': len(dashboard_data['available_data']['all_employers']),
-                'available_housegirls': len(dashboard_data['available_data']['all_housegirls'])
             })
         
         if is_admin:
