@@ -1,5 +1,17 @@
-import { BarChart3, Briefcase, Users, MessageCircle, Settings, Building2 } from 'lucide-react';
+import { Briefcase, Users, MessageCircle, Settings, Building2 } from 'lucide-react';
 import { NavItem } from '@/types/employer';
+
+export const KENYA_CITIES = [
+  'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
+  'Malindi', 'Kitale', 'Garissa', 'Kakamega', 'Nyeri', 'Machakos',
+  'Meru', 'Kisii', 'Kericho', 'Embu', 'Migori', 'Homa Bay',
+  'Bungoma', 'Kilifi', 'Other',
+];
+
+export const SKILLS_OPTIONS = [
+  'Cooking', 'Cleaning', 'Childcare', 'Eldercare', 'Laundry',
+  'Ironing', 'Gardening', 'Driving', 'Shopping', 'Pet Care', 'First Aid',
+];
 
 export const NAV_ITEMS: NavItem[] = [
   { id: 'housegirls', label: 'Housegirls', icon: Users, color: 'purple' },
@@ -24,7 +36,7 @@ export const SALARY_RANGE_OPTIONS = [
 ];
 
 export const EDUCATION_OPTIONS = [
-  'Class 8 and Above', 'Form 4 and Above', 'College/University', 'Other'
+  'Primary', 'Class 8+', 'Form 4 and Above', 'Certificate', 'Diploma', 'Degree',
 ];
 
 export const WORK_TYPE_OPTIONS = [

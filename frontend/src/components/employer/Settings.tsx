@@ -2,12 +2,13 @@ import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Users, Shield, Upload, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Users, Shield, Upload, Eye, EyeOff, Loader2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { uploadPhoto } from '@/lib/photoUpload';
+import { KENYA_CITIES } from '@/constants/employer';
 
 interface SettingsProps {
   stats: {
@@ -20,20 +21,27 @@ interface SettingsProps {
     location?: string;
     phone?: string;
     profile_photo_url?: string;
+    company_name?: string;
+    description?: string;
   } | null;
 }
 
 export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
-  const { user } = useAuth();
-  const { showSuccessNotification, showErrorNotification, showInfoNotification } = useNotificationActions();
+  const { user, signOut } = useAuth();
+  const { showSuccessNotification, showErrorNotification } = useNotificationActions();
 
   const [firstName, setFirstName] = useState(user?.first_name || '');
   const [lastName, setLastName] = useState(user?.last_name || '');
+  const [companyName, setCompanyName] = useState('');
+  const [companyDescription, setCompanyDescription] = useState('');
   const [location, setLocation] = useState((user as { location?: string } | null)?.location || '');
   const [phone, setPhone] = useState(user?.phone_number || '');
   const [profilePhoto, setProfilePhoto] = useState((user as { profile_photo_url?: string } | null)?.profile_photo_url || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPhoto, setIsSavingPhoto] = useState(false);
   const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -51,6 +59,8 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
     location?: string;
     phone?: string;
     profile_photo_url?: string;
+    company_name?: string;
+    description?: string;
   }) => {
     const fullName = (data.full_name || '').trim();
     const [firstFromFull = '', ...rest] = fullName.split(' ');
@@ -60,6 +70,8 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
     setLocation(data.location || '');
     setPhone(data.phone || '');
     setProfilePhoto(data.profile_photo_url || '');
+    setCompanyName(data.company_name || '');
+    setCompanyDescription(data.description || '');
   };
 
   const hasInitialized = useRef(false);
@@ -109,6 +121,48 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
     }
   };
 
+  const handleSavePhotoOnly = async () => {
+    if (!user || !profilePhoto) return;
+    setIsSavingPhoto(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const response = await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ profile_photo_url: profilePhoto }),
+      });
+      if (response.ok) {
+        showSuccessNotification('Photo saved', 'Your profile photo has been updated.');
+      } else {
+        showErrorNotification('Save failed', 'Please try again.');
+      }
+    } catch {
+      showErrorNotification('Save failed', 'Please try again.');
+    } finally {
+      setIsSavingPhoto(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!user) return;
+    setIsDeletingAccount(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      await signOut();
+    } catch {
+      showErrorNotification('Delete failed', 'Please try again.');
+      setIsDeletingAccount(false);
+      setShowDeleteConfirm(false);
+    }
+  };
+
   const handleSaveProfile = async () => {
     if (!user) return;
     setIsSaving(true);
@@ -122,6 +176,8 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
         },
         body: JSON.stringify({
           full_name: `${firstName} ${lastName}`.trim(),
+          company_name: companyName.trim(),
+          description: companyDescription.trim(),
           location: location.trim(),
           phone: phone.trim(),
           profile_photo_url: profilePhoto || null,
@@ -180,7 +236,7 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" id="employer-settings-root">
       <Card className="bg-white border border-gray-200 shadow-sm">
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
@@ -191,6 +247,7 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          {/* Name row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div id="employer-first-name">
               <label className="text-sm font-medium text-gray-700 mb-2 block">First Name</label>
@@ -212,16 +269,31 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
             </div>
           </div>
 
-          <div id="employer-location">
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Location</label>
+          {/* Company Name */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Company Name</label>
             <Input
-              value={location}
-              onChange={(event) => setLocation(event.target.value)}
+              value={companyName}
+              onChange={(event) => setCompanyName(event.target.value)}
               className="bg-white border-gray-200 focus:border-blue-300 focus:ring-blue-300"
-              placeholder="Nairobi, Kenya"
+              placeholder="e.g. Acme Household Services"
             />
           </div>
 
+          {/* Location dropdown */}
+          <div id="employer-location">
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Location</label>
+            <select
+              value={location}
+              onChange={(e) => setLocation(e.target.value)}
+              className="w-full p-2 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-300"
+            >
+              <option value="">Select city</option>
+              {KENYA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+
+          {/* Phone */}
           <div>
             <label className="text-sm font-medium text-gray-700 mb-2 block">Phone</label>
             <Input
@@ -232,21 +304,55 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
             />
           </div>
 
+          {/* Email (read-only) */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Email</label>
+            <Input
+              value={user?.email || ''}
+              readOnly
+              className="bg-gray-50 border-gray-200 text-gray-500 cursor-not-allowed"
+            />
+          </div>
+
+          {/* Company Description */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">Company Description</label>
+            <textarea
+              value={companyDescription}
+              onChange={(e) => setCompanyDescription(e.target.value)}
+              rows={3}
+              className="w-full p-2 border border-gray-200 rounded-md text-sm bg-white focus:outline-none focus:ring-1 focus:ring-blue-300"
+              placeholder="Brief description of your household / company..."
+            />
+          </div>
+
+          {/* Profile Photo */}
           <div id="employer-photo" className="space-y-2">
-            <label className="text-sm font-medium text-gray-700 block">Profile Photo (optional)</label>
-            <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center text-sm text-gray-500">
+            <label className="text-sm font-medium text-gray-700 block">Profile Photo</label>
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="h-16 w-16 rounded-full overflow-hidden border border-gray-200 bg-gray-100 flex items-center justify-center text-sm text-gray-500 shrink-0">
                 {profilePhoto ? (
                   <img src={profilePhoto} alt="Employer profile" className="h-full w-full object-cover" />
                 ) : (
                   <span>Avatar</span>
                 )}
               </div>
-              <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
+              <label className="inline-flex items-center gap-2 cursor-pointer rounded-md border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
                 {isUploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {isUploadingPhoto ? 'Uploading...' : 'Upload'}
+                {isUploadingPhoto ? 'Uploading...' : 'Choose Photo'}
                 <input type="file" accept="image/*" className="hidden" onChange={handleProfilePhotoChange} disabled={isUploadingPhoto} />
               </label>
+              {profilePhoto && (
+                <Button
+                  size="sm"
+                  className="bg-green-600 hover:bg-green-700 text-white"
+                  onClick={handleSavePhotoOnly}
+                  disabled={isSavingPhoto}
+                >
+                  {isSavingPhoto ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                  {isSavingPhoto ? 'Saving...' : 'Save Photo'}
+                </Button>
+              )}
             </div>
           </div>
 
@@ -340,6 +446,56 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
                 ) : 'Change Password'}
               </Button>
             </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Danger Zone */}
+      <Card className="bg-white border border-red-200 shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2 text-red-700">
+            <div className="p-2 bg-red-100 rounded-lg">
+              <AlertTriangle className="h-5 w-5 text-red-600" />
+            </div>
+            <span>Danger Zone</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-gray-600 mb-4">
+            Deleting your account will permanently remove your employer profile and all data. This cannot be undone.
+          </p>
+          {!showDeleteConfirm ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setShowDeleteConfirm(true)}
+            >
+              Delete Account
+            </Button>
+          ) : (
+            <div className="border border-red-200 rounded-lg p-4 bg-red-50 space-y-3">
+              <p className="text-sm font-medium text-red-800">Are you sure? This cannot be undone.</p>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowDeleteConfirm(false)}
+                  disabled={isDeletingAccount}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteAccount}
+                  disabled={isDeletingAccount}
+                >
+                  {isDeletingAccount ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Deleting...</>
+                  ) : 'Yes, Delete My Account'}
+                </Button>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>
