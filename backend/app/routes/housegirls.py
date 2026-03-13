@@ -192,6 +192,14 @@ def get_housegirls():
                             last_name = u_data.get('last_name', '')
                             phone_number = u_data.get('phone_number', '')
                             email = u_data.get('email', '')
+            
+            # Fallback to fields on housegirl doc if profile lookup fails
+            if not first_name:
+                first_name = housegirl.get('first_name') or housegirl.get('name', '').split(' ')[0]
+            if not last_name:
+                last_name = housegirl.get('last_name') or ' '.join(housegirl.get('name', '').split(' ')[1:])
+            if not phone_number:
+                phone_number = housegirl.get('phone_number') or housegirl.get('phone')
 
             housegirl_id = housegirl.get('id')
             can_view_contact = has_contact_access(current_user_id, housegirl_id)

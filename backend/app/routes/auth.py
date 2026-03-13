@@ -57,18 +57,39 @@ def firebase_signup():
         profile_exists = any(True for _ in profiles_ref)
         
         if not profile_exists:
-            profile_id = str(uuid.uuid4())
+            profile_id = user.id  # Use user_uid format for consistency
+            timestamp = datetime.utcnow().isoformat()
             profile_data = {
                 'id': profile_id,
+                'profile_id': profile_id,  # Explicitly set for easier lookup
                 'user_id': user.id,
-                'created_at': datetime.utcnow().isoformat(),
-                'updated_at': datetime.utcnow().isoformat()
+                'first_name': getattr(user, 'first_name', ''),
+                'last_name': getattr(user, 'last_name', ''),
+                'email': getattr(user, 'email', ''),
+                'phone_number': getattr(user, 'phone_number', ''),
+                'created_at': timestamp,
+                'updated_at': timestamp
             }
             # Add any extra fields from data not already handled
             for k, v in data.items():
-                if k not in ['user_type', 'first_name', 'last_name', 'phone_number']:
+                if k not in ['user_type', 'first_name', 'last_name', 'phone_number', 'email']:
                     profile_data[k] = v
+            
             db.collection('profiles').document(profile_id).set(profile_data)
+            
+            # Create role-specific profile doc
+            if required_role == 'employer':
+                db.collection('employer_profiles').document(profile_id).set({**profile_data})
+                logger.info(f'Created employer profile: employer_profiles/{profile_id}')
+            elif required_role == 'housegirl':
+                db.collection('housegirl_profiles').document(profile_id).set({
+                    **profile_data,
+                    'is_available': True,
+                    'unlock_count': 0,
+                    'activation_fee_paid': False,
+                    'in_demand_alert': False
+                })
+                logger.info(f'Created housegirl profile: housegirl_profiles/{profile_id}')
         
         session['user_id'] = user.id
         session['user_type'] = getattr(user, 'user_type', None)
@@ -206,6 +227,7 @@ def verify_phone_auth():
                 if not role_doc.exists:
                     role_profile = {
                         'id': user_id,
+                        'profile_id': user_id,
                         'user_id': user_id,
                         'first_name': existing_data.get('first_name', ''),
                         'last_name': existing_data.get('last_name', ''),
@@ -255,6 +277,7 @@ def verify_phone_auth():
             profile_id = f"user_{uid}"
             profile_data = {
                 'id': profile_id,
+                'profile_id': profile_id,
                 'user_id': user_id,
                 'first_name': first_name,
                 'last_name': last_name,
