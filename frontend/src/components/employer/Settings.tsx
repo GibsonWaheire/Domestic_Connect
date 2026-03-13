@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -59,47 +59,15 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
     setProfilePhoto(data.profile_photo_url || '');
   };
 
+  const hasInitialized = useRef(false);
+
   useEffect(() => {
+    if (hasInitialized.current) return;
     if (profileData) {
       applyProfileData(profileData);
-      return;
+      hasInitialized.current = true;
     }
-    setFirstName(user?.first_name || '');
-    setLastName(user?.last_name || '');
-    setLocation((user as { location?: string } | null)?.location || '');
-    setPhone(user?.phone_number || '');
-    setProfilePhoto((user as { profile_photo_url?: string } | null)?.profile_photo_url || '');
-  }, [user, profileData]);
-
-  useEffect(() => {
-    if (!user?.id) return;
-    let mounted = true;
-
-    const loadProfile = async () => {
-      try {
-        const token = await FirebaseAuthService.getIdToken();
-        const res = await fetch(
-          `${API_BASE_URL}/api/employers/${user.id}`,
-          {
-            headers: {
-              ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
-          }
-        );
-        if (!res.ok) return;
-        const data = await res.json();
-        if (mounted) {
-          applyProfileData(data);
-        }
-      } catch {
-      }
-    };
-
-    loadProfile();
-    return () => {
-      mounted = false;
-    };
-  }, [user?.id]);
+  }, [profileData]);
 
   useEffect(() => {
     if (window.location.hash === '#employer-first-name') {
