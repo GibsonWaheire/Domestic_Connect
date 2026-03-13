@@ -32,3 +32,7 @@ dist-ssr
 .vercel
 firebase-service-account.json
 backend/venv/
+
+# Python
+**/__pycache__/
+*.pyc
