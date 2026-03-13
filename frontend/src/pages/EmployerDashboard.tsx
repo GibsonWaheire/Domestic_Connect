@@ -13,7 +13,10 @@ import { Housegirl } from '@/types/employer';
 import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
-import { Building2, LogOut, Phone, RefreshCw, Settings as SettingsIcon, Users } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Building2, Briefcase, LogOut, Phone, Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X } from 'lucide-react';
+import { KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS, WORK_TYPE_OPTIONS, EDUCATION_OPTIONS } from '@/constants/employer';
+import { API_BASE_URL } from '@/lib/apiConfig';
 
 const EmployerDashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -63,6 +66,14 @@ const EmployerDashboard = () => {
 
   // State for real data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
+  const [jobPostings, setJobPostings] = useState<any[]>([]);
+  const [showJobForm, setShowJobForm] = useState(false);
+  const [isCreatingJob, setIsCreatingJob] = useState(false);
+  const [jobFormData, setJobFormData] = useState({
+    title: '', description: '', location: '',
+    salaryMin: '', salaryMax: '', workType: '',
+    experience: '', education: '', skills: [] as string[], deadline: '',
+  });
   const [employerProfileData, setEmployerProfileData] = useState<{
     full_name?: string;
     first_name?: string;
@@ -70,6 +81,8 @@ const EmployerDashboard = () => {
     location?: string;
     phone?: string;
     profile_photo_url?: string;
+    company_name?: string;
+    description?: string;
   } | null>(null);
 
   // Use real-time data hook
@@ -85,6 +98,12 @@ const EmployerDashboard = () => {
     enabled: !!user
   });
 
+  // Extract job postings from dashboard data
+  useEffect(() => {
+    const jobs = (dashboardData?.available_data as any)?.job_postings || [];
+    setJobPostings(jobs);
+  }, [dashboardData]);
+
   useEffect(() => {
     if (!user?.id) return;
     let mounted = true;
@@ -92,7 +111,7 @@ const EmployerDashboard = () => {
     const loadProfile = async () => {
       try {
         const token = await FirebaseAuthService.getIdToken();
-        const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || ''}/api/employers/${user.id}`, {
+        const res = await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
@@ -219,26 +238,44 @@ const EmployerDashboard = () => {
     {
       key: 'first-name',
       label: 'Add your first name',
-      weight: 25,
+      weight: 20,
       completed: Boolean((employerProfileData?.first_name || user?.first_name || '').trim()),
     },
     {
       key: 'last-name',
       label: 'Add your last name',
-      weight: 25,
+      weight: 20,
       completed: Boolean((employerProfileData?.last_name || user?.last_name || '').trim()),
     },
     {
       key: 'location',
       label: 'Add your location',
-      weight: 25,
+      weight: 15,
       completed: Boolean((employerProfileData?.location || (user as { location?: string } | null)?.location || '').trim()),
     },
     {
       key: 'photo',
       label: 'Upload a profile photo',
-      weight: 25,
+      weight: 20,
       completed: Boolean(employerProfileData?.profile_photo_url || (user as { profile_photo_url?: string } | null)?.profile_photo_url),
+    },
+    {
+      key: 'company_name',
+      label: 'Add your company name',
+      weight: 10,
+      completed: Boolean((employerProfileData?.company_name || '').trim()),
+    },
+    {
+      key: 'phone',
+      label: 'Add your phone number',
+      weight: 10,
+      completed: Boolean((employerProfileData?.phone || (user as { phone_number?: string } | null)?.phone_number || '').trim()),
+    },
+    {
+      key: 'description',
+      label: 'Add a company description',
+      weight: 5,
+      completed: Boolean((employerProfileData?.description || '').trim()),
     },
   ] as const;
 
@@ -275,6 +312,79 @@ const EmployerDashboard = () => {
     setShowUnlockModal(true);
   };
 
+  const handleJobSkillToggle = (skill: string) => {
+    setJobFormData(prev => ({
+      ...prev,
+      skills: prev.skills.includes(skill)
+        ? prev.skills.filter(s => s !== skill)
+        : [...prev.skills, skill],
+    }));
+  };
+
+  const handleCreateJob = async () => {
+    if (!jobFormData.title || !jobFormData.location || !jobFormData.salaryMin || !jobFormData.salaryMax) {
+      toast({ title: "Missing required fields", description: "Please fill in title, location, and salary range.", variant: "destructive" });
+      return;
+    }
+    setIsCreatingJob(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/jobs/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          title: jobFormData.title,
+          description: jobFormData.description,
+          location: jobFormData.location,
+          salary_min: parseInt(jobFormData.salaryMin) || 0,
+          salary_max: parseInt(jobFormData.salaryMax) || 0,
+          accommodation_type: jobFormData.workType,
+          required_experience: jobFormData.experience,
+          required_education: jobFormData.education,
+          skills_required: jobFormData.skills,
+          application_deadline: jobFormData.deadline,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to create job');
+      }
+      const newJob = await res.json();
+      setJobPostings(prev => [newJob, ...prev]);
+      setShowJobForm(false);
+      setJobFormData({ title: '', description: '', location: '', salaryMin: '', salaryMax: '', workType: '', experience: '', education: '', skills: [], deadline: '' });
+      toast({ title: "Job posted!", description: `"${newJob.title}" is now live.` });
+      await refreshData(false);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: "Failed to post job", description: msg, variant: "destructive" });
+    } finally {
+      setIsCreatingJob(false);
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
+        method: 'DELETE',
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to delete job');
+      }
+      setJobPostings(prev => prev.filter((j: any) => j.id !== jobId));
+      toast({ title: "Job deleted." });
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      toast({ title: "Failed to delete job", description: msg, variant: "destructive" });
+    }
+  };
+
   const handleUnlockSuccess = async (payload: { housegirlId: number; phone?: string; email?: string }) => {
     setHousegirls((prev) =>
       prev.map((housegirl) =>
@@ -295,6 +405,7 @@ const EmployerDashboard = () => {
   const sidebarItems = [
     { id: 'housegirls', label: 'Browse Housegirls', icon: Users },
     { id: 'contacts', label: 'My Contacts', icon: Phone },
+    { id: 'jobs', label: 'Post a Job', icon: Briefcase },
     { id: 'agency', label: 'Agency Services', icon: Building2 },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ] as const;
@@ -369,6 +480,190 @@ const EmployerDashboard = () => {
           </div>
         );
       }
+      case 'jobs':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Post a Job</h2>
+                <p className="mt-1 text-sm text-gray-600">Create job postings and manage applications from housegirls.</p>
+              </div>
+              <Button type="button" onClick={() => setShowJobForm(v => !v)}>
+                {showJobForm ? <><X className="h-4 w-4 mr-2" />Cancel</> : <><Plus className="h-4 w-4 mr-2" />New Job</>}
+              </Button>
+            </div>
+
+            {showJobForm && (
+              <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">Job Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Job Title <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.title}
+                      onChange={e => setJobFormData(p => ({ ...p, title: e.target.value }))}
+                      placeholder="e.g. Full-time Housegirl"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Location <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.location}
+                      onChange={e => setJobFormData(p => ({ ...p, location: e.target.value }))}
+                    >
+                      <option value="">Select city</option>
+                      {KENYA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Salary Min (KES) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.salaryMin}
+                      onChange={e => setJobFormData(p => ({ ...p, salaryMin: e.target.value }))}
+                      placeholder="e.g. 15000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Salary Max (KES) <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="number"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.salaryMax}
+                      onChange={e => setJobFormData(p => ({ ...p, salaryMax: e.target.value }))}
+                      placeholder="e.g. 25000"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Work Type</label>
+                    <select
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.workType}
+                      onChange={e => setJobFormData(p => ({ ...p, workType: e.target.value }))}
+                    >
+                      <option value="">Any</option>
+                      {WORK_TYPE_OPTIONS.map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Experience Required</label>
+                    <select
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.experience}
+                      onChange={e => setJobFormData(p => ({ ...p, experience: e.target.value }))}
+                    >
+                      <option value="">Any</option>
+                      {EXPERIENCE_OPTIONS.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Education Required</label>
+                    <select
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.education}
+                      onChange={e => setJobFormData(p => ({ ...p, education: e.target.value }))}
+                    >
+                      <option value="">Any</option>
+                      {EDUCATION_OPTIONS.map(ed => <option key={ed} value={ed}>{ed}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Application Deadline</label>
+                    <input
+                      type="date"
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.deadline}
+                      onChange={e => setJobFormData(p => ({ ...p, deadline: e.target.value }))}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                    rows={3}
+                    value={jobFormData.description}
+                    onChange={e => setJobFormData(p => ({ ...p, description: e.target.value }))}
+                    placeholder="Describe duties, requirements, and expectations..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Skills Required</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SKILLS_OPTIONS.map(skill => (
+                      <button
+                        key={skill}
+                        type="button"
+                        onClick={() => handleJobSkillToggle(skill)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${
+                          jobFormData.skills.includes(skill)
+                            ? 'bg-gray-900 text-white border-gray-900'
+                            : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'
+                        }`}
+                      >
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setShowJobForm(false)}>Cancel</Button>
+                  <Button type="button" onClick={handleCreateJob} disabled={isCreatingJob}>
+                    {isCreatingJob ? 'Posting...' : 'Post Job'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h3 className="text-base font-semibold text-gray-900 mb-3">My Job Postings</h3>
+              {jobPostings.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">No job postings yet. Click "New Job" to get started.</p>
+              ) : (
+                <div className="space-y-3">
+                  {jobPostings.map((job: any) => (
+                    <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <p className="text-sm font-semibold text-gray-900">{job.title}</p>
+                          <Badge variant={job.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                            {job.status || 'active'}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          {job.location} · KES {job.salary_min?.toLocaleString()} – {job.salary_max?.toLocaleString()}
+                        </p>
+                        <p className="text-xs text-gray-500">
+                          {job.applications_count ?? 0} applicant{(job.applications_count ?? 0) !== 1 ? 's' : ''} ·{' '}
+                          Posted {job.created_at ? new Date(job.created_at).toLocaleDateString() : '—'}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteJob(job.id)}
+                        className="ml-3 text-gray-400 hover:text-red-600 transition-colors shrink-0"
+                        title="Delete job"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
       case 'settings':
         return (
           <Settings
