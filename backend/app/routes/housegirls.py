@@ -262,6 +262,7 @@ def get_housegirl(housegirl_id):
             housegirl_id = fallback_doc.id
             
         housegirl = hg_doc.to_dict()
+        logger.info(f'Profile read: {hg_doc.reference.path}')
         
         first_name = ""
         last_name = ""
@@ -465,6 +466,7 @@ def update_housegirl(housegirl_id):
                     'created_at': timestamp,
                     **updates
                 })
+            logger.info(f'Profile saved: {doc_ref.path} -> {updates}')
             
         updated_doc = doc_ref.get()
         return jsonify(updated_doc.to_dict()), 200

@@ -150,13 +150,17 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
       });
 
       if (response.ok) {
-        await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
+        const freshRes = await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
           headers: {
             'Content-Type': 'application/json',
             ...(token ? { Authorization: `Bearer ${token}` } : {}),
           },
         });
-        showSuccessNotification('Profile saved', 'Your employer profile has been saved.');
+        if (freshRes.ok) {
+          const freshData = await freshRes.json();
+          applyProfileData(freshData);
+        }
+        showSuccessNotification('Profile saved', 'Your employer profile has been saved and verified.');
       } else {
         showErrorNotification('Failed to save profile', 'Please try again.');
       }
