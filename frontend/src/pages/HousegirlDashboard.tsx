@@ -1005,6 +1005,7 @@ const HousegirlDashboard = () => {
                     <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
                     <PhotoUpload
                       onPhotoUploaded={handlePhotoUpload}
+                      currentPhoto={profilePhoto || undefined}
                     />
                     <div className="mt-4 flex flex-col items-center gap-2">
                       <Button 
