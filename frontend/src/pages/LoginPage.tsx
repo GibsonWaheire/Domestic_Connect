@@ -98,6 +98,13 @@ const LoginPage = () => {
     }
   };
 
+  if (googleLoading) return (
+    <div className="min-h-screen bg-[#FDF6F0] flex flex-col items-center justify-center gap-4">
+      <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
+      <p className="text-sm font-medium text-gray-600">Signing you in...</p>
+    </div>
+  );
+
   return (
     <div className="flex min-h-screen bg-[#FDF6F0] font-sans text-[#111]">
       {/* Left Panel - Hidden on Mobile */}

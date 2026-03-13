@@ -257,7 +257,29 @@ def get_housegirl(housegirl_id):
         if not hg_doc.exists:
             fallback_doc = find_housegirl_doc_for_user(normalized_id)
             if not fallback_doc:
-                return jsonify({'error': 'Housegirl not found'}), 404
+                empty_profile = {
+                    'id': normalized_id,
+                    'user_id': normalized_id,
+                    'full_name': '',
+                    'role': '',
+                    'skills': [],
+                    'monthly_rate': 0,
+                    'expected_salary': 0,
+                    'bio': '',
+                    'location': '',
+                    'current_location': '',
+                    'photo_url': '',
+                    'profile_photo_url': '',
+                    'is_available': True,
+                    'unlock_count': 0,
+                    'activation_fee_paid': False,
+                    'in_demand_alert': False,
+                    'created_at': datetime.utcnow().isoformat(),
+                    'updated_at': datetime.utcnow().isoformat(),
+                }
+                db.collection('housegirl_profiles').document(normalized_id).set(empty_profile)
+                logger.info(f'Created empty housegirl profile: housegirl_profiles/{normalized_id}')
+                return jsonify(empty_profile), 200
             hg_doc = fallback_doc
             housegirl_id = fallback_doc.id
             
