@@ -101,29 +101,42 @@ def get_housegirls_for_employer(include_unavailable=False):
     if not include_unavailable:
         query = query.where('is_available', '==', True)
     hg_docs = query.stream()
-    
+
     result = []
     for doc in hg_docs:
         housegirl = doc.to_dict()
+        hg_id = housegirl.get('id') or doc.id
         pid = housegirl.get('profile_id')
         first_name = ""
         last_name = ""
         phone = ""
-        
-        if pid:
+        email = ""
+
+        if not pid:
+            logger.warning(f'get_housegirls_for_employer: housegirl doc {hg_id} missing profile_id')
+        else:
             prof_doc = db.collection('profiles').document(pid).get()
             if prof_doc.exists:
                 user_id = prof_doc.to_dict().get('user_id')
-                if user_id:
+                if not user_id:
+                    logger.warning(f'get_housegirls_for_employer: profile {pid} missing user_id')
+                else:
                     user_doc = db.collection('users').document(user_id).get()
                     if user_doc.exists:
                         u = user_doc.to_dict()
                         first_name = u.get('first_name', '')
                         last_name = u.get('last_name', '')
                         phone = u.get('phone_number', '')
-        
+                        email = u.get('email', '')
+
+        unlock_count = len(list(
+            db.collection('contact_access')
+            .where('housegirl_id', '==', hg_id)
+            .stream()
+        ))
+
         result.append({
-            'id': housegirl.get('id'),
+            'id': hg_id,
             'profile_id': pid,
             'age': housegirl.get('age'),
             'bio': housegirl.get('bio'),
@@ -139,7 +152,9 @@ def get_housegirls_for_employer(include_unavailable=False):
             'profile_photo_url': housegirl.get('profile_photo_url'),
             'first_name': first_name,
             'last_name': last_name,
+            'email': email,
             'phone_number': phone,
+            'unlock_count': unlock_count,
             'created_at': housegirl.get('created_at'),
             'updated_at': housegirl.get('updated_at')
         })
