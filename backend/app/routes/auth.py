@@ -432,13 +432,13 @@ def logout():
     """Logout user"""
     try:
         user_id = session.get('user_id')
-        
-        # Clear session
-        session.clear()
-        
-        # Log user action
+
+        # Log user action before clearing session
         if user_id:
             log_user_action(user_id, 'logout')
+
+        # Clear session
+        session.clear()
         
         return jsonify({'message': 'Logout successful'}), 200
         
@@ -458,13 +458,18 @@ def check_session():
             return jsonify({'user': None}), 200
         
         # For session check, we bring along full profile data
-        user = User.get_user_with_profile(user_id)
+        try:
+            user = User.get_user_with_profile(user_id)
+        except Exception as db_error:
+            logger.warning(f'check_session: Firestore unavailable, preserving session for {user_id}: {str(db_error)}')
+            return jsonify({'user': None}), 200
+
         if not user:
             session.clear()
             return jsonify({'user': None}), 200
-        
+
         return jsonify({'user': user.get_full_profile_data()}), 200
-        
+
     except Exception as e:
         print(f"Check session error: {e}")
         logger.error(f'Error: {str(e)}')
