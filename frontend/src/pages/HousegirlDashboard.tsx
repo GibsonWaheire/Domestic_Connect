@@ -204,12 +204,8 @@ const HousegirlDashboard = () => {
   }, [user, loading, navigate]);
 
   useEffect(() => {
-    const loadProfilePhoto = async () => {
+    const loadProfileData = async () => {
       if (!user || user.user_type !== 'housegirl' || !resolvedUserId) return;
-      const userData = getUserData();
-      if (userData.photoUrl) {
-        setProfilePhoto(userData.photoUrl);
-      }
       try {
         const token = await FirebaseAuthService.getIdToken();
         const response = await fetch(`/api/housegirls/${resolvedUserId}`, {
@@ -260,7 +256,7 @@ const HousegirlDashboard = () => {
       } catch {
       }
     };
-    loadProfilePhoto();
+    loadProfileData();
   }, [resolvedUserId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleActivationPayment = async () => {
@@ -359,21 +355,8 @@ const HousegirlDashboard = () => {
     navigate('/housegirls');
   };
 
-  const handlePhotoUpload = async (photoUrl: string) => {
+  const handlePhotoUpload = (photoUrl: string) => {
     setProfilePhoto(photoUrl);
-    if (!user || !resolvedUserId) return;
-    try {
-      const token = await FirebaseAuthService.getIdToken();
-      await fetch(`/api/housegirls/${resolvedUserId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ photo_url: photoUrl }),
-      });
-    } catch {
-    }
   };
 
   const handleFormChange = (field: string, value: string) => {
@@ -473,23 +456,6 @@ const HousegirlDashboard = () => {
     }
   };
 
-  // Initialize edit form data when userData is available
-  useEffect(() => {
-    if (user && user.user_type === 'housegirl') {
-      const userData = getUserData();
-      setEditFormData({
-        bio: userData.bio,
-        expectedSalary: userData.expectedSalary,
-        location: userData.location,
-        experience: userData.experience,
-        education: userData.education,
-        accommodationType: userData.accommodationType,
-        community: userData.community,
-        skills: userData.skills.join(', '),
-        languages: userData.languages.join(', ')
-      });
-    }
-  }, [user, getUserData]);
 
   if (loading) {
     return (
