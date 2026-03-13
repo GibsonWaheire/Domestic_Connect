@@ -300,7 +300,13 @@ def update_employer(employer_id):
             if emp_doc.exists:
                 doc_ref.update(updates)
             else:
-                profile_id = get_profile_id_for_user(getattr(user, 'id'))
+                profile_docs = list(
+                    db.collection('profiles')
+                    .where('user_id', '==', getattr(user, 'id'))
+                    .limit(1)
+                    .stream()
+                )
+                profile_id = profile_docs[0].to_dict().get('id') if profile_docs else None
                 doc_ref.set({
                     'id': employer_id,
                     'user_id': getattr(user, 'id'),
@@ -309,9 +315,12 @@ def update_employer(employer_id):
                     **updates
                 })
             logger.info(f'Profile saved: {doc_ref.path} -> {updates}')
-            
-        # Refetch updated
+
+        # Refetch and verify write
         updated_doc = doc_ref.get()
+        if not updated_doc.exists:
+            logger.error(f'Write verification failed: {doc_ref.path}')
+            return jsonify({'error': 'Save failed — profile could not be verified after write.'}), 500
         return jsonify(updated_doc.to_dict()), 200
         
     except Exception as e:

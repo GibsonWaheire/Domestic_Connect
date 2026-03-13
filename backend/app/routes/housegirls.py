@@ -489,10 +489,13 @@ def update_housegirl(housegirl_id):
                     **updates
                 })
             logger.info(f'Profile saved: {doc_ref.path} -> {updates}')
-            
+
         updated_doc = doc_ref.get()
+        if not updated_doc.exists:
+            logger.error(f'Write verification failed: {doc_ref.path}')
+            return jsonify({'error': 'Save failed — profile could not be verified after write.'}), 500
         return jsonify(updated_doc.to_dict()), 200
-        
+
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({
