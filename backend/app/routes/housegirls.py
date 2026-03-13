@@ -120,125 +120,121 @@ def get_housegirls():
         tribe = request.args.get('tribe', '').lower()
         min_salary = request.args.get('min_salary', type=int)
         max_salary = request.args.get('max_salary', type=int)
-        is_available = request.args.get('is_available')
+        is_available_param = request.args.get('is_available')
         
-        # Firestore does not easily support multi-field ranges and ilike without advanced indexes
-        # So we fetch the base set and filter locally if it's too complex.
-        query = db.collection('housegirl_profiles')
+        # We start with the 'users' collection to ensure universal visibility
+        # of all accounts registered as housegirls.
+        users_query = db.collection('users').where('user_type', '==', 'housegirl')
+        user_docs = users_query.stream()
         
-        if education:
-            query = query.where('education', '==', education)
-        if experience:
-            query = query.where('experience', '==', experience)
-        if accommodation_type:
-            query = query.where('accommodation_type', '==', accommodation_type)
+        all_results = []
+        current_user_id = get_authenticated_user_id_from_request()
+        
+        for user_doc in user_docs:
+            user_data = user_doc.to_dict()
+            user_id = user_doc.id
             
-        if is_available is not None:
-            # Convert string to boolean
-            is_avail_bool = str(is_available).lower() in ['true', '1', 't', 'y', 'yes']
-            query = query.where('is_available', '==', is_avail_bool)
-
-        docs = query.stream()
-        all_housegirls = [doc.to_dict() for doc in docs]
-        
-        # Apply in-memory filters for fields requiring ilike or complex ranges
-        filtered = []
-        for hg in all_housegirls:
+            # Try to fetch the enriched housegirl profile
+            # We look up by doc ID (which should be user_id) or via profile_id link
+            hg_profile_doc = db.collection('housegirl_profiles').document(user_id).get()
+            hg_profile = hg_profile_doc.to_dict() if hg_profile_doc.exists else {}
+            
+            if not hg_profile:
+                # Fallback: check if there's a profile doc via profile_id in cross-reference
+                # though our recent fixes make user_id the doc ID, let's be robust.
+                fallback_profile = find_housegirl_doc_for_user(user_id)
+                if fallback_profile:
+                    hg_profile = fallback_profile.to_dict()
+            
+            # Combine data
+            first_name = user_data.get('first_name') or hg_profile.get('first_name', '')
+            last_name = user_data.get('last_name') or hg_profile.get('last_name', '')
+            full_name = f"{first_name} {last_name}".strip()
+            
+            # Local filtering (Firestore's limitations make in-memory filtering cleaner here)
             if location:
-                loc = hg.get('location', '').lower()
-                curr_loc = hg.get('current_location', '').lower()
+                loc = (hg_profile.get('location') or user_data.get('location') or '').lower()
+                curr_loc = hg_profile.get('current_location', '').lower()
                 if location not in loc and location not in curr_loc:
                     continue
+            
             if tribe:
-                hg_tribe = hg.get('tribe', '').lower()
+                hg_tribe = hg_profile.get('tribe', '').lower()
                 if tribe not in hg_tribe:
                     continue
-            if min_salary is not None:
-                if hg.get('expected_salary', 0) < min_salary:
-                    continue
-            if max_salary is not None:
-                if hg.get('expected_salary', 0) > max_salary:
-                    continue
-            filtered.append(hg)
             
+            if education and education.lower() not in hg_profile.get('education', '').lower():
+                continue
+                
+            if experience and experience.lower() not in hg_profile.get('experience', '').lower():
+                continue
+                
+            if accommodation_type and accommodation_type != hg_profile.get('accommodation_type'):
+                continue
+
+            expected_salary = hg_profile.get('expected_salary', 0)
+            if min_salary is not None and expected_salary < min_salary:
+                continue
+            if max_salary is not None and expected_salary > max_salary:
+                continue
+            
+            # Availability logic: Universal visibility requested.
+            # We still show the status, but we don't hide them from the list.
+            unlock_count = get_unlock_count(user_id, hg_profile.get('profile_id'))
+            
+            # Use explicit availability flag if set, otherwise default to true
+            # We ignore the 3-unlock limit for VISIBILITY, but can still track it.
+            profile_is_available = hg_profile.get('is_available', True)
+            
+            if is_available_param is not None:
+                is_avail_bool = str(is_available_param).lower() in ['true', '1', 't', 'y', 'yes']
+                if profile_is_available != is_avail_bool:
+                    continue
+
+            can_view_contact = has_contact_access(current_user_id, user_id)
+            
+            all_results.append({
+                'id': user_id,
+                'profile_id': hg_profile.get('profile_id') or user_id,
+                'name': full_name,
+                'role': hg_profile.get('role', 'housegirl'),
+                'skills': hg_profile.get('skills', []),
+                'rate': expected_salary,
+                'photo': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
+                'availability': profile_is_available,
+                'age': hg_profile.get('age'),
+                'bio': hg_profile.get('bio'),
+                'current_location': hg_profile.get('current_location') or user_data.get('location'),
+                'location': hg_profile.get('location') or user_data.get('location'),
+                'education': hg_profile.get('education'),
+                'experience': hg_profile.get('experience'),
+                'expected_salary': expected_salary,
+                'accommodation_type': hg_profile.get('accommodation_type'),
+                'tribe': hg_profile.get('tribe'),
+                'is_available': profile_is_available,
+                'unlock_count': unlock_count,
+                'in_demand_alert': hg_profile.get('in_demand_alert', False),
+                'activation_fee_paid': hg_profile.get('activation_fee_paid', False),
+                'profile_photo_url': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
+                'first_name': first_name,
+                'last_name': last_name,
+                'phone': user_data.get('phone_number') if can_view_contact else 'Unlock to view',
+                'email': user_data.get('email') if can_view_contact else 'Unlock to view',
+                'created_at': hg_profile.get('created_at') or user_data.get('created_at'),
+                'updated_at': hg_profile.get('updated_at') or user_data.get('updated_at')
+            })
+
         # Pagination
         page = int(request.args.get('page', 1))
         per_page = int(request.args.get('per_page', 20))
         
-        total = len(filtered)
+        total = len(all_results)
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
-        paginated = filtered[start_idx:end_idx]
-        
-        result = []
-        current_user_id = get_authenticated_user_id_from_request()
-        for housegirl in paginated:
-            first_name = ""
-            last_name = ""
-            phone_number = ""
-            email = ""
-            
-            profile_id = housegirl.get('profile_id')
-            if profile_id:
-                prof_doc = db.collection('profiles').document(profile_id).get()
-                if prof_doc.exists:
-                    prof_data = prof_doc.to_dict()
-                    user_id = prof_data.get('user_id')
-                    if user_id:
-                        user_doc = db.collection('users').document(user_id).get()
-                        if user_doc.exists:
-                            u_data = user_doc.to_dict()
-                            first_name = u_data.get('first_name', '')
-                            last_name = u_data.get('last_name', '')
-                            phone_number = u_data.get('phone_number', '')
-                            email = u_data.get('email', '')
-            
-            # Fallback to fields on housegirl doc if profile lookup fails
-            if not first_name:
-                first_name = housegirl.get('first_name') or housegirl.get('name', '').split(' ')[0]
-            if not last_name:
-                last_name = housegirl.get('last_name') or ' '.join(housegirl.get('name', '').split(' ')[1:])
-            if not phone_number:
-                phone_number = housegirl.get('phone_number') or housegirl.get('phone')
-
-            housegirl_id = housegirl.get('id')
-            can_view_contact = has_contact_access(current_user_id, housegirl_id)
-            unlock_count = get_unlock_count(housegirl_id, profile_id)
-            computed_is_available = unlock_count < 3
-
-            result.append({
-                'id': housegirl_id,
-                'profile_id': profile_id,
-                'name': f"{first_name} {last_name}".strip(),
-                'role': 'housegirl',
-                'skills': housegirl.get('skills', []),
-                'rate': housegirl.get('expected_salary'),
-                'photo': housegirl.get('profile_photo_url'),
-                'availability': computed_is_available,
-                'age': housegirl.get('age'),
-                'bio': housegirl.get('bio'),
-                'current_location': housegirl.get('current_location'),
-                'location': housegirl.get('location'),
-                'education': housegirl.get('education'),
-                'experience': housegirl.get('experience'),
-                'expected_salary': housegirl.get('expected_salary'),
-                'accommodation_type': housegirl.get('accommodation_type'),
-                'tribe': housegirl.get('tribe'),
-                'is_available': computed_is_available,
-                'unlock_count': unlock_count,
-                'in_demand_alert': housegirl.get('in_demand_alert', False),
-                'activation_fee_paid': housegirl.get('activation_fee_paid', False),
-                'profile_photo_url': housegirl.get('profile_photo_url'),
-                'first_name': first_name,
-                'last_name': last_name,
-                'phone': phone_number if can_view_contact else 'Unlock to view',
-                'email': email if can_view_contact else 'Unlock to view',
-                'created_at': housegirl.get('created_at'),
-                'updated_at': housegirl.get('updated_at')
-            })
+        paginated = all_results[start_idx:end_idx]
         
         return jsonify({
-            'housegirls': result,
+            'housegirls': paginated,
             'pagination': {
                 'page': page,
                 'per_page': per_page,
@@ -326,16 +322,16 @@ def get_housegirl(housegirl_id):
         current_user_id = get_authenticated_user_id_from_request()
         can_view_contact = has_contact_access(current_user_id, housegirl_id)
         unlock_count = get_unlock_count(housegirl_id, profile_id)
-        computed_is_available = unlock_count < 3
+        computed_is_available = housegirl.get('is_available', True)
         
         return jsonify({
-            'id': housegirl.get('id'),
-            'profile_id': profile_id,
-            'name': f"{first_name} {last_name}".strip(),
+            'id': housegirl_id,
+            'profile_id': profile_id or housegirl_id,
+            'name': f"{first_name} {last_name}".strip() or housegirl.get('full_name', 'Househelp'),
             'role': housegirl.get('role', 'housegirl'),
             'skills': housegirl.get('skills', []),
             'rate': housegirl.get('expected_salary'),
-            'photo': profile_photo_url,
+            'photo': profile_photo_url or housegirl.get('profile_photo_url'),
             'availability': computed_is_available,
             'age': housegirl.get('age'),
             'bio': housegirl.get('bio'),
@@ -350,7 +346,7 @@ def get_housegirl(housegirl_id):
             'unlock_count': unlock_count,
             'in_demand_alert': housegirl.get('in_demand_alert', False),
             'activation_fee_paid': housegirl.get('activation_fee_paid', False),
-            'profile_photo_url': profile_photo_url,
+            'profile_photo_url': profile_photo_url or housegirl.get('profile_photo_url'),
             'first_name': first_name,
             'last_name': last_name,
             'phone': phone_number if can_view_contact else 'Unlock to view',
