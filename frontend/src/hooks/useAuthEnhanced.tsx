@@ -186,10 +186,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (isFirebaseUser) await FirebaseAuthService.signOut();
       else await apiRequest('/api/auth/logout', { method: 'DELETE' });
       setUser(null); setIsFirebaseUser(false); shouldSyncFirebaseUserRef.current = false;
+      localStorage.removeItem('dc_auth_provider');
       toast({ title: "Signed Out", description: "You have been signed out successfully." });
       navigate(redirectTo);
     } catch (error) {
       setUser(null); setIsFirebaseUser(false); shouldSyncFirebaseUserRef.current = false;
+      localStorage.removeItem('dc_auth_provider');
       toast({ title: "Signed Out", description: "You have been signed out." });
     } finally { setLoading(false); setIsSigningOut(false); }
   }, [isFirebaseUser, navigate]);
