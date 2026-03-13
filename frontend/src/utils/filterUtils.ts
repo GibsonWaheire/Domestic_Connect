@@ -59,16 +59,9 @@ export const filterHousegirls = (
       return false;
     }
 
-    // Experience filter
-    if (selectedExperience) {
-      const experienceYears = parseInt(housegirl.experience.split(' ')[0]);
-      const [minExp, maxExp] = selectedExperience.split('-').map(s => parseInt(s.split(' ')[0]));
-      
-      if (selectedExperience.includes('12+')) {
-        if (experienceYears < 12) return false;
-      } else if (experienceYears < minExp || experienceYears > maxExp) {
-        return false;
-      }
+    // Experience filter — exact match since housegirl stores range strings (e.g. "0-2 years")
+    if (selectedExperience && housegirl.experience !== selectedExperience) {
+      return false;
     }
 
     // Living arrangement filter
