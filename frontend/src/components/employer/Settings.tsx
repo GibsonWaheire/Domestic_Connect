@@ -101,18 +101,31 @@ export const Settings = ({ stats: _stats, profileData }: SettingsProps) => {
 
   const handleProfilePhotoChange = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !user) {
-      return;
-    }
+    if (!file || !user) return;
 
     setIsUploadingPhoto(true);
     try {
-      const result = await uploadPhoto(file, user.id);
-      if (result.success && result.photoUrl) {
-        setProfilePhoto(result.photoUrl);
-        showSuccessNotification('Photo uploaded', 'Press Save to update your profile.');
-      } else {
-        showErrorNotification('Upload failed', result.error || 'Please try again.');
+      const photoUrl = await uploadPhoto(file, user.id);
+      setProfilePhoto(photoUrl);
+      // Auto-save immediately with the fresh URL (don't read from state, use local var)
+      setIsSavingPhoto(true);
+      try {
+        const token = await FirebaseAuthService.getIdToken();
+        const response = await fetch(`${API_BASE_URL}/api/employers/${user.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify({ profile_photo_url: photoUrl }),
+        });
+        if (response.ok) {
+          showSuccessNotification('Photo saved', 'Your profile photo has been updated.');
+        } else {
+          showErrorNotification('Save failed', 'Please try again.');
+        }
+      } finally {
+        setIsSavingPhoto(false);
       }
     } catch {
       showErrorNotification('Upload failed', 'Please try again.');
