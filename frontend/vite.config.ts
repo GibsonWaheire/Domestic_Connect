@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
-import obfuscator from "rollup-plugin-obfuscator";
+import JavaScriptObfuscator from "javascript-obfuscator";
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
@@ -25,28 +25,33 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react(),
       mode === 'development' && componentTagger(),
-      isProd && obfuscator({
-        options: {
-          compact: true,
-          controlFlowFlattening: false,
-          deadCodeInjection: false,
-          debugProtection: false,
-          disableConsoleOutput: true,
-          identifierNamesGenerator: 'hexadecimal',
-          log: false,
-          renameGlobals: false,
-          rotateStringArray: true,
-          selfDefending: false,
-          shuffleStringArray: true,
-          splitStrings: false,
-          stringArray: true,
-          stringArrayCallsTransform: true,
-          stringArrayEncoding: ['base64'],
-          stringArrayIndexShift: true,
-          stringArrayThreshold: 0.75,
-          unicodeEscapeSequence: false,
+      isProd && {
+        name: 'js-obfuscator',
+        renderChunk(code: string, chunk: { fileName: string }) {
+          if (!chunk.fileName.endsWith('.js')) return null;
+          const result = JavaScriptObfuscator.obfuscate(code, {
+            compact: true,
+            controlFlowFlattening: false,
+            deadCodeInjection: false,
+            debugProtection: false,
+            disableConsoleOutput: true,
+            identifierNamesGenerator: 'hexadecimal',
+            log: false,
+            renameGlobals: false,
+            rotateStringArray: true,
+            selfDefending: false,
+            shuffleStringArray: true,
+            splitStrings: false,
+            stringArray: true,
+            stringArrayCallsTransform: true,
+            stringArrayEncoding: ['base64'],
+            stringArrayIndexShift: true,
+            stringArrayThreshold: 0.75,
+            unicodeEscapeSequence: false,
+          });
+          return { code: result.getObfuscatedCode() };
         },
-      }),
+      },
     ].filter(Boolean),
     resolve: {
       alias: {
