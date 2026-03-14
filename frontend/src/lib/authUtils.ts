@@ -22,6 +22,8 @@ export interface User {
     bio?: string;
     firebase_uid?: string;
     is_firebase_user?: boolean;
+    profile_photo_url?: string;
+    photo_url?: string;
 }
 
 import { API_BASE_URL } from './apiConfig';
