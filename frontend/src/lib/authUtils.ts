@@ -25,7 +25,7 @@ export interface User {
 }
 
 import { API_BASE_URL } from './apiConfig';
-export const INACTIVITY_TIMEOUT = 30 * 60 * 1000;
+export const INACTIVITY_TIMEOUT = 2 * 60 * 1000; // 2 minutes
 
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const { headers, ...restOptions } = options;
