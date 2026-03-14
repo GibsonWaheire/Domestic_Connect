@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Home, LogOut, MessageCircle, Settings, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { API_BASE_URL } from '@/lib/apiConfig';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +48,24 @@ const HousegirlDashboard = () => {
       navigate('/housegirls');
     }
   }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (!resolvedUserId) return;
+    const loadPhoto = async () => {
+      try {
+        const token = await FirebaseAuthService.getIdToken();
+        const res = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          const photoUrl = data.profile_photo_url || data.photo_url || null;
+          if (photoUrl) setProfilePhoto(photoUrl);
+        }
+      } catch {}
+    };
+    loadPhoto();
+  }, [resolvedUserId]);
 
   const handleSignOut = async () => {
     await signOut();
