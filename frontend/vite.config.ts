@@ -27,8 +27,11 @@ export default defineConfig(({ mode }) => {
       mode === 'development' && componentTagger(),
       isProd && {
         name: 'js-obfuscator',
-        renderChunk(code: string, chunk: { fileName: string }) {
+        renderChunk(code: string, chunk: { fileName: string; name: string }) {
           if (!chunk.fileName.endsWith('.js')) return null;
+          // Skip third-party vendor chunks — obfuscating Firebase/React breaks auth
+          const vendorChunks = ['vendor', 'router', 'ui', 'icons', 'utils'];
+          if (vendorChunks.includes(chunk.name)) return null;
           const result = JavaScriptObfuscator.obfuscate(code, {
             compact: true,
             controlFlowFlattening: false,
