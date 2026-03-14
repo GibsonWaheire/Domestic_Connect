@@ -114,6 +114,7 @@ const HousegirlsListPage = () => {
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [highDemandWarning, setHighDemandWarning] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -149,9 +150,17 @@ const HousegirlsListPage = () => {
       return Number.isNaN(parsed) ? 0 : parsed;
     };
 
-    fetch(`${API_BASE_URL}/api/housegirls`)
-      .then((r) => r.json())
-      .then((data) => {
+    const loadProfiles = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/housegirls`);
+        if (!response.ok) {
+          setProfiles([]);
+          setLoading(false);
+          setError('Failed to load profiles. Please try again.');
+          return;
+        }
+
+        const data = await response.json();
         const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
         const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
           const firstName = profile.first_name?.trim() || 'Unknown';
@@ -174,9 +183,16 @@ const HousegirlsListPage = () => {
           };
         });
         setProfiles(mappedProfiles);
+        setError(null);
+      } catch {
+        setProfiles([]);
+        setError('Failed to load profiles. Please try again.');
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    };
+
+    loadProfiles();
   }, []);
 
 
@@ -640,7 +656,19 @@ const HousegirlsListPage = () => {
                     Loading profiles...
                   </div>
                 )}
-                {paginatedProfiles.map((profile) => {
+                {!loading && error && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">
+                      Could not load profiles.
+                      {' '}
+                      Please try again later.
+                    </p>
+                    <button onClick={() => window.location.reload()}>
+                      Retry
+                    </button>
+                  </div>
+                )}
+                {!error && paginatedProfiles.map((profile) => {
                   const isUnlocked = Boolean(unlockedProfiles[profile.id]);
                   const isContactLocked = profile.phone === 'Unlock to view';
                   return (
