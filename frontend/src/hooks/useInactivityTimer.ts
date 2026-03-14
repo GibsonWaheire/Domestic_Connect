@@ -21,12 +21,17 @@ export const useInactivityTimer = (
             warningTimer = setTimeout(() => {
                 toast({
                     title: "Session Expiring",
-                    description: "You will be logged out in 2 minutes due to inactivity.",
+                    description: "You will be logged out in 30 seconds due to inactivity.",
                     variant: "destructive",
                 });
-            }, INACTIVITY_TIMEOUT - 2 * 60 * 1000);
+            }, INACTIVITY_TIMEOUT - 30 * 1000); // warn 30s before logout
 
             timer = setTimeout(async () => {
+                toast({
+                    title: "Session Expired",
+                    description: "You have been logged out due to inactivity.",
+                    variant: "destructive",
+                });
                 await signOut('/login');
             }, INACTIVITY_TIMEOUT);
         };
