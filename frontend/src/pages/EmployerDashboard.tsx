@@ -792,7 +792,7 @@ const EmployerDashboard = () => {
                       key={item.id}
                       type="button"
                       variant="outline"
-                      onClick={() => setActiveSection(item.id)}
+                      onClick={() => item.id === 'housegirls' ? navigate('/housegirls') : setActiveSection(item.id)}
                       className={isActive ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-gray-700'}
                     >
                       <Icon className="h-4 w-4 mr-2" />

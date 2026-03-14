@@ -82,6 +82,19 @@ export const useGoogleAuth = (
 
                     const signupUserType = signupResponse.user_type;
                     setLoading(false);
+
+                    const pendingUnlockRawSignup = sessionStorage.getItem('unlock_after_login');
+                    if (pendingUnlockRawSignup) {
+                        try {
+                            const pendingUnlock = JSON.parse(pendingUnlockRawSignup);
+                            sessionStorage.removeItem('unlock_after_login');
+                            navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                            return { error: null, user: signupResponse.user };
+                        } catch {
+                            sessionStorage.removeItem('unlock_after_login');
+                        }
+                    }
+
                     switch (signupUserType) {
                         case 'employer':
                             navigate('/employer-dashboard', { replace: true });
@@ -118,6 +131,19 @@ export const useGoogleAuth = (
 
             const resolvedUserType = response.user_type;
             setLoading(false);
+
+            const pendingUnlockRaw = sessionStorage.getItem('unlock_after_login');
+            if (pendingUnlockRaw) {
+                try {
+                    const pendingUnlock = JSON.parse(pendingUnlockRaw);
+                    sessionStorage.removeItem('unlock_after_login');
+                    navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                    return { error: null, user: response.user };
+                } catch {
+                    sessionStorage.removeItem('unlock_after_login');
+                }
+            }
+
             switch (resolvedUserType) {
                 case 'employer':
                     navigate('/employer-dashboard', { replace: true });
