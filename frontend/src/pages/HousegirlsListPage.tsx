@@ -112,7 +112,7 @@ const HousegirlsListPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, { phone?: string; email?: string }>>({});
+  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, boolean>>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
@@ -160,22 +160,16 @@ const HousegirlsListPage = () => {
         setLoading(true);
         setError(null);
 
-        const url = `${API_BASE_URL}/api/housegirls/`;
-        console.log('Fetching from:', url);
-
-        const response = await fetch(url, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        console.log('Response status:', response.status);
+        const response = await fetch(`${API_BASE_URL}/api/housegirls/`);
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
+          setProfiles([]);
+          setLoading(false);
+          setError('Failed to load profiles. Please try again.');
+          return;
         }
 
         const data = await response.json();
-        console.log('Profiles received:', data.housegirls?.length);
         const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
         const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
           const firstName = profile.first_name?.trim() || 'Unknown';
