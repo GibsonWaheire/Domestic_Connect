@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, CheckCircle, Edit, RefreshCw } from 'lucide-react';
+import { AlertCircle, Edit, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -125,16 +125,9 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
     }));
   };
 
-  const handleSavePhoto = async () => {
-    if (!resolvedUserId || !profilePhoto) {
-      toast({
-        title: 'No photo selected',
-        description: 'Please upload a photo before saving.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
+  const handlePhotoUploaded = async (photoUrl: string) => {
+    onProfilePhotoChange(photoUrl);
+    if (!resolvedUserId) return;
     setIsSavingPhoto(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
@@ -144,19 +137,14 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ profile_photo_url: profilePhoto }),
+        body: JSON.stringify({ profile_photo_url: photoUrl }),
       });
-      if (!response.ok) {
-        throw new Error('Failed to save photo');
-      }
-      toast({
-        title: 'Photo saved',
-        description: 'Your profile photo has been updated and saved to the database.',
-      });
+      if (!response.ok) throw new Error('Failed to save photo');
+      toast({ title: 'Photo saved', description: 'Your profile photo has been updated.' });
     } catch {
       toast({
         title: 'Save failed',
-        description: 'There was an error saving your photo. Please try again.',
+        description: 'Photo uploaded but could not be saved. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -284,29 +272,19 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
           <div className="space-y-6">
             <div className="text-center" id="housegirl-photo">
               <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
-              <PhotoUpload onPhotoUploaded={(url) => onProfilePhotoChange(url)} />
-              <div className="mt-4 flex flex-col items-center gap-2">
-                <Button
-                  onClick={handleSavePhoto}
-                  disabled={isSavingPhoto || !profilePhoto}
-                  className="bg-green-600 hover:bg-green-700 text-white px-8"
-                >
-                  {isSavingPhoto ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Save Photo
-                    </>
-                  )}
-                </Button>
-                <p className="text-xs text-gray-500 italic">
-                  Note: The photo must be of a real person to be approved.
-                </p>
-              </div>
+              <PhotoUpload
+                onPhotoUploaded={handlePhotoUploaded}
+                currentPhoto={profilePhoto || undefined}
+              />
+              {isSavingPhoto && (
+                <div className="mt-2 flex items-center justify-center gap-2 text-sm text-gray-500">
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  Saving photo...
+                </div>
+              )}
+              <p className="text-xs text-gray-500 italic mt-2">
+                Note: The photo must be of a real person to be approved.
+              </p>
             </div>
 
             <Separator />
