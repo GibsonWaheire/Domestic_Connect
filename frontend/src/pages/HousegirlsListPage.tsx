@@ -159,7 +159,7 @@ const HousegirlsListPage = () => {
         setLoading(true);
         setError(null);
 
-        const url = `${API_BASE_URL}/api/housegirls`;
+        const url = `${API_BASE_URL}/api/housegirls/`;
         console.log('Fetching from:', url);
 
         const response = await fetch(url, {
