@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
-import { API_BASE_URL } from '@/lib/apiConfig';
-import { Lock, MapPin, Menu, Phone, Search, X } from 'lucide-react';
+import { MapPin, Menu, Phone, Search, X } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
+import { FirebaseAuthService } from '@/lib/firebaseAuth';
 
 const bgImage = '/housegirls.webp';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  'https://domesticconnect-production.up.railway.app';
 
 type RoleType = 'House Help' | 'Nanny' | 'Cook' | 'Caregiver' | 'Cleaner';
 
@@ -108,7 +111,7 @@ const HousegirlsListPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, boolean>>({});
+  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, { phone?: string; email?: string }>>({});
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
@@ -153,15 +156,25 @@ const HousegirlsListPage = () => {
 
     const loadProfiles = async () => {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/housegirls`);
+        setLoading(true);
+        setError(null);
+
+        const url = `${API_BASE_URL}/api/housegirls`;
+        console.log('Fetching from:', url);
+
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        console.log('Response status:', response.status);
+
         if (!response.ok) {
-          setProfiles([]);
-          setLoading(false);
-          setError('Failed to load profiles. Please try again.');
-          return;
+          throw new Error(`HTTP ${response.status}`);
         }
 
         const data = await response.json();
+        console.log('Profiles received:', data.housegirls?.length);
         const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
         const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
           const firstName = profile.first_name?.trim() || 'Unknown';
@@ -185,9 +198,10 @@ const HousegirlsListPage = () => {
         });
         setProfiles(mappedProfiles);
         setError(null);
-      } catch {
+      } catch (err) {
+        console.error('Fetch error:', err);
         setProfiles([]);
-        setError('Failed to load profiles. Please try again.');
+        setError('Could not load profiles.');
       } finally {
         setLoading(false);
       }
@@ -206,13 +220,13 @@ const HousegirlsListPage = () => {
 
   const handleGetContact = (profileId: string) => {
     if (!user) {
-      localStorage.setItem('pendingContactId', profileId);
+      sessionStorage.setItem('unlock_after_login', profileId);
       navigate('/login?mode=signup');
       return;
     }
-    const selectedProfile = profiles.find((profile) => profile.id === profileId);
-    if (selectedProfile && !selectedProfile.available) {
-      setHighDemandWarning('This profile has high demand. They may not be available.');
+    const found = profiles.find((profile) => profile.id === profileId);
+    if (found && found.unlockCount >= 3) {
+      setHighDemandWarning(`⚡ High demand — unlocked ${found.unlockCount} times. They may not be available.`);
     } else {
       setHighDemandWarning(null);
     }
@@ -231,47 +245,49 @@ const HousegirlsListPage = () => {
     setShowPaymentModal(true);
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     if (selectedProfileId) {
-      setUnlockedProfiles((prev) => ({ ...prev, [selectedProfileId]: true }));
+      try {
+        const token = await FirebaseAuthService.getIdToken();
+        const response = await fetch(`${API_BASE_URL}/api/housegirls/${selectedProfileId}`, {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setUnlockedProfiles((prev) => ({
+            ...prev,
+            [selectedProfileId]: {
+              phone: data.phone !== 'Unlock to view' ? data.phone : undefined,
+              email: data.email !== 'Unlock to view' ? data.email : undefined,
+            },
+          }));
+        } else {
+          setUnlockedProfiles((prev) => ({ ...prev, [selectedProfileId]: {} }));
+        }
+      } catch {
+        setUnlockedProfiles((prev) => ({ ...prev, [selectedProfileId]: {} }));
+      }
     }
     setSelectedProfileId(null);
     setShowPaymentModal(false);
   };
 
   useEffect(() => {
-    if (!user) {
-      return;
-    }
+    if (!user || profiles.length === 0) return;
 
-    const searchParams = new URLSearchParams(window.location.search);
-    const pendingFromQuery = searchParams.get('pendingContactId');
-    const pendingContactId = pendingFromQuery || localStorage.getItem('pendingContactId');
-    if (!pendingContactId) {
-      return;
-    }
+    const pendingId = sessionStorage.getItem('unlock_after_login');
+    if (!pendingId) return;
 
-    const matchingProfile = profiles.find((profile) => profile.id === pendingContactId);
-    if (!matchingProfile) {
-      localStorage.removeItem('pendingContactId');
-      if (pendingFromQuery) {
-        searchParams.delete('pendingContactId');
-        const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
-        window.history.replaceState({}, '', nextUrl);
-      }
-      return;
-    }
+    const matchingProfile = profiles.find((profile) => profile.id === pendingId);
+    sessionStorage.removeItem('unlock_after_login');
+    if (!matchingProfile) return;
 
     setSelectedProfileId(matchingProfile.id);
     setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
     setShowPaymentModal(true);
-    localStorage.removeItem('pendingContactId');
-
-    if (pendingFromQuery) {
-      searchParams.delete('pendingContactId');
-      const nextUrl = searchParams.toString() ? `${window.location.pathname}?${searchParams.toString()}` : window.location.pathname;
-      window.history.replaceState({}, '', nextUrl);
-    }
   }, [profiles, user]);
 
   useEffect(() => {
@@ -670,8 +686,8 @@ const HousegirlsListPage = () => {
                   </div>
                 )}
                 {!error && paginatedProfiles.map((profile) => {
-                  const isUnlocked = Boolean(unlockedProfiles[profile.id]);
-                  const isContactLocked = profile.phone === 'Unlock to view';
+                  const unlockData = unlockedProfiles[profile.id];
+                  const isUnlocked = unlockData !== undefined;
                   return (
                     <article
                       key={profile.id}
@@ -691,11 +707,17 @@ const HousegirlsListPage = () => {
                         <div className="flex-1 w-full">
                           <div className="flex flex-col gap-1 text-center md:text-left">
                             <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
-                            {!profile.available && (
-                              <Badge variant="secondary" className="w-fit mx-auto md:mx-0 border-amber-300 bg-amber-50 text-amber-700 text-[11px] px-2 py-0.5 rounded-full">
-                                ⚡ High demand
-                              </Badge>
-                            )}
+
+                            {profile.unlockCount >= 3 ? (
+                              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-full w-fit mx-auto md:mx-0">
+                                ⚡ High demand · unlocked {profile.unlockCount} times
+                              </div>
+                            ) : profile.unlockCount > 0 ? (
+                              <div className="text-[11px] text-amber-600 w-fit mx-auto md:mx-0">
+                                🔓 Unlocked {profile.unlockCount} times
+                              </div>
+                            ) : null}
+
                             <Badge variant="secondary" className={`w-fit mx-auto md:mx-0 border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[profile.role as RoleType]}`}>
                               {profile.role}
                             </Badge>
@@ -711,16 +733,12 @@ const HousegirlsListPage = () => {
                               ))}
                             </div>
                             <p className="text-[#555] text-[13px]">{profile.experienceYears} yrs experience</p>
+
                             {isUnlocked && (
-                              <div className="text-[13px] text-[#555] border border-[#e5e5e5] px-3 py-2 w-fit mx-auto md:mx-0">
-                                {isContactLocked ? (
-                                  <span className="inline-flex items-center gap-2 text-amber-600">
-                                    <Lock className="h-3 w-3" />
-                                    Unlock to view contact
-                                  </span>
-                                ) : (
-                                  <>Contact: {profile.phone} · {profile.exactLocation}</>
-                                )}
+                              <div className="text-[13px] border border-green-200 bg-green-50 px-3 py-2 w-fit mx-auto md:mx-0 rounded space-y-0.5">
+                                <div className="text-green-700 font-medium">✓ Contact Unlocked</div>
+                                {unlockData?.phone && <div className="text-[#555]">📞 {unlockData.phone}</div>}
+                                {unlockData?.email && <div className="text-[#555]">📧 {unlockData.email}</div>}
                               </div>
                             )}
                           </div>
@@ -735,7 +753,7 @@ const HousegirlsListPage = () => {
                             onClick={(e) => { e.stopPropagation(); handleGetContact(profile.id); }}
                             className="w-full md:w-auto rounded-[4px] px-6 bg-black hover:bg-[#333] text-white transition-opacity duration-150"
                           >
-                            {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
+                            {isUnlocked ? 'Contact Unlocked ✓' : 'Unlock Contact - KES 200'}
                           </Button>
                         </div>
                       </div>
@@ -946,7 +964,7 @@ const HousegirlsListPage = () => {
                       handleGetContact(selectedProfile.id);
                     }}
                   >
-                    {Boolean(unlockedProfiles[selectedProfile.id]) ? 'Contact Unlocked ✓' : 'Unlock Contact →'}
+                    {unlockedProfiles[selectedProfile.id] !== undefined ? 'Contact Unlocked ✓' : 'Unlock Contact - KES 200'}
                   </Button>
                 ) : (
                   <Button
