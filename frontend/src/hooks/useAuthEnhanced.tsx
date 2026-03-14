@@ -125,8 +125,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const setupAuth = async () => {
       try {
         const { auth } = await import('@/lib/firebase');
-        const { setPersistence, browserLocalPersistence } = await import('firebase/auth');
-        await setPersistence(auth, browserLocalPersistence);
+        const { setPersistence, browserSessionPersistence } = await import('firebase/auth');
+        await setPersistence(auth, browserSessionPersistence);
       } catch (err) { console.error('Firebase persistence init error:', err); }
 
       unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
