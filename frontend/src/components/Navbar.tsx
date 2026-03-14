@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,12 @@ const Navbar = () => {
                 <Link to="/" className="flex flex-col leading-none">
                     <span className="text-xl font-bold tracking-tight text-[#111]">Domestic Connect</span>
                 </Link>
+
+                <nav className="hidden md:flex items-center">
+                    <Link to="/housegirls" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
+                        Browse
+                    </Link>
+                </nav>
 
                 <div className="flex items-center gap-4">
                     {user ? (
