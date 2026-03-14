@@ -1,6 +1,6 @@
 import { Helmet } from 'react-helmet-async';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -98,6 +98,7 @@ const ROLE_BADGE: Record<RoleType, string> = {
 const HousegirlsListPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const getDashboardRoute = () => {
     if (!user) return '/';
@@ -220,7 +221,12 @@ const HousegirlsListPage = () => {
 
   const handleGetContact = (profileId: string) => {
     if (!user) {
-      sessionStorage.setItem('unlock_after_login', profileId);
+      const profile = profiles.find((p) => p.id === profileId);
+      sessionStorage.setItem('unlock_after_login', JSON.stringify({
+        profileId,
+        profileName: profile?.name || '',
+        returnUrl: '/housegirls',
+      }));
       navigate('/login?mode=signup');
       return;
     }
@@ -278,17 +284,41 @@ const HousegirlsListPage = () => {
   useEffect(() => {
     if (!user || profiles.length === 0) return;
 
-    const pendingId = sessionStorage.getItem('unlock_after_login');
+    // Priority 1: ?unlock=profileId in URL (set by auth hooks after login)
+    const unlockParam = searchParams.get('unlock');
+    if (unlockParam) {
+      window.history.replaceState({}, '', '/housegirls');
+      const match = profiles.find((p) => p.id === unlockParam);
+      if (match) {
+        setSelectedProfileId(match.id);
+        setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
+        setShowPaymentModal(true);
+      }
+      return;
+    }
+
+    // Priority 2: sessionStorage (set by handleGetContact before redirect)
+    const raw = sessionStorage.getItem('unlock_after_login');
+    if (!raw) return;
+
+    let pendingId: string | null = null;
+    try {
+      const parsed = JSON.parse(raw);
+      pendingId = parsed.profileId || null;
+    } catch {
+      pendingId = raw; // fallback for plain string
+    }
+
+    sessionStorage.removeItem('unlock_after_login');
     if (!pendingId) return;
 
-    const matchingProfile = profiles.find((profile) => profile.id === pendingId);
-    sessionStorage.removeItem('unlock_after_login');
+    const matchingProfile = profiles.find((p) => p.id === pendingId);
     if (!matchingProfile) return;
 
     setSelectedProfileId(matchingProfile.id);
     setSelectedPaymentPackage(CONTACT_UNLOCK_PACKAGE);
     setShowPaymentModal(true);
-  }, [profiles, user]);
+  }, [profiles, user, searchParams]);
 
   useEffect(() => {
     if (!isMenuOpen) return;
