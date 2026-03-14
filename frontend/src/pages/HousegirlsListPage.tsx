@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { API_BASE_URL } from '@/lib/apiConfig';
-import { Lock, MapPin, Menu, Phone, Search } from 'lucide-react';
+import { Lock, MapPin, Menu, Phone, Search, X } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
 
 const bgImage = '/housegirls.webp';
@@ -114,9 +114,11 @@ const HousegirlsListPage = () => {
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [highDemandWarning, setHighDemandWarning] = useState<string | null>(null);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedProfile, setSelectedProfile] = useState<Profile | null>(null);
 
   const filteredProfiles = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -149,9 +151,17 @@ const HousegirlsListPage = () => {
       return Number.isNaN(parsed) ? 0 : parsed;
     };
 
-    fetch(`${API_BASE_URL}/api/housegirls`)
-      .then((r) => r.json())
-      .then((data) => {
+    const loadProfiles = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/housegirls`);
+        if (!response.ok) {
+          setProfiles([]);
+          setLoading(false);
+          setError('Failed to load profiles. Please try again.');
+          return;
+        }
+
+        const data = await response.json();
         const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
         const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
           const firstName = profile.first_name?.trim() || 'Unknown';
@@ -174,9 +184,16 @@ const HousegirlsListPage = () => {
           };
         });
         setProfiles(mappedProfiles);
+        setError(null);
+      } catch {
+        setProfiles([]);
+        setError('Failed to load profiles. Please try again.');
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    };
+
+    loadProfiles();
   }, []);
 
 
@@ -640,13 +657,26 @@ const HousegirlsListPage = () => {
                     Loading profiles...
                   </div>
                 )}
-                {paginatedProfiles.map((profile) => {
+                {!loading && error && (
+                  <div className="text-center py-12">
+                    <p className="text-gray-500">
+                      Could not load profiles.
+                      {' '}
+                      Please try again later.
+                    </p>
+                    <button onClick={() => window.location.reload()}>
+                      Retry
+                    </button>
+                  </div>
+                )}
+                {!error && paginatedProfiles.map((profile) => {
                   const isUnlocked = Boolean(unlockedProfiles[profile.id]);
                   const isContactLocked = profile.phone === 'Unlock to view';
                   return (
                     <article
                       key={profile.id}
-                      className={`bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 ${ROLE_BORDER[profile.role as RoleType]}`}
+                      className={`bg-white border border-[#e5e5e5] shadow-[0_1px_3px_rgba(0,0,0,0.08)] p-5 cursor-pointer hover:shadow-md transition-all ${ROLE_BORDER[profile.role as RoleType]}`}
+                      onClick={() => setSelectedProfile(profile)}
                     >
                       <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
                         <div className="relative flex-shrink-0 mx-auto md:mx-0">
@@ -702,7 +732,7 @@ const HousegirlsListPage = () => {
                             <span className="text-sm font-medium text-gray-500">/mo</span>
                           </p>
                           <Button
-                            onClick={() => handleGetContact(profile.id)}
+                            onClick={(e) => { e.stopPropagation(); handleGetContact(profile.id); }}
                             className="w-full md:w-auto rounded-[4px] px-6 bg-black hover:bg-[#333] text-white transition-opacity duration-150"
                           >
                             {isUnlocked ? 'Contact Unlocked ✓' : 'Get Contact →'}
@@ -850,6 +880,85 @@ const HousegirlsListPage = () => {
       {showPaymentModal && highDemandWarning && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[80] rounded-full border border-amber-300 bg-amber-50 px-4 py-2 text-xs text-amber-700">
           {highDemandWarning}
+        </div>
+      )}
+
+      {selectedProfile && (
+        <div
+          className="fixed inset-0 z-[90] bg-black/50 flex items-center justify-center p-4"
+          onClick={() => setSelectedProfile(null)}
+        >
+          <div
+            className="bg-white w-full max-w-md rounded-xl shadow-2xl overflow-y-auto max-h-[90vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-4 border-b border-gray-100">
+              <h2 className="text-base font-semibold text-gray-900">Profile</h2>
+              <button
+                type="button"
+                onClick={() => setSelectedProfile(null)}
+                className="h-8 w-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-500"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="flex items-center gap-4">
+                <UserAvatar
+                  src={selectedProfile.avatar}
+                  name={selectedProfile.name}
+                  size="xl"
+                  isAvailable={selectedProfile.available}
+                />
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">{selectedProfile.name}</h3>
+                  <Badge variant="secondary" className={`border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[selectedProfile.role as RoleType]}`}>
+                    {selectedProfile.role}
+                  </Badge>
+                  <p className="text-sm text-gray-500 flex items-center gap-1 mt-1">
+                    <MapPin className="h-3 w-3" />{selectedProfile.location}
+                  </p>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {selectedProfile.tags.map((tag) => (
+                  <Badge key={tag} variant="secondary" className="border border-[#ddd] bg-transparent text-[#555] text-[12px] rounded-[2px] px-2 py-1">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">Experience</span>
+                  <p className="font-medium">{selectedProfile.experienceYears} yrs</p>
+                </div>
+                <div>
+                  <span className="text-gray-500">Monthly Rate</span>
+                  <p className="font-medium">KES {selectedProfile.monthlyRate.toLocaleString()}</p>
+                </div>
+              </div>
+              <div className="pt-2">
+                {user ? (
+                  <Button
+                    className="w-full rounded-[4px] bg-black hover:bg-[#333] text-white"
+                    onClick={() => {
+                      setSelectedProfile(null);
+                      handleGetContact(selectedProfile.id);
+                    }}
+                  >
+                    {Boolean(unlockedProfiles[selectedProfile.id]) ? 'Contact Unlocked ✓' : 'Unlock Contact →'}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full rounded-[4px] bg-black hover:bg-[#333] text-white"
+                    onClick={() => navigate('/login?mode=signup')}
+                  >
+                    Sign in to unlock contact
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -27,17 +27,28 @@ def create_app(config_name=None):
     if hasattr(config_class, 'init_app'):
         config_class.init_app(app)
         
-    CORS(app,
-        resources={r"/*": {"origins": [
-            "http://localhost:5173", 
-            "http://127.0.0.1:5173",
-            "https://domestic-connect.up.railway.app",
-            "https://domestic-connect-production.up.railway.app",
-            "https://domesticconnect-production.up.railway.app",
-            "https://domesticconnect.vercel.app",
-            "https://domestic-connect.co.ke",
-            "https://www.domestic-connect.co.ke"
-        ]}},
+    allowed_origins = [
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "https://domestic-connect.up.railway.app",
+        "https://domestic-connect-production.up.railway.app",
+        "https://domesticconnect-production.up.railway.app",
+        "https://domesticconnect.vercel.app",
+        "https://domestic-connect.co.ke",
+        "https://www.domestic-connect.co.ke"
+    ]
+
+    CORS(
+        app,
+        resources={
+            r"/api/housegirls*": {
+                "origins": "*",
+                "supports_credentials": False
+            },
+            r"/*": {
+                "origins": allowed_origins
+            }
+        },
         supports_credentials=True,
         allow_headers=['Content-Type', 'Authorization', 'Accept'],
         methods=['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS']
