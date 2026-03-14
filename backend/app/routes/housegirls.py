@@ -56,15 +56,18 @@ def get_authenticated_user_id_from_request():
     auth_header = request.headers.get('Authorization', '')
     if not auth_header.startswith('Bearer '):
         return None
-    token = auth_header.split(' ')[1]
-    firebase_user = verify_firebase_token(token)
-    if not firebase_user:
+    try:
+        token = auth_header.split(' ')[1]
+        firebase_user = verify_firebase_token(token)
+        if not firebase_user:
+            return None
+        user_doc = db.collection('users').where('firebase_uid', '==', firebase_user.get('uid')).limit(1).stream()
+        user = next(user_doc, None)
+        if not user:
+            return None
+        return user.to_dict().get('id')
+    except Exception:
         return None
-    user_doc = db.collection('users').where('firebase_uid', '==', firebase_user.get('uid')).limit(1).stream()
-    user = next(user_doc, None)
-    if not user:
-        return None
-    return user.to_dict().get('id')
 
 
 def has_contact_access(current_user_id, housegirl_id):
