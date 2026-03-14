@@ -1,5 +1,5 @@
 export interface Housegirl {
-  id: number;
+  id: string | number;
   name: string;
   age: number;
   location: string;
@@ -9,12 +9,11 @@ export interface Housegirl {
   bio?: string;
   skills?: string[];
   rating?: number;
-  reviews?: number;
   contactUnlocked: boolean;
   unlockCount: number;
   phone?: string;
   email?: string;
-  nationality: string;
+  nationality?: string;
   community: string;
   education: string;
   workType: string;

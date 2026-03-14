@@ -264,13 +264,17 @@ export const Housegirls = ({
                     name={housegirl.name}
                     size="xl"
                     className="h-20 w-20 border border-gray-200"
-                    isAvailable={true}
+                    isAvailable={housegirl.status === 'available'}
                   />
 
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-gray-900">{housegirl.name}</h3>
-                      <Badge className="bg-green-100 text-green-800 border-green-200">AVAILABLE</Badge>
+                      {housegirl.status === 'available' ? (
+                        <Badge className="bg-green-100 text-green-800 border-green-200">AVAILABLE</Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-200">⚡ High Demand</Badge>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm text-gray-600">

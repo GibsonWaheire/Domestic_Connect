@@ -134,8 +134,8 @@ const EmployerDashboard = () => {
   // Transform dashboard data when it changes
   useEffect(() => {
     const apiHousegirls = dashboardData?.available_data.housegirls || [];
-    const transformedHousegirls: Housegirl[] = apiHousegirls.map((hg, index) => ({
-      id: Number(hg.id) || (100000 + index),
+    const transformedHousegirls: Housegirl[] = apiHousegirls.map((hg) => ({
+      id: String(hg.id),
       name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
       age: hg.age,
       location: hg.location,
@@ -144,9 +144,7 @@ const EmployerDashboard = () => {
       salary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
       status: hg.is_available ? 'available' : 'unavailable',
       bio: hg.bio,
-      skills: Array.isArray(hg.skills) && hg.skills.length > 0 ? hg.skills : ['Cooking', 'Cleaning', 'Laundry'],
-      rating: 4.5, // Default rating since it's not in API yet
-      reviews: 12, // Default reviews
+      skills: hg.skills || [],
       contactUnlocked: Boolean(
         hg.phone_number &&
         hg.phone_number !== 'Unlock to view' &&
@@ -156,7 +154,6 @@ const EmployerDashboard = () => {
       unlockCount: Number(hg.unlock_count) || 0,
       phone: hg.phone_number,
       email: hg.email,
-      nationality: 'Kenyan', // Default nationality
       community: hg.tribe,
       workType: hg.accommodation_type,
       livingArrangement: hg.accommodation_type,
@@ -164,14 +161,14 @@ const EmployerDashboard = () => {
     }));
 
     const sortedRealHousegirls = transformedHousegirls.sort((a, b) => {
-      const aMatch = apiHousegirls.find((hg) => (Number(hg.id) || 0) === a.id);
-      const bMatch = apiHousegirls.find((hg) => (Number(hg.id) || 0) === b.id);
+      const aMatch = apiHousegirls.find((hg) => String(hg.id) === String(a.id));
+      const bMatch = apiHousegirls.find((hg) => String(hg.id) === String(b.id));
       const aTime = Date.parse((aMatch as { created_at?: string } | undefined)?.created_at || '');
       const bTime = Date.parse((bMatch as { created_at?: string } | undefined)?.created_at || '');
       if (Number.isFinite(aTime) && Number.isFinite(bTime)) {
         return bTime - aTime;
       }
-      return b.id - a.id;
+      return Number(b.id) - Number(a.id);
     });
     setHousegirls(sortedRealHousegirls);
   }, [dashboardData]);
@@ -388,7 +385,7 @@ const EmployerDashboard = () => {
   const handleUnlockSuccess = async (payload: { housegirlId: number; phone?: string; email?: string }) => {
     setHousegirls((prev) =>
       prev.map((housegirl) =>
-        housegirl.id === payload.housegirlId
+        String(housegirl.id) === String(payload.housegirlId)
           ? {
               ...housegirl,
               contactUnlocked: true,
