@@ -406,7 +406,7 @@ const LandingPage = () => {
             </div>
             <div className="flex flex-col items-center gap-2">
               <Clock size={20} className="text-white" />
-              <span className="font-semibold text-lg">Same Day</span>
+              <span className="font-semibold text-lg">Instantly</span>
               <span className="text-sm text-gray-300">Access</span>
             </div>
           </div>
@@ -420,11 +420,11 @@ const LandingPage = () => {
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <p className="text-lg mb-3">⭐⭐⭐⭐⭐</p>
               <p className="italic text-[#444] mb-4">
-                "Nilipatikana kazi in 3 days. Asante Domestic Connect!"
+                "Nilipa kazi in 3 days. Asante Domestic Connect!"
               </p>
               <p className="text-[13px] font-bold text-[#111]">— Amina, House Help · Mombasa</p>
             </div>
-            <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
+            <div className="bg-blue border border-gray-200 rounded-xl p-6 shadow-sm">
               <p className="text-lg mb-3">⭐⭐⭐⭐⭐</p>
               <p className="italic text-[#444] mb-4">
                 "Found a great nanny in 2 days. Honest and straightforward service."
@@ -434,7 +434,7 @@ const LandingPage = () => {
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <p className="text-lg mb-3">⭐⭐⭐⭐⭐</p>
               <p className="italic text-[#444] mb-4">
-                "Niliwasiliana na mama wa nyumba ndani ya dakika chache. Huduma nzuri sana."
+                "thanks guys, ur amazing!."
               </p>
               <p className="text-[13px] font-bold text-[#111]">— Joyce, Employer · Kisumu</p>
             </div>
@@ -474,7 +474,7 @@ const LandingPage = () => {
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#aaa] mb-3">Contact</p>
             <div className="flex flex-col gap-2 text-sm">
               <p className="text-white">📍 Nairobi, Kenya</p>
-              <a href="https://wa.me/254700000000" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#aaa] transition-colors">📱 WhatsApp us</a>
+              <a href="https://wa.me/254726899113" target="_blank" rel="noopener noreferrer" className="text-white hover:text-[#aaa] transition-colors">📱 WhatsApp us</a>
               <p className="text-white">🌐 domesticconnect.co.ke</p>
               <Link to="/privacy-policy" className="text-white hover:text-[#aaa] transition-colors">Privacy Policy</Link>
               <Link to="/terms" className="text-white hover:text-[#aaa] transition-colors">Terms of Service</Link>
@@ -488,7 +488,7 @@ const LandingPage = () => {
           Chat with us
         </span>
         <a
-          href="https://wa.me/254700000000"
+          href="https://wa.me/254726899113"
           target="_blank"
           rel="noopener noreferrer"
           className="h-14 w-14 rounded-full bg-green-500 text-white shadow-xl inline-flex items-center justify-center hover:bg-green-600 transition-colors"
