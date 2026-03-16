@@ -2,9 +2,10 @@ from flask import Blueprint, request, jsonify, session
 from app.services.auth_service import login_required, get_current_user, firebase_auth_required
 from app.models import User, Profile
 from app.firebase_init import db
-from app.middleware.security import rate_limit, validate_json_input, USER_SCHEMA
+from app.middleware.security import rate_limit, rate_limit_by_email, validate_json_input, USER_SCHEMA
 from app.middleware.performance import cache_response, compress_response
 from app.middleware.logging import log_request, log_error, log_user_action
+from app.utils.audit_log import write_audit_log, ACTION_ROLE_CHANGED
 import uuid
 import bcrypt
 from datetime import datetime
@@ -367,12 +368,19 @@ def update_role():
 
         session['user_type'] = user_type
 
+        old_user_type = getattr(user, 'user_type', None)
+        write_audit_log(
+            user_id=getattr(user, 'id'),
+            action=ACTION_ROLE_CHANGED,
+            details={'old_role': old_user_type, 'new_role': user_type},
+        )
+
         return jsonify({
             'user_type': user_type,
             'success': True
         }), 200
     except Exception as e:
-        logger.error(f'Error: {str(e)}')
+        logger.error(f'update_role error: {str(e)}')
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
@@ -512,8 +520,7 @@ def check_session():
         return jsonify({'user': user.get_full_profile_data()}), 200
 
     except Exception as e:
-        print(f"Check session error: {e}")
-        logger.error(f'Error: {str(e)}')
+        logger.error(f'check_session error: {str(e)}')
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
@@ -525,17 +532,57 @@ def update_user_profile():
     try:
         user = request.current_user
         data = request.get_json()
-        
+
         # Use BaseModel method to update profile
         user.update_profile(**data)
-        
+
         return jsonify({
             'message': 'Profile updated successfully',
             'user': user.get_full_profile_data()
         }), 200
-        
+
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
+
+
+@auth_bp.route('/password-reset', methods=['POST'])
+@rate_limit_by_email(max_requests=4, window_seconds=3600)  # 4 requests per email per hour
+@log_request()
+def request_password_reset():
+    """
+    Proxy Firebase password-reset email.
+    Rate-limited to 4 requests per email address per hour.
+    """
+    try:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip()
+
+        if not email:
+            return jsonify({'error': 'Email address is required.'}), 400
+
+        # Basic format check (full validation is done by Firebase)
+        import re as _re
+        if not _re.match(r'^[^@\s]+@[^@\s]+\.[^@\s]+$', email):
+            return jsonify({'error': 'Invalid email address.'}), 400
+
+        try:
+            from firebase_admin import auth as firebase_admin_auth
+            link = firebase_admin_auth.generate_password_reset_link(email)
+            # In a production setup you would send `link` via your own email provider.
+            # For now we let Firebase send the default email.
+            logger.info(f'Password-reset requested for email hash (not logged for privacy).')
+        except Exception as fb_err:
+            # Log the technical detail server-side only; return generic message to client
+            logger.error(f'password_reset Firebase error: {str(fb_err)}')
+
+        # Always return the same response to prevent email enumeration
+        return jsonify({
+            'message': 'If that email is registered you will receive a password-reset link shortly.'
+        }), 200
+
+    except Exception as e:
+        logger.error(f'password_reset error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500

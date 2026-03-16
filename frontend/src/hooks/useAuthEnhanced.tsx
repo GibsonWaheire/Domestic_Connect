@@ -130,12 +130,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       } catch (err) { console.error('Firebase persistence init error:', err); }
 
       unsubscribe = FirebaseAuthService.onAuthStateChanged(async (firebaseUser) => {
-        if (import.meta.env.DEV) console.log('onAuthStateChanged fire. firebaseUser:', firebaseUser?.uid);
         if (isSigningOut) { clearTimeout(fallbackTimeout); return; }
         try {
           if (firebaseUser) {
             if (!firebaseUser.email) {
-              if (import.meta.env.DEV) console.log('No email on firebaseUser, setting isFirebaseUser true');
               setIsFirebaseUser(true);
               await checkSession();
               return;
@@ -149,12 +147,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   user.id === `user_${firebaseUser.uid}`
                 );
               if (firebaseMatchesUser) {
-                if (import.meta.env.DEV) console.log('Firebase user already synced');
                 setLoading(false);
                 clearTimeout(fallbackTimeout);
                 return;
               }
-              if (import.meta.env.DEV) console.log('Hydrating firebase user from backend');
               await handleFirebaseUser(firebaseUser);
               shouldSyncFirebaseUserRef.current = false;
               setLoading(false);
@@ -162,14 +158,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               return;
             }
             if (user && (user.firebase_uid === firebaseUser.uid || user.id === firebaseUser.uid)) {
-              if (import.meta.env.DEV) console.log('User already matches, skipping sync');
               setLoading(false); clearTimeout(fallbackTimeout); shouldSyncFirebaseUserRef.current = false; return;
             }
-            if (import.meta.env.DEV) console.log('Syncing firebase user to backend...');
             await handleFirebaseUser(firebaseUser);
             shouldSyncFirebaseUserRef.current = false;
           } else {
-            if (import.meta.env.DEV) console.log('Firebase user is null, clearing user state');
             setUser(null);
             setIsFirebaseUser(false);
             shouldSyncFirebaseUserRef.current = false;

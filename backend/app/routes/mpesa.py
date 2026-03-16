@@ -43,20 +43,20 @@ def get_access_token():
         auth_string = f"{MPESA_CONFIG['CONSUMER_KEY']}:{MPESA_CONFIG['CONSUMER_SECRET']}"
         auth_bytes = auth_string.encode('ascii')
         auth_b64 = base64.b64encode(auth_bytes).decode('ascii')
-        
+
         response = requests.get(
             MPESA_URLS[MPESA_CONFIG['ENVIRONMENT']]['auth'],
             headers={'Authorization': f'Basic {auth_b64}'}
         )
-        
+
         if response.status_code == 200:
             return response.json()['access_token']
         else:
-            raise Exception(f"Failed to get access token: {response.text}")
-            
+            raise Exception(f"Failed to get access token: {response.status_code}")
+
     except Exception as e:
-        print(f"Error getting access token: {e}")
-        raise e
+        logger.error(f'get_access_token error: {str(e)}')
+        raise
 
 def get_timestamp():
     """Get current timestamp in M-Pesa format"""
@@ -210,42 +210,43 @@ def transaction_status():
 
 @mpesa_bp.route('/callback', methods=['POST'])
 def mpesa_callback():
-    """Handle M-Pesa callback"""
+    """Handle M-Pesa callback — webhook secret validated via URL token."""
     try:
-        data = request.get_json()
-        
-        # Log the callback for debugging
-        print(f"M-Pesa Callback received: {json.dumps(data, indent=2)}")
-        
-        # Process the callback based on the result
-        result_code = data.get('Body', {}).get('stkCallback', {}).get('ResultCode')
-        result_desc = data.get('Body', {}).get('stkCallback', {}).get('ResultDesc')
-        
+        data = request.get_json(silent=True) or {}
+
+        # Verify the webhook secret token embedded in the callback URL
+        webhook_secret = os.environ.get('MPESA_WEBHOOK_SECRET', '')
+        provided_token = request.args.get('token', '')
+        if webhook_secret and provided_token != webhook_secret:
+            logger.warning('mpesa_callback: invalid webhook token rejected')
+            return jsonify({'error': 'Forbidden'}), 403
+
+        # Validate required payload structure before processing
+        stk_callback = data.get('Body', {}).get('stkCallback', {})
+        result_code = stk_callback.get('ResultCode')
+        result_desc = stk_callback.get('ResultDesc', '')
+
+        if result_code is None:
+            logger.warning('mpesa_callback: missing ResultCode in payload')
+            return jsonify({'error': 'Invalid callback payload'}), 400
+
         if result_code == 0:
-            # Payment successful
-            callback_metadata = data.get('Body', {}).get('stkCallback', {}).get('CallbackMetadata', {}).get('Item', [])
-            
-            # Extract transaction details
-            transaction_details = {}
-            for item in callback_metadata:
-                transaction_details[item.get('Name')] = item.get('Value')
-            
-            # Here you would typically update your database with the successful payment
-            # For now, just log it
-            print(f"Payment successful: {transaction_details}")
-            
+            callback_items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
+            transaction_details = {
+                item.get('Name'): item.get('Value')
+                for item in callback_items
+                if isinstance(item, dict)
+            }
+            logger.info('mpesa_callback: payment successful, receipt=%s',
+                        transaction_details.get('MpesaReceiptNumber', 'n/a'))
             return jsonify({'status': 'success'}), 200
         else:
-            # Payment failed
-            print(f"Payment failed: {result_desc}")
-            return jsonify({'status': 'failed', 'reason': result_desc}), 200
-            
+            logger.info('mpesa_callback: payment failed, code=%s', result_code)
+            return jsonify({'status': 'failed'}), 200
+
     except Exception as e:
-        print(f"Error processing callback: {e}")
-        logger.error(f'Error: {str(e)}')
-        return jsonify({
-            'error': 'Something went wrong. Please try again.'
-        }), 500
+        logger.error(f'mpesa_callback error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
 
 @mpesa_bp.route('/health', methods=['GET'])
 def health_check():

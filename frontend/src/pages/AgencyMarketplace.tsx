@@ -147,8 +147,6 @@ const AgencyMarketplace = () => {
 
   const handleAgencyHire = async (agencyId: string) => {
     try {
-      // Here you would integrate with payment system
-      console.log('Hiring through agency:', agencyId);
       
       // Create agency client record
       const agencyClientData = {
