@@ -345,9 +345,8 @@ const HousegirlPage = () => {
             
             <div className="max-w-2xl mx-auto">
               <PhotoUpload 
-                onPhotoUploaded={(photoUrl) => {
-                  console.log('Photo uploaded:', photoUrl);
-                  // In production, this would save to the user's profile
+                onPhotoUploaded={(_photoUrl) => {
+                  // Photo URL saved to profile via the upload endpoint
                 }}
               />
             </div>

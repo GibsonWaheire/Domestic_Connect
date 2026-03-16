@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required, admin_required
 from app.firebase_init import db
+from app.utils.audit_log import write_audit_log, ACTION_USER_DEACTIVATED, ACTION_USER_ACTIVATED, ACTION_AGENCY_VERIFIED, ACTION_DATA_EXPORT
 from datetime import datetime, timedelta
 import json
 import logging
@@ -304,7 +305,16 @@ def toggle_user_status(user_id):
         new_status = not user.get('is_active', True)
         
         user_doc_ref.update({'is_active': new_status})
-        
+
+        admin_user = getattr(request, 'current_user', None)
+        admin_id = getattr(admin_user, 'id', 'unknown_admin')
+        write_audit_log(
+            user_id=user_id,
+            action=ACTION_USER_ACTIVATED if new_status else ACTION_USER_DEACTIVATED,
+            details={'new_is_active': new_status},
+            performed_by=admin_id,
+        )
+
         return jsonify({
             'message': f'User {"activated" if new_status else "deactivated"} successfully',
             'user': {
@@ -313,9 +323,9 @@ def toggle_user_status(user_id):
                 'is_active': new_status
             }
         }), 200
-        
+
     except Exception as e:
-        logger.error(f'Error: {str(e)}')
+        logger.error(f'toggle_user_status error: {str(e)}')
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
@@ -405,7 +415,16 @@ def verify_agency(agency_id):
             return jsonify({'error': 'Invalid verification status'}), 400
         
         agency_doc_ref.update({'verification_status': verification_status})
-        
+
+        admin_user = getattr(request, 'current_user', None)
+        admin_id = getattr(admin_user, 'id', 'unknown_admin')
+        write_audit_log(
+            user_id=agency_id,
+            action=ACTION_AGENCY_VERIFIED,
+            details={'verification_status': verification_status, 'agency_name': agency_doc.to_dict().get('name')},
+            performed_by=admin_id,
+        )
+
         return jsonify({
             'message': f'Agency {verification_status} successfully',
             'agency': {
@@ -414,7 +433,7 @@ def verify_agency(agency_id):
                 'verification_status': verification_status
             }
         }), 200
-        
+
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({
@@ -452,8 +471,15 @@ def get_analytics():
     """Get detailed analytics data"""
     from collections import defaultdict
     try:
-        # Group users by date explicitly in python
-        # Not performant for millions of users, but standard practice in firebase without BigQuery
+        admin_user = getattr(request, 'current_user', None)
+        admin_id = getattr(admin_user, 'id', 'unknown_admin')
+        write_audit_log(
+            user_id=admin_id,
+            action=ACTION_DATA_EXPORT,
+            details={'endpoint': '/admin/analytics'},
+            performed_by=admin_id,
+        )
+
         users = [u.to_dict() for u in db.collection('users').stream()]
         
         user_growth_dict = defaultdict(int)

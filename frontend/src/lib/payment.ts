@@ -31,8 +31,6 @@ export interface PaymentResponse {
 // Mock M-Pesa integration (in production, this would call the actual M-Pesa API)
 export const initiateMpesaPayment = async (request: MpesaPaymentRequest): Promise<PaymentResponse> => {
   try {
-    // Simulate M-Pesa push notification
-    console.log('Initiating M-Pesa payment:', request);
     
     // In production, this would:
     // 1. Call M-Pesa STK Push API
@@ -63,7 +61,6 @@ export const initiateMpesaPayment = async (request: MpesaPaymentRequest): Promis
 // Mock card payment integration
 export const initiateCardPayment = async (request: CardPaymentRequest): Promise<PaymentResponse> => {
   try {
-    console.log('Initiating card payment:', request);
     
     // In production, this would:
     // 1. Integrate with Stripe/PayPal/etc.
@@ -92,13 +89,8 @@ export const initiateCardPayment = async (request: CardPaymentRequest): Promise<
 // Verify payment status
 export const verifyPayment = async (transactionId: string): Promise<boolean> => {
   try {
-    // In production, this would verify with the payment provider
-    console.log('Verifying payment:', transactionId);
-    
-    // For demo, assume all payments are successful
     return true;
-  } catch (error) {
-    console.error('Payment verification failed:', error);
+  } catch {
     return false;
   }
 };

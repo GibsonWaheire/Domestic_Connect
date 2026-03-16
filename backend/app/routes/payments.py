@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
+from app.utils.audit_log import write_audit_log, ACTION_PAYMENT_COMPLETED, ACTION_PAYMENT_FAILED, ACTION_CONTACT_UNLOCKED
 from datetime import datetime
 import uuid
 import logging
@@ -209,6 +210,14 @@ def create_purchase():
 @payments_bp.route('/mpesa-callback', methods=['POST'])
 def mpesa_callback():
     try:
+        # --- Webhook secret verification ---
+        # The callback URL should include ?token=<MPESA_WEBHOOK_SECRET>
+        webhook_secret = os.getenv('MPESA_WEBHOOK_SECRET', '')
+        provided_token = request.args.get('token', '')
+        if webhook_secret and provided_token != webhook_secret:
+            logger.warning('mpesa_callback (payments): invalid webhook token rejected')
+            return jsonify({'error': 'Forbidden'}), 403
+
         callback_data = request.get_json(silent=True) or {}
         stk_callback = callback_data.get('Body', {}).get('stkCallback', {})
 
@@ -237,6 +246,15 @@ def mpesa_callback():
                 'result_desc': stk_callback.get('ResultDesc', callback_data.get('ResultDesc')),
                 'updated_at': datetime.utcnow().isoformat()
             })
+            write_audit_log(
+                user_id=purchase_data.get('user_id', 'unknown'),
+                action=ACTION_PAYMENT_FAILED,
+                details={
+                    'purchase_id': purchase_doc.id,
+                    'checkout_request_id': checkout_request_id,
+                    'result_code': result_code,
+                },
+            )
             return jsonify({'message': 'Payment callback recorded as failed'}), 200
 
         callback_items = stk_callback.get('CallbackMetadata', {}).get('Item', [])
@@ -281,6 +299,18 @@ def mpesa_callback():
                                 'activation_fee_paid': True,
                                 'updated_at': datetime.utcnow().isoformat()
                             }, merge=True)
+
+        write_audit_log(
+            user_id=purchase_data.get('user_id', 'unknown'),
+            action=ACTION_PAYMENT_COMPLETED,
+            details={
+                'purchase_id': purchase_doc.id,
+                'checkout_request_id': checkout_request_id,
+                'mpesa_receipt': receipt,
+                'amount': amount,
+                'package_id': purchase_data.get('package_id'),
+            },
+        )
 
         return jsonify({
             'message': 'Payment confirmed and credits added',
@@ -380,6 +410,16 @@ def unlock_contact():
             db.collection('housegirl_profiles').document(housegirl_id).set(updates, merge=True)
         
         updated_summary = get_contact_credit_summary(user_id)
+
+        write_audit_log(
+            user_id=user_id,
+            action=ACTION_CONTACT_UNLOCKED,
+            details={
+                'access_id': access_id,
+                'target_profile_id': target_profile_id,
+                'housegirl_id': housegirl_id,
+            },
+        )
 
         return jsonify({
             'message': 'Contact unlocked successfully',

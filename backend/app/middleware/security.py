@@ -11,6 +11,9 @@ import html
 # Rate limiting storage (in production, use Redis)
 rate_limit_storage = defaultdict(lambda: deque(maxlen=100))
 
+# Separate store keyed by email for password-reset rate limiting
+email_rate_limit_storage = defaultdict(lambda: deque(maxlen=50))
+
 def rate_limit(max_requests=100, window_seconds=60):
     """
     Rate limiting decorator
@@ -43,6 +46,36 @@ def rate_limit(max_requests=100, window_seconds=60):
             return f(*args, **kwargs)
         return decorated_function
     return decorator
+
+def rate_limit_by_email(max_requests=4, window_seconds=3600):
+    """
+    Rate-limit a route by the `email` field in the JSON body.
+    Falls back to IP-based limiting if no email is present.
+    Intended for password-reset and other per-email-address throttles.
+    """
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            data = request.get_json(silent=True) or {}
+            email = (data.get('email') or '').lower().strip()
+            key = f'email:{email}' if email else request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
+
+            current_time = time.time()
+            bucket = email_rate_limit_storage[key]
+
+            while bucket and bucket[0] < current_time - window_seconds:
+                bucket.popleft()
+
+            if len(bucket) >= max_requests:
+                return jsonify({
+                    'error': 'Too many requests. Please wait before trying again.'
+                }), 429
+
+            bucket.append(current_time)
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
 
 def validate_input(data, schema):
     """
