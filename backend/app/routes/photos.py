@@ -106,6 +106,35 @@ def upload_photo():
         }
         db.collection('photos').document(photo_id).set(photo_data)
 
+        # Persist proxy URL directly on the housegirl profile and user document
+        # so it is immediately visible without a separate PUT request.
+        user_id = getattr(user, 'id')
+        timestamp = datetime.utcnow().isoformat()
+        photo_update = {'profile_photo_url': proxy_url, 'updated_at': timestamp}
+
+        # Update users collection
+        try:
+            db.collection('users').document(user_id).set(photo_update, merge=True)
+        except Exception as ue:
+            logger.warning(f'Could not update users doc: {ue}')
+
+        # Update housegirl_profiles — try by document ID first, then by query
+        try:
+            hg_ref = db.collection('housegirl_profiles').document(user_id)
+            if hg_ref.get().exists:
+                hg_ref.update(photo_update)
+            else:
+                hg_docs = list(
+                    db.collection('housegirl_profiles')
+                    .where('user_id', '==', user_id)
+                    .limit(1)
+                    .stream()
+                )
+                if hg_docs:
+                    hg_docs[0].reference.update(photo_update)
+        except Exception as he:
+            logger.warning(f'Could not update housegirl_profiles doc: {he}')
+
         return jsonify({
             'message': 'Photo uploaded successfully',
             'photo_id': photo_id,
