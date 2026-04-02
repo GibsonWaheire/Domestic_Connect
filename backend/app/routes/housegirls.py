@@ -2,12 +2,51 @@ from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required, verify_firebase_token
 from app.firebase_init import db
 from datetime import datetime
+from urllib.parse import urlparse, unquote
 import uuid
 import logging
 
 
 logger = logging.getLogger(__name__)
 housegirls_bp = Blueprint('housegirls', __name__)
+
+
+def normalize_photo_url(url: str | None) -> str | None:
+    """Convert any stored photo URL into the backend proxy format.
+
+    Old uploads used the Firebase Storage client SDK and stored full
+    firebasestorage.googleapis.com URLs that require authentication.
+    New uploads store /api/photos/file/{userId}/{filename} proxy paths.
+
+    This function rewrites old URLs to the proxy format so they are
+    publicly accessible to everyone, logged-in or not.
+    """
+    if not url:
+        return None
+    # Already in proxy format — nothing to do
+    if url.startswith('/api/photos/file/'):
+        return url
+    # Full backend URL (e.g. https://backend.railway.app/api/photos/file/...)
+    if '/api/photos/file/' in url:
+        idx = url.index('/api/photos/file/')
+        return url[idx:]
+    # Firebase Storage download URL
+    if 'firebasestorage.googleapis.com' in url:
+        try:
+            parsed = urlparse(url)
+            # path: /v0/b/{bucket}/o/{encoded_storage_path}
+            if '/o/' in parsed.path:
+                encoded = parsed.path.split('/o/', 1)[1]
+                storage_path = unquote(encoded)   # profile-photos/{userId}/{filename}
+                parts = storage_path.split('/')
+                if len(parts) >= 3 and parts[0] == 'profile-photos':
+                    user_id = parts[1]
+                    filename = parts[2]
+                    return f'/api/photos/file/{user_id}/{filename}'
+        except Exception:
+            pass
+    # Unknown format — return as-is
+    return url
 
 
 def normalize_id(uid):
@@ -223,7 +262,7 @@ def get_housegirls():
                 'role': hg_profile.get('role', 'housegirl'),
                 'skills': hg_profile.get('skills', []),
                 'rate': expected_salary,
-                'photo': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
+                'photo': normalize_photo_url(hg_profile.get('profile_photo_url') or user_data.get('photo_url')),
                 'availability': profile_is_available,
                 'age': hg_profile.get('age'),
                 'bio': hg_profile.get('bio'),
@@ -238,7 +277,7 @@ def get_housegirls():
                 'unlock_count': unlock_count,
                 'in_demand_alert': hg_profile.get('in_demand_alert', False),
                 'activation_fee_paid': hg_profile.get('activation_fee_paid', False),
-                'profile_photo_url': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
+                'profile_photo_url': normalize_photo_url(hg_profile.get('profile_photo_url') or user_data.get('photo_url')),
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': user_data.get('phone_number') if can_view_contact else 'Unlock to view',
@@ -317,8 +356,8 @@ def get_housegirl(housegirl_id):
         last_name = ""
         phone_number = ""
         email = ""
-        profile_photo_url = housegirl.get('profile_photo_url') or housegirl.get('photo_url')
-        
+        profile_photo_url = normalize_photo_url(housegirl.get('profile_photo_url') or housegirl.get('photo_url'))
+
         profile_id = housegirl.get('profile_id')
         if profile_id:
             prof_doc = db.collection('profiles').document(profile_id).get()
@@ -334,7 +373,7 @@ def get_housegirl(housegirl_id):
                         phone_number = u_data.get('phone_number', '')
                         email = u_data.get('email', '')
                         if not profile_photo_url:
-                            profile_photo_url = u_data.get('profile_photo_url') or u_data.get('photo_url')
+                            profile_photo_url = normalize_photo_url(u_data.get('profile_photo_url') or u_data.get('photo_url'))
 
         # Fallback to fields stored on the housegirl doc if multi-hop lookup yields empty names
         if not first_name and housegirl.get('full_name'):
@@ -354,7 +393,7 @@ def get_housegirl(housegirl_id):
             'role': housegirl.get('role', 'housegirl'),
             'skills': housegirl.get('skills', []),
             'rate': housegirl.get('expected_salary'),
-            'photo': profile_photo_url or housegirl.get('profile_photo_url'),
+            'photo': profile_photo_url or normalize_photo_url(housegirl.get('profile_photo_url')),
             'availability': computed_is_available,
             'age': housegirl.get('age'),
             'bio': housegirl.get('bio'),
@@ -369,7 +408,7 @@ def get_housegirl(housegirl_id):
             'unlock_count': unlock_count,
             'in_demand_alert': housegirl.get('in_demand_alert', False),
             'activation_fee_paid': housegirl.get('activation_fee_paid', False),
-            'profile_photo_url': profile_photo_url or housegirl.get('profile_photo_url'),
+            'profile_photo_url': profile_photo_url or normalize_photo_url(housegirl.get('profile_photo_url')),
             'first_name': first_name,
             'last_name': last_name,
             'phone': phone_number if can_view_contact else 'Unlock to view',
