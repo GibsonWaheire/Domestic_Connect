@@ -4,9 +4,16 @@ interface FooterProps {
   filteredHousegirlsCount: number;
 }
 
+const handleFooterClick = () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
 export const Footer = ({ filteredHousegirlsCount }: FooterProps) => {
   return (
-    <footer className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200/50 flex-shrink-0">
+    <footer
+      className="bg-gradient-to-r from-gray-50 to-white border-t border-gray-200/50 flex-shrink-0"
+      onClick={handleFooterClick}
+    >
       <div className="px-6 py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-6">

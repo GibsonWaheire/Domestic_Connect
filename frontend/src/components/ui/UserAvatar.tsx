@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface UserAvatarProps {
@@ -16,6 +16,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   className,
   isAvailable
 }) => {
+  const [imgError, setImgError] = useState(false);
+
   const sizeClasses = {
     sm: 'h-8 w-8 text-xs',
     md: 'h-10 w-10 text-sm',
@@ -24,18 +26,11 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     '2xl': 'h-24 w-24 text-3xl'
   };
 
-  const getInitials = (n: string) => {
-    return n
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('');
-  };
+  const showImage = src && !imgError;
 
   return (
     <div className="relative inline-block">
-      {src ? (
+      {showImage ? (
         <img
           src={src}
           alt={name}
@@ -44,24 +39,18 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
             sizeClasses[size],
             className
           )}
-          onError={(e) => {
-            // Fallback if image fails to load
-            (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).parentElement?.classList.add('bg-gray-600');
-          }}
+          onError={() => setImgError(true)}
         />
       ) : (
         <div
           className={cn(
-            'rounded-full bg-gray-600 text-white font-semibold flex items-center justify-center text-center',
+            'rounded-full bg-gray-100 border border-gray-200',
             sizeClasses[size],
             className
           )}
-        >
-          {getInitials(name)}
-        </div>
+        />
       )}
-      
+
       {isAvailable !== undefined && (
         <span
           className={cn(

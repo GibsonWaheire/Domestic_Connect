@@ -439,9 +439,9 @@ const HousegirlsListPage = () => {
           property="og:description"
           content="Looking for a trusted housegirl, nanny, house manager, caregiver or cleaner in Nairobi, Mombasa, Kisumu, Nakuru or anywhere in Kenya? Browse verified profiles and connect today for just KES 200."
         />
-        <meta property="og:url" content="https://www.domesticconnect.co.ke" />
+        <meta property="og:url" content="https://domestic-connect.co.ke/housegirls" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href="https://www.domesticconnect.co.ke" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/housegirls" />
       </Helmet>
 
       <div className="fixed inset-0 z-[-1]">

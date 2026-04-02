@@ -65,21 +65,8 @@ export default defineConfig(({ mode }) => {
       __API_BASE_URL__: JSON.stringify(env.VITE_API_BASE_URL || ''),
     },
     build: {
-      target: 'esnext',
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug', 'console.warn'],
-        },
-        mangle: {
-          toplevel: true,
-        },
-        format: {
-          comments: false,
-        },
-      },
+      target: 'es2019',
+      minify: 'esbuild',
       rollupOptions: {
         output: {
           manualChunks: {

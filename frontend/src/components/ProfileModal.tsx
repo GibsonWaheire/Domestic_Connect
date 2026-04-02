@@ -8,6 +8,7 @@ import { useAuth } from '@/hooks/useAuthEnhanced';
 import { initiateMpesaPayment, initiateCardPayment, PaymentResponse } from '@/lib/payment';
 import { toast } from '@/hooks/use-toast';
 import ReturnToHome from '@/components/ReturnToHome';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { 
   User, 
   MapPin, 
@@ -163,17 +164,11 @@ const ProfileModal = ({ isOpen, onClose, housegirl }: ProfileModalProps) => {
                 <Card>
                   <CardContent className="p-6">
                     <div className="flex items-start space-x-4">
-                      <div className="w-32 h-32 bg-blue-100 rounded-full flex items-center justify-center">
-                        {housegirl.image ? (
-                          <img 
-                            src={housegirl.image} 
-                            alt={housegirl.name}
-                            className="w-32 h-32 rounded-full object-cover"
-                          />
-                        ) : (
-                          <User className="h-16 w-16 text-blue-600" />
-                        )}
-                      </div>
+                      <UserAvatar
+                        src={housegirl.image}
+                        name={housegirl.name}
+                        size="2xl"
+                      />
                       <div className="flex-1">
                         <div className="flex items-center space-x-3 mb-2">
                           <h3 className="text-2xl font-bold text-gray-900">{housegirl.name}</h3>

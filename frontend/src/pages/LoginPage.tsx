@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuthEnhanced } from '@/hooks/useAuthEnhanced';
-import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { FirebaseAuthService, resetPassword } from '@/lib/firebaseAuth';
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -16,7 +16,7 @@ const LoginPage = () => {
   const signUp = authContext?.signUp || (async () => ({ error: 'Authentication is unavailable.' }));
 
   const [searchParams] = useSearchParams();
-  const [mode, setMode] = useState<'login' | 'signup' | 'select-role'>('login');
+  const [mode, setMode] = useState<'login' | 'signup' | 'select-role' | 'forgot-password'>('login');
   const [userType, setUserType] = useState<'employer' | 'housegirl'>('employer');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,6 +25,9 @@ const LoginPage = () => {
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
   const [isUpdatingRole, setIsUpdatingRole] = useState(false);
   const [pendingUid, setPendingUid] = useState('');
+  const [resetEmailInput, setResetEmailInput] = useState('');
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
   useEffect(() => {
@@ -98,6 +101,29 @@ const LoginPage = () => {
     }
   };
 
+  const handleForgotPassword = async () => {
+    setError(null);
+    if (!resetEmailInput.trim()) {
+      setError('Please enter your email address.');
+      return;
+    }
+    setResetLoading(true);
+    try {
+      await resetPassword(resetEmailInput.trim());
+      setResetSent(true);
+    } catch (err: any) {
+      const code = err?.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/invalid-email') {
+        // Show success anyway to prevent email enumeration
+        setResetSent(true);
+      } else {
+        setError('Something went wrong. Please try again.');
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   if (googleLoading) return (
     <div className="min-h-screen bg-[#FDF6F0] flex flex-col items-center justify-center gap-4">
       <div className="w-10 h-10 border-4 border-black border-t-transparent rounded-full animate-spin" />
@@ -156,6 +182,11 @@ const LoginPage = () => {
                   <h2 className="text-xl font-semibold text-gray-900">One more step</h2>
                   <p className="mt-1 text-sm text-gray-500">What best describes you?</p>
                 </>
+              ) : mode === 'forgot-password' ? (
+                <>
+                  <h2 className="text-xl font-semibold text-gray-900">Reset your password</h2>
+                  <p className="mt-1 text-sm text-gray-500">We'll send a reset link to your email.</p>
+                </>
               ) : (
                 <>
                   <h2 className="text-xl font-semibold text-gray-900">Welcome to Domestic Connect</h2>
@@ -167,7 +198,7 @@ const LoginPage = () => {
             </div>
 
             {/* Sign In / Create Account toggle */}
-            {mode !== 'select-role' && (
+            {mode !== 'select-role' && mode !== 'forgot-password' && (
               <div className="flex p-1 bg-white/60 backdrop-blur-sm border border-gray-200 rounded-full mb-8 shadow-sm">
                 <button
                   type="button"
@@ -196,8 +227,49 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Role selector */}
-            {mode === 'select-role' ? (
+            {/* Forgot password form */}
+            {mode === 'forgot-password' && (
+              <div className="flex flex-col animate-in fade-in duration-300">
+                {resetSent ? (
+                  <div className="rounded-xl border border-green-200 bg-green-50/80 px-4 py-4 text-sm text-green-700 font-medium shadow-sm mb-6">
+                    Check your inbox — if that email is registered you'll receive a reset link shortly.
+                  </div>
+                ) : (
+                  <>
+                    <div className="mb-4">
+                      <Label htmlFor="resetEmailInput" className="block text-sm font-semibold text-[#111] mb-2">Email</Label>
+                      <Input
+                        id="resetEmailInput"
+                        type="email"
+                        value={resetEmailInput}
+                        onChange={(e) => setResetEmailInput(e.target.value)}
+                        placeholder="you@example.com"
+                        className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleForgotPassword(); }}
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      disabled={resetLoading}
+                      onClick={handleForgotPassword}
+                      className="w-full bg-[#111] text-white rounded-xl h-12 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md mb-4"
+                    >
+                      {resetLoading ? 'Sending...' : 'Send Reset Link'}
+                    </Button>
+                  </>
+                )}
+                <button
+                  type="button"
+                  onClick={() => { setMode('login'); setError(null); setResetSent(false); setResetEmailInput(''); }}
+                  className="text-sm text-gray-500 hover:text-[#111] transition-colors duration-200 text-center"
+                >
+                  ← Back to Sign In
+                </button>
+              </div>
+            )}
+
+            {/* Role selector / email form */}
+            {mode !== 'forgot-password' && (mode === 'select-role' ? (
               <div className="flex flex-col gap-4">
                 <button
                   type="button"
@@ -293,7 +365,18 @@ const LoginPage = () => {
                 </div>
 
                 <div className="mb-4">
-                  <Label htmlFor="passwordInput" className="block text-sm font-semibold text-[#111] mb-2">Password</Label>
+                  <div className="flex items-center justify-between mb-2">
+                    <Label htmlFor="passwordInput" className="text-sm font-semibold text-[#111]">Password</Label>
+                    {mode === 'login' && (
+                      <button
+                        type="button"
+                        onClick={() => { setMode('forgot-password'); setError(null); setResetEmailInput(emailInput); }}
+                        className="text-xs text-gray-500 hover:text-[#111] transition-colors duration-200"
+                      >
+                        Forgot password?
+                      </button>
+                    )}
+                  </div>
                   <Input
                     id="passwordInput"
                     type="password"
@@ -325,7 +408,7 @@ const LoginPage = () => {
                   {mode === 'login' ? 'Sign In with Email' : 'Create Account with Email'}
                 </Button>
               </div>
-            )}
+            ))}
           </div>
         </div>
       </div>

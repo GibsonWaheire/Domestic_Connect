@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuthEnhanced';
@@ -16,17 +17,40 @@ const LandingPage = () => {
   const localBusinessSchema = {
     "@context": "https://schema.org",
     "@type": "LocalBusiness",
-    "name": "Domestic Connect",
-    "description": "Find verified domestic workers across Kenya",
+    "name": "Domestic Connect Kenya",
+    "alternateName": "Domestic Connect",
+    "description": "Kenya's trusted platform for finding verified housegirls, nannies, cooks, caregivers and domestic workers in Nairobi, Mombasa, Kisumu and across Kenya.",
     "url": "https://domestic-connect.co.ke",
-    "areaServed": "Kenya",
-    "serviceType": [
-      "House Help",
-      "Nanny",
-      "Cook",
-      "Caregiver",
-      "Cleaner"
-    ]
+    "image": "https://domestic-connect.co.ke/og-image.jpg",
+    "priceRange": "KES 200",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Nairobi",
+      "addressCountry": "KE"
+    },
+    "geo": {
+      "@type": "GeoCoordinates",
+      "latitude": -1.286389,
+      "longitude": 36.817223
+    },
+    "areaServed": [
+      { "@type": "City", "name": "Nairobi" },
+      { "@type": "City", "name": "Mombasa" },
+      { "@type": "City", "name": "Kisumu" },
+      { "@type": "City", "name": "Nakuru" },
+      { "@type": "Country", "name": "Kenya" }
+    ],
+    "hasOfferCatalog": {
+      "@type": "OfferCatalog",
+      "name": "Domestic Worker Services",
+      "itemListElement": [
+        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Housegirl / House Help" } },
+        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Nanny / Childcare" } },
+        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Cook" } },
+        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "Caregiver / Elderly Care" } },
+        { "@type": "Offer", "itemOffered": { "@type": "Service", "name": "House Cleaner" } }
+      ]
+    }
   };
 
   const getDashboardRoute = () => {
@@ -98,10 +122,17 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }}
-      />
+      <Helmet>
+        <title>Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers</title>
+        <meta name="description" content="Domestic Connect Kenya — find verified housegirls, nannies, cooks and caregivers in Nairobi, Mombasa, Kisumu and across Kenya. Browse 1,000+ profiles. Pay only KES 200 to connect." />
+        <meta name="keywords" content="domestic connect kenya, domestic connect nairobi, find housegirl kenya, nanny nairobi, caregiver kenya, house help kenya, domestic worker nairobi, cook kenya, house manager nairobi, housegirl agency kenya" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/" />
+        <meta property="og:title" content="Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers" />
+        <meta property="og:description" content="Find verified housegirls, nannies, cooks and caregivers in Nairobi, Mombasa, Kisumu and across Kenya. Pay only KES 200 to connect." />
+        <meta property="og:url" content="https://domestic-connect.co.ke/" />
+        <meta property="og:type" content="website" />
+        <script type="application/ld+json">{JSON.stringify(localBusinessSchema)}</script>
+      </Helmet>
       {/* NAVBAR */}
       <header className="border-b border-gray-100 bg-white">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
@@ -454,7 +485,9 @@ const LandingPage = () => {
             <div className="flex flex-col gap-2 text-sm">
               <Link to="/housegirls" className="text-white hover:text-[#aaa] transition-colors">Find a Housegirl</Link>
               <Link to="/how-it-works" className="text-white hover:text-[#aaa] transition-colors">How It Works</Link>
+              <Link to="/why-choose-us" className="text-white hover:text-[#aaa] transition-colors">Why Choose Us</Link>
               <Link to="/agency-packages" className="text-white hover:text-[#aaa] transition-colors">Pricing</Link>
+              <Link to="/contact-us" className="text-white hover:text-[#aaa] transition-colors">Contact Us</Link>
               <Link to="/agency-marketplace" className="text-white hover:text-[#aaa] transition-colors">Agency Marketplace</Link>
             </div>
           </div>

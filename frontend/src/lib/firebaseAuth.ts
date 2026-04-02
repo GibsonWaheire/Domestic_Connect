@@ -8,7 +8,8 @@ import {
   signInWithPopup,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  updatePassword
+  updatePassword,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -84,4 +85,8 @@ export const signInWithEmail = async (email: string, password: string) => {
 
 export const signUpWithEmail = async (email: string, password: string) => {
   return createUserWithEmailAndPassword(auth, email, password);
+};
+
+export const resetPassword = async (email: string) => {
+  return sendPasswordResetEmail(auth, email);
 };

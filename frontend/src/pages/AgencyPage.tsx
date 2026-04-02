@@ -1,3 +1,4 @@
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,15 @@ const AgencyPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-white via-emerald-50 to-teal-50">
+      <Helmet>
+        <title>Domestic Worker Agencies in Kenya | Domestic Connect</title>
+        <meta name="description" content="Browse trusted domestic worker agencies in Kenya on Domestic Connect. Find licensed housegirl bureaus and staffing agencies in Nairobi, Mombasa and across Kenya." />
+        <meta name="keywords" content="domestic worker agency kenya, housegirl agency nairobi, nanny agency kenya, domestic connect agencies, licensed domestic staff bureau kenya" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/agencies" />
+        <meta property="og:title" content="Domestic Worker Agencies in Kenya | Domestic Connect" />
+        <meta property="og:description" content="Browse trusted domestic worker agencies in Kenya. Find licensed housegirl bureaus in Nairobi, Mombasa and beyond." />
+        <meta property="og:url" content="https://domestic-connect.co.ke/agencies" />
+      </Helmet>
       {/* Header */}
       <header className="bg-white/80 backdrop-blur-sm border-b border-emerald-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-6xl mx-auto px-4 py-4">

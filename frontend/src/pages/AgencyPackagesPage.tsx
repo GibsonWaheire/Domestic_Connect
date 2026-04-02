@@ -1,4 +1,5 @@
 import { Shield, CheckCircle2 } from 'lucide-react';
+import { Helmet } from 'react-helmet-async';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -26,6 +27,15 @@ const packages = [
 const AgencyPackagesPage = () => {
   return (
     <div className="min-h-screen bg-gradient-to-r from-blue-50 to-indigo-50 py-16">
+      <Helmet>
+        <title>Agency Packages & Pricing | Domestic Connect Kenya</title>
+        <meta name="description" content="Choose a Domestic Connect Kenya agency package to list verified housegirls, nannies and caregivers. Affordable plans starting from KES 1,200. Reach thousands of Kenyan families." />
+        <meta name="keywords" content="domestic worker agency packages kenya, housegirl agency nairobi pricing, domestic connect agency plan, hire domestic workers kenya" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/agency-packages" />
+        <meta property="og:title" content="Agency Packages & Pricing | Domestic Connect Kenya" />
+        <meta property="og:description" content="Affordable agency packages to list and place verified domestic workers across Kenya." />
+        <meta property="og:url" content="https://domestic-connect.co.ke/agency-packages" />
+      </Helmet>
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full mb-6">
