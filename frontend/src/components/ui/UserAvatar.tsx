@@ -9,26 +9,6 @@ interface UserAvatarProps {
   isAvailable?: boolean;
 }
 
-const WomanIcon = ({ className }: { className?: string }) => (
-  <svg
-    viewBox="0 0 100 100"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-    aria-hidden="true"
-  >
-    {/* Head */}
-    <circle cx="50" cy="32" r="18" fill="#c4a882" />
-    {/* Hair */}
-    <ellipse cx="50" cy="20" rx="18" ry="12" fill="#7a5c38" />
-    <ellipse cx="33" cy="30" rx="6" ry="14" fill="#7a5c38" />
-    <ellipse cx="67" cy="30" rx="6" ry="14" fill="#7a5c38" />
-    {/* Body / shoulders */}
-    <ellipse cx="50" cy="82" rx="28" ry="22" fill="#d4a5c9" />
-    {/* Neck */}
-    <rect x="44" y="48" width="12" height="12" rx="4" fill="#c4a882" />
-  </svg>
-);
-
 const UserAvatar: React.FC<UserAvatarProps> = ({
   src,
   name = '?',
@@ -64,13 +44,11 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       ) : (
         <div
           className={cn(
-            'rounded-full bg-pink-50 border border-pink-200 flex items-center justify-center overflow-hidden',
+            'rounded-full bg-gray-100 border border-gray-200',
             sizeClasses[size],
             className
           )}
-        >
-          <WomanIcon className="w-full h-full" />
-        </div>
+        />
       )}
 
       {isAvailable !== undefined && (
