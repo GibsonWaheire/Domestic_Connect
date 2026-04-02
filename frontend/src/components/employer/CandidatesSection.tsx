@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface JobApplication {
   id: number;
@@ -325,17 +326,11 @@ const CandidatesSection = ({ onViewProfile, onContact }: CandidatesSectionProps)
             <CardContent className="p-6">
               <div className="flex items-start justify-between mb-4">
                 <div className="flex items-start space-x-4">
-                  <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center">
-                    {application.housegirl.image ? (
-                      <img 
-                        src={application.housegirl.image} 
-                        alt={application.housegirl.name}
-                        className="w-16 h-16 rounded-full object-cover"
-                      />
-                    ) : (
-                      <Users className="h-8 w-8 text-purple-600" />
-                    )}
-                  </div>
+                  <UserAvatar
+                    src={application.housegirl.image}
+                    name={application.housegirl.name}
+                    size="lg"
+                  />
                   <div>
                     <h3 className="text-xl font-semibold text-gray-900 mb-1">
                       {application.housegirl.name}

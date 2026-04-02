@@ -68,6 +68,7 @@ import {
   BatteryCharging,
   Loader2
 } from 'lucide-react';
+import UserAvatar from '@/components/ui/UserAvatar';
 
 interface Housegirl {
   id: string;
@@ -738,9 +739,11 @@ const AgencyDashboard = () => {
                       {recentHousegirls.map((housegirl) => (
                         <div key={housegirl.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
                           <div className="flex items-center space-x-4">
-                            <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center text-slate-700 font-semibold">
-                              {housegirl.name.split(' ').map(n => n[0]).join('')}
-                            </div>
+                            <UserAvatar
+                              src={housegirl.photo}
+                              name={housegirl.name}
+                              size="md"
+                            />
                             <div>
                               <h3 className="font-semibold text-slate-900">{housegirl.name}</h3>
                               <p className="text-sm text-slate-600">{housegirl.location} • {housegirl.experience}</p>
