@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { cn } from '@/lib/utils';
 
 interface UserAvatarProps {
@@ -9,6 +9,26 @@ interface UserAvatarProps {
   isAvailable?: boolean;
 }
 
+const WomanIcon = ({ className }: { className?: string }) => (
+  <svg
+    viewBox="0 0 100 100"
+    xmlns="http://www.w3.org/2000/svg"
+    className={className}
+    aria-hidden="true"
+  >
+    {/* Head */}
+    <circle cx="50" cy="32" r="18" fill="#c4a882" />
+    {/* Hair */}
+    <ellipse cx="50" cy="20" rx="18" ry="12" fill="#7a5c38" />
+    <ellipse cx="33" cy="30" rx="6" ry="14" fill="#7a5c38" />
+    <ellipse cx="67" cy="30" rx="6" ry="14" fill="#7a5c38" />
+    {/* Body / shoulders */}
+    <ellipse cx="50" cy="82" rx="28" ry="22" fill="#d4a5c9" />
+    {/* Neck */}
+    <rect x="44" y="48" width="12" height="12" rx="4" fill="#c4a882" />
+  </svg>
+);
+
 const UserAvatar: React.FC<UserAvatarProps> = ({
   src,
   name = '?',
@@ -16,6 +36,8 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   className,
   isAvailable
 }) => {
+  const [imgError, setImgError] = useState(false);
+
   const sizeClasses = {
     sm: 'h-8 w-8 text-xs',
     md: 'h-10 w-10 text-sm',
@@ -24,18 +46,11 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
     '2xl': 'h-24 w-24 text-3xl'
   };
 
-  const getInitials = (n: string) => {
-    return n
-      .split(' ')
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join('');
-  };
+  const showImage = src && !imgError;
 
   return (
     <div className="relative inline-block">
-      {src ? (
+      {showImage ? (
         <img
           src={src}
           alt={name}
@@ -44,24 +59,20 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
             sizeClasses[size],
             className
           )}
-          onError={(e) => {
-            // Fallback if image fails to load
-            (e.target as HTMLImageElement).style.display = 'none';
-            (e.target as HTMLImageElement).parentElement?.classList.add('bg-gray-600');
-          }}
+          onError={() => setImgError(true)}
         />
       ) : (
         <div
           className={cn(
-            'rounded-full bg-gray-600 text-white font-semibold flex items-center justify-center text-center',
+            'rounded-full bg-pink-50 border border-pink-200 flex items-center justify-center overflow-hidden',
             sizeClasses[size],
             className
           )}
         >
-          {getInitials(name)}
+          <WomanIcon className="w-full h-full" />
         </div>
       )}
-      
+
       {isAvailable !== undefined && (
         <span
           className={cn(

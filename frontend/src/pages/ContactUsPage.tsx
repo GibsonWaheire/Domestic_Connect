@@ -10,11 +10,12 @@ const ContactUsPage = () => {
   return (
     <div className="min-h-screen bg-white">
       <Helmet>
-        <title>Contact Us | Domestic Connect</title>
-        <meta
-          name="description"
-          content="Contact Domestic Connect support and sales for help with your account, listings, and agency services."
-        />
+        <title>Contact Us | Domestic Connect Kenya</title>
+        <meta name="description" content="Contact Domestic Connect Kenya support and sales for help with your account, housegirl listings, and agency services. We're here to help families and workers across Kenya." />
+        <meta name="keywords" content="contact domestic connect kenya, domestic connect support, domestic connect nairobi contact" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/contact-us" />
+        <meta property="og:title" content="Contact Us | Domestic Connect Kenya" />
+        <meta property="og:url" content="https://domestic-connect.co.ke/contact-us" />
       </Helmet>
 
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">

@@ -118,20 +118,9 @@ def upload_photo():
 
 
 @photos_bp.route('/file/<user_id>/<filename>', methods=['GET'])
-@firebase_auth_required
 def serve_photo(user_id: str, filename: str):
-    """Serve a photo — only the owning user (or an admin) may access it."""
+    """Serve a profile photo — publicly accessible (profile photos are visible to all visitors)."""
     try:
-        current_user = request.current_user
-        if not current_user:
-            abort(401)
-
-        requester_id = getattr(current_user, 'id', None)
-        is_admin = getattr(current_user, 'is_admin', False)
-
-        if requester_id != user_id and not is_admin:
-            abort(403)
-
         upload_base_folder = current_app.config.get('UPLOAD_FOLDER', 'uploads')
         user_folder = os.path.join(upload_base_folder, user_id)
 

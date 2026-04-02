@@ -35,7 +35,7 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       // Bundle optimization
-      target: 'esnext',
+      target: 'es2019',
       minify: 'esbuild', // Use esbuild instead of terser
       rollupOptions: {
         output: {

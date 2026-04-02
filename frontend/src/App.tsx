@@ -40,23 +40,29 @@ const queryClient = new QueryClient({
   },
 });
 
+const PAGE_TITLES: Record<string, string> = {
+  "/": "Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers",
+  "/home": "Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers",
+  "/housegirls": "Browse Domestic Workers | Domestic Connect Kenya",
+  "/browse-housegirls": "Browse House Help in Kenya | Domestic Connect",
+  "/agencies": "Domestic Worker Agencies in Kenya | Domestic Connect",
+  "/agency-marketplace": "Agency Marketplace | Domestic Connect Kenya",
+  "/how-it-works": "How It Works | Domestic Connect Kenya",
+  "/why-choose-us": "Why Choose Domestic Connect Kenya | Trusted House Help Platform",
+  "/agency-packages": "Agency Packages & Pricing | Domestic Connect Kenya",
+  "/contact-us": "Contact Us | Domestic Connect Kenya",
+  "/contact": "Contact Us | Domestic Connect Kenya",
+  "/login": "Sign In | Domestic Connect Kenya",
+  "/privacy-policy": "Privacy Policy | Domestic Connect Kenya",
+  "/terms": "Terms of Service | Domestic Connect Kenya",
+};
+
 const RouteTitleManager = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.pathname === "/" || location.pathname === "/home") {
-      document.title = "Domestic Connect | Find House Help Kenya";
-      return;
-    }
-    if (location.pathname === "/housegirls") {
-      document.title = "Browse Domestic Workers | Domestic Connect Kenya";
-      return;
-    }
-    if (location.pathname === "/login") {
-      document.title = "Sign In | Domestic Connect";
-      return;
-    }
-    document.title = "Domestic Connect | Find Trusted House Help in Kenya";
+    const title = PAGE_TITLES[location.pathname];
+    document.title = title || "Domestic Connect Kenya | Find Trusted House Help";
   }, [location.pathname]);
 
   return null;
