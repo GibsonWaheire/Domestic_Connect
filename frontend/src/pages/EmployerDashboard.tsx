@@ -146,10 +146,8 @@ const EmployerDashboard = () => {
       bio: hg.bio,
       skills: hg.skills || [],
       contactUnlocked: Boolean(
-        hg.phone_number &&
-        hg.phone_number !== 'Unlock to view' &&
-        hg.email &&
-        hg.email !== 'Unlock to view'
+        hg.contact_unlocked ||
+        (hg.phone_number && hg.phone_number !== 'Unlock to view')
       ),
       unlockCount: Number(hg.unlock_count) || 0,
       phone: hg.phone_number,

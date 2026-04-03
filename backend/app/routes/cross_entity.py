@@ -37,6 +37,7 @@ def get_dashboard_data():
         
         if user_type == 'employer' or is_admin:
             dashboard_data['available_data']['housegirls'] = get_housegirls_for_employer(
+                current_user_id=user_id,
                 include_unavailable=is_admin
             )
             dashboard_data['available_data']['job_postings'] = get_job_postings_for_employer(user_id)
@@ -91,11 +92,19 @@ def get_dashboard_data():
             'error': 'Something went wrong. Please try again.'
         }), 500
 
-def get_housegirls_for_employer(include_unavailable=False):
-    """Get available housegirls for employers to view with super-universal visibility"""
+def get_housegirls_for_employer(current_user_id=None, include_unavailable=False):
+    """Get available housegirls for employers. Contact details are masked unless the employer has paid to unlock them."""
     try:
         user_docs_map = {}
         users_ref = db.collection('users')
+
+        # Pre-fetch all housegirl IDs this employer has unlocked — one query, no N+1
+        unlocked_ids = set()
+        if current_user_id:
+            for doc in db.collection('contact_access').where('user_id', '==', current_user_id).stream():
+                d = doc.to_dict()
+                if d.get('housegirl_id'):
+                    unlocked_ids.add(str(d['housegirl_id']))
         
         # 1. Start with 'users' collection
         users_query = users_ref.where('user_type', '==', 'housegirl')
@@ -157,8 +166,9 @@ def get_housegirls_for_employer(include_unavailable=False):
                 'profile_photo_url': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
                 'first_name': first_name,
                 'last_name': last_name,
-                'email': user_data.get('email', ''),
-                'phone_number': user_data.get('phone_number', ''),
+                'contact_unlocked': str(user_id) in unlocked_ids,
+                'email': user_data.get('email', '') if str(user_id) in unlocked_ids else 'Unlock to view',
+                'phone_number': user_data.get('phone_number', '') if str(user_id) in unlocked_ids else 'Unlock to view',
                 'unlock_count': unlock_count,
                 'created_at': hg_profile.get('created_at') or user_data.get('created_at'),
                 'updated_at': hg_profile.get('updated_at') or user_data.get('updated_at')
