@@ -45,6 +45,11 @@ def normalize_photo_url(url: str | None) -> str | None:
                     return f'/api/photos/file/{user_id}/{filename}'
         except Exception:
             pass
+    # Google OAuth / Firebase Auth avatars (googleusercontent, gravatar, etc.)
+    # — these are email-account avatars, NOT uploaded profile photos. Reject them.
+    _REJECTED_HOSTS = ('googleusercontent.com', 'gravatar.com', 'graph.facebook.com')
+    if any(h in url for h in _REJECTED_HOSTS):
+        return None
     # Unknown format — return as-is
     return url
 
@@ -262,7 +267,7 @@ def get_housegirls():
                 'role': hg_profile.get('role', 'housegirl'),
                 'skills': hg_profile.get('skills', []),
                 'rate': expected_salary,
-                'photo': normalize_photo_url(hg_profile.get('profile_photo_url') or user_data.get('photo_url')),
+                'photo': normalize_photo_url(hg_profile.get('profile_photo_url')),
                 'availability': profile_is_available,
                 'age': hg_profile.get('age'),
                 'bio': hg_profile.get('bio'),
@@ -277,7 +282,7 @@ def get_housegirls():
                 'unlock_count': unlock_count,
                 'in_demand_alert': hg_profile.get('in_demand_alert', False),
                 'activation_fee_paid': hg_profile.get('activation_fee_paid', False),
-                'profile_photo_url': normalize_photo_url(hg_profile.get('profile_photo_url') or user_data.get('photo_url')),
+                'profile_photo_url': normalize_photo_url(hg_profile.get('profile_photo_url')),
                 'first_name': first_name,
                 'last_name': last_name,
                 'phone': user_data.get('phone_number') if can_view_contact else 'Unlock to view',
@@ -356,7 +361,7 @@ def get_housegirl(housegirl_id):
         last_name = ""
         phone_number = ""
         email = ""
-        profile_photo_url = normalize_photo_url(housegirl.get('profile_photo_url') or housegirl.get('photo_url'))
+        profile_photo_url = normalize_photo_url(housegirl.get('profile_photo_url'))
 
         profile_id = housegirl.get('profile_id')
         if profile_id:
@@ -373,7 +378,7 @@ def get_housegirl(housegirl_id):
                         phone_number = u_data.get('phone_number', '')
                         email = u_data.get('email', '')
                         if not profile_photo_url:
-                            profile_photo_url = normalize_photo_url(u_data.get('profile_photo_url') or u_data.get('photo_url'))
+                            profile_photo_url = normalize_photo_url(u_data.get('profile_photo_url'))
 
         # Fallback to fields stored on the housegirl doc if multi-hop lookup yields empty names
         if not first_name and housegirl.get('full_name'):
