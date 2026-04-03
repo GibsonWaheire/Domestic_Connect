@@ -38,3 +38,6 @@ backend/venv/
 *.pyc
 **/*.pyc
 **/*.pyo
+
+# One-time utility scripts
+backend/register_ipn.py
