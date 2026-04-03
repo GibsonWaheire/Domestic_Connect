@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Edit, RefreshCw } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertCircle, Camera, Edit, RefreshCw, Save } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import PhotoUpload from '@/components/PhotoUpload';
 import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
@@ -52,6 +51,9 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
   const [showEditModal, setShowEditModal] = useState(false);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPhoto, setIsSavingPhoto] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingPreview, setPendingPreview] = useState<string | null>(null);
+  const photoFileInputRef = useRef<HTMLInputElement>(null);
   const [editFormData, setEditFormData] = useState<EditFormData>(defaultFormData);
 
   useEffect(() => {
@@ -126,15 +128,37 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
     }));
   };
 
-  const handlePhotoUploaded = async (photoUrl: string) => {
-    // Optimistically show the photo immediately
-    onProfilePhotoChange(photoUrl);
+  const handlePhotoFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'Invalid file', description: 'Please select an image (JPEG, PNG, etc.)', variant: 'destructive' });
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'File too large', description: 'Maximum size is 5 MB', variant: 'destructive' });
+      return;
+    }
+    setPendingFile(file);
+    const reader = new FileReader();
+    reader.onload = (ev) => setPendingPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const handleSavePhoto = async () => {
+    if (!pendingFile || !user) return;
     if (!resolvedUserId) return;
     setIsSavingPhoto(true);
     try {
-      const token = await FirebaseAuthService.getIdToken();
+      const { uploadPhoto } = await import('@/lib/photoUpload');
+      const photoUrl = await uploadPhoto(pendingFile, user.id);
 
-      // Save photo URL to the housegirl profile in the DB
+      // Optimistically update UI
+      onProfilePhotoChange(photoUrl);
+      setPendingFile(null);
+      setPendingPreview(null);
+
+      const token = await FirebaseAuthService.getIdToken();
       const saveRes = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
         method: 'PUT',
         headers: {
@@ -145,7 +169,6 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
       });
       if (!saveRes.ok) throw new Error('Failed to save photo');
 
-      // Re-fetch the saved profile to confirm the URL is persisted
       const verifyRes = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
@@ -159,7 +182,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
     } catch {
       toast({
         title: 'Save failed',
-        description: 'Photo uploaded but could not be saved to your profile. Please try again.',
+        description: 'Photo could not be saved. Please try again.',
         variant: 'destructive',
       });
     } finally {
@@ -276,20 +299,70 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         <CardHeader>
           <CardTitle className="text-xl">Profile Photo</CardTitle>
           <CardDescription>
-            This photo is shown to employers browsing for housegirls. Upload a clear, real photo of yourself.
+            This photo is shown to employers. Upload a clear, real photo of yourself.
           </CardDescription>
         </CardHeader>
-        <CardContent>
-          <PhotoUpload
-            onPhotoUploaded={handlePhotoUploaded}
-            currentPhoto={profilePhoto || undefined}
-          />
-          {isSavingPhoto && (
-            <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
-              <RefreshCw className="h-4 w-4 animate-spin" />
-              Saving photo to your profile…
-            </div>
+        <CardContent className="flex flex-col items-center gap-4">
+          {/* Preview: pending new photo, or current saved photo, or placeholder */}
+          <div className="w-44 h-44 rounded-xl overflow-hidden border-4 border-gray-200 shadow-md bg-pink-50 flex items-center justify-center">
+            {(pendingPreview || profilePhoto) ? (
+              <img
+                src={pendingPreview || profilePhoto!}
+                alt="Profile preview"
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+                <rect width="100" height="100" fill="#fce7f3" />
+                <ellipse cx="50" cy="32" rx="16" ry="18" fill="#f9a8d4" />
+                <rect x="30" y="30" width="40" height="10" rx="5" fill="#be185d" />
+                <rect x="42" y="49" width="16" height="8" rx="4" fill="#f9a8d4" />
+                <ellipse cx="50" cy="72" rx="22" ry="18" fill="#ec4899" />
+              </svg>
+            )}
+          </div>
+
+          {pendingPreview && (
+            <p className="text-sm text-blue-600 font-medium">New photo ready — click Save Photo to confirm</p>
           )}
+
+          {/* Hidden file input */}
+          <input
+            ref={photoFileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handlePhotoFileSelect}
+          />
+
+          <div className="flex gap-3">
+            <Button
+              variant="outline"
+              onClick={() => photoFileInputRef.current?.click()}
+              disabled={isSavingPhoto}
+            >
+              <Camera className="h-4 w-4 mr-2" />
+              {profilePhoto || pendingPreview ? 'Change Photo' : 'Choose Photo'}
+            </Button>
+
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleSavePhoto}
+              disabled={!pendingFile || isSavingPhoto}
+            >
+              {isSavingPhoto ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                <>
+                  <Save className="h-4 w-4 mr-2" />
+                  Save Photo
+                </>
+              )}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
