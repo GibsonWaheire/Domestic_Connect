@@ -123,25 +123,7 @@ const HousegirlDashboard = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
-            <UserAvatar
-              src={profilePhoto}
-              name={`${user.first_name || ''} ${user.last_name || ''}`}
-              size="xl"
-              className="border-2 border-gray-100"
-            />
-            <div className="text-left">
-              <p className="text-sm font-medium text-gray-900">My Profile</p>
-              <Button
-                variant="link"
-                size="sm"
-                className="h-auto p-0 text-blue-600 font-medium"
-                onClick={() => setActiveTab('profile')}
-              >
-                Edit Details
-              </Button>
-            </div>
-          </div>
+          <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm" />
         </div>
 
         <div className="mb-6 flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
