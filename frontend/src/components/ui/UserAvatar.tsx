@@ -21,9 +21,9 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   const sizeClasses = {
     sm: 'h-8 w-8 text-xs',
     md: 'h-10 w-10 text-sm',
-    lg: 'h-14 w-14 text-lg',
-    xl: 'h-[72px] w-[72px] text-2xl',
-    '2xl': 'h-24 w-24 text-3xl'
+    lg: 'h-16 w-16 text-lg',
+    xl: 'h-24 w-24 text-2xl',
+    '2xl': 'h-32 w-32 text-3xl'
   };
 
   const showImage = src && !imgError;
@@ -35,7 +35,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
           src={src}
           alt={name}
           className={cn(
-            'rounded-full object-cover border border-gray-200',
+            'rounded-xl object-cover border border-gray-200',
             sizeClasses[size],
             className
           )}
@@ -44,11 +44,15 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       ) : (
         <div
           className={cn(
-            'rounded-full bg-gray-100 border border-gray-200',
+            'rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400',
             sizeClasses[size],
             className
           )}
-        />
+        >
+          <svg className="w-1/2 h-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a9.75 9.75 0 0115 0" />
+          </svg>
+        </div>
       )}
 
       {isAvailable !== undefined && (

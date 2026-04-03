@@ -127,7 +127,7 @@ const HousegirlDashboard = () => {
             <UserAvatar
               src={profilePhoto}
               name={`${user.first_name || ''} ${user.last_name || ''}`}
-              size="lg"
+              size="xl"
               className="border-2 border-gray-100"
             />
             <div className="text-left">

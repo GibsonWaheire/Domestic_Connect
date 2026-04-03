@@ -262,8 +262,8 @@ export const Housegirls = ({
                   <UserAvatar
                     src={housegirl.profileImage}
                     name={housegirl.name}
-                    size="xl"
-                    className="h-20 w-20 border border-gray-200"
+                    size="2xl"
+                    className="border-2 border-gray-200 shrink-0"
                     isAvailable={housegirl.status === 'available'}
                   />
 

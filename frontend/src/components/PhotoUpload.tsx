@@ -93,7 +93,7 @@ const PhotoUpload = ({ onPhotoUploaded, currentPhoto }: PhotoUploadProps) => {
       <CardContent className="space-y-4">
         {previewUrl && (
           <div className="relative">
-            <div className="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-gray-200">
+            <div className="w-40 h-40 mx-auto rounded-xl overflow-hidden border-4 border-gray-200 shadow-md">
               <img src={previewUrl} alt="Profile preview" className="w-full h-full object-cover" />
             </div>
             <Button

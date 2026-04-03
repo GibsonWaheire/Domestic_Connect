@@ -39,12 +39,12 @@ export const ProfileModal = ({
         <div className="space-y-6">
           {/* Profile Header */}
           <div className="flex items-start space-x-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
-            <div className="relative">
+            <div className="relative shrink-0">
               <UserAvatar
                 src={housegirl.profileImage}
                 name={housegirl.name}
-                size="xl"
-                className="w-24 h-24 border-4 border-white shadow-lg"
+                size="2xl"
+                className="border-4 border-white shadow-lg"
               />
               {housegirl.rating && (
                 <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-white text-sm rounded-full px-2 py-1 flex items-center shadow-lg">
