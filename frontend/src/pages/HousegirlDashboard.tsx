@@ -13,6 +13,7 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import OverviewTab from '@/components/housegirl/OverviewTab';
 import ProfileTab from '@/components/housegirl/ProfileTab';
 import SettingsTab from '@/components/housegirl/SettingsTab';
+import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
 
 const HousegirlDashboard = () => {
   const { user, signOut, loading } = useAuth();
@@ -59,7 +60,7 @@ const HousegirlDashboard = () => {
         });
         if (res.ok) {
           const data = await res.json();
-          const photoUrl = data.profile_photo_url || data.photo_url || null;
+          const photoUrl = toAbsolutePhotoUrl(data.profile_photo_url || data.photo_url);
           if (photoUrl) setProfilePhoto(photoUrl);
         }
       } catch {}

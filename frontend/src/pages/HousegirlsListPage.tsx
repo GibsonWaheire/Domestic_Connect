@@ -9,6 +9,7 @@ import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { MapPin, Menu, Phone, Search, X } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
 
 const bgImage = '/housegirls.webp';
 const API_BASE_URL =
@@ -192,7 +193,7 @@ const HousegirlsListPage = () => {
             available: Boolean(profile.is_available),
             phone: profile.phone_number || profile.phone || 'Unlock to view',
             exactLocation: location,
-            avatar: profile.profile_photo_url || null,
+            avatar: toAbsolutePhotoUrl(profile.profile_photo_url),
             unlockCount: Number(profile.unlock_count) || 0,
           };
         });

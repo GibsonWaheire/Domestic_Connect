@@ -12,6 +12,7 @@ import { NotificationProvider } from '@/contexts/NotificationContext';
 import { Helmet } from 'react-helmet-async';
 import { Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
 
 const BrowseHousegirls = () => {
   const { user } = useAuth();
@@ -73,7 +74,7 @@ const BrowseHousegirls = () => {
         community: hg.tribe,
         workType: hg.accommodation_type,
         livingArrangement: hg.accommodation_type,
-        profileImage: hg.profile_photo_url
+        profileImage: toAbsolutePhotoUrl(hg.profile_photo_url)
       }));
       setHousegirls(transformedHousegirls);
     }

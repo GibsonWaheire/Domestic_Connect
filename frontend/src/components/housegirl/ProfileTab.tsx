@@ -7,6 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import PhotoUpload from '@/components/PhotoUpload';
 import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/apiConfig';
+import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { User } from '@/lib/authUtils';
 import EditProfileModal, { EditFormData } from './EditProfileModal';
@@ -66,7 +67,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         });
         if (!response.ok) return;
         const result = await response.json();
-        const apiPhoto = result?.profile_photo_url || result?.photo_url || '';
+        const apiPhoto = toAbsolutePhotoUrl(result?.profile_photo_url || result?.photo_url);
         const apiSkills = Array.isArray(result?.skills) ? result.skills : [];
         const apiLanguages = Array.isArray(result?.languages) ? result.languages : [];
         if (apiPhoto) {
@@ -236,7 +237,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         age: saved?.age ? String(saved.age) : editFormData.age,
       });
       if (saved?.profile_photo_url) {
-        onProfilePhotoChange(saved.profile_photo_url);
+        onProfilePhotoChange(toAbsolutePhotoUrl(saved.profile_photo_url) || saved.profile_photo_url);
       }
       setShowEditModal(false);
       toast({
