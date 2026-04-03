@@ -2,13 +2,15 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Phone, Mail, Star, MapPin, Clock, Shield, CreditCard, Lock
+import {
+  Phone, Mail, Star, MapPin, Clock, Shield, CreditCard, Lock, ExternalLink
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
+
+export const PESAPAL_PENDING_KEY = 'pesapal_pending_payment';
 
 interface UnlockModalProps {
   showUnlockModal: boolean;
@@ -20,127 +22,75 @@ interface UnlockModalProps {
   onUnlockSuccess: (payload: { housegirlId: number; phone?: string; email?: string }) => void;
 }
 
-export const UnlockModal = ({ 
-  showUnlockModal, 
-  setShowUnlockModal, 
-  housegirlToUnlock, 
-  isUnlocking, 
+export const UnlockModal = ({
+  showUnlockModal,
+  setShowUnlockModal,
+  housegirlToUnlock,
+  isUnlocking,
   setIsUnlocking,
-  employerPhone,
   onUnlockSuccess
 }: UnlockModalProps) => {
-  const { showSuccessNotification, showInfoNotification } = useNotificationActions();
-  const [isPaymentPending, setIsPaymentPending] = useState(false);
-
-  const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+  const { showErrorNotification } = useNotificationActions();
 
   const handleUnlock = async () => {
     if (!housegirlToUnlock) return;
 
     setIsUnlocking(true);
-    setIsPaymentPending(false);
 
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const housegirlResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlToUnlock.id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
+      // Fetch the housegirl's profile_id for contact-access
+      const housegirlResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlToUnlock.id}`, { headers });
       const housegirlData = await housegirlResponse.json().catch(() => ({}));
       const targetProfileId = housegirlData?.profile_id;
       if (!targetProfileId) {
         throw new Error('Unable to identify this profile for unlock.');
       }
 
+      // Create Pesapal order
       const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
+        headers,
         body: JSON.stringify({
           package_id: 'contact_unlock',
-          phone: employerPhone,
-          phone_number: employerPhone,
           amount: 200,
+          target_profile_id: String(targetProfileId),
+          housegirl_id: String(housegirlToUnlock.id),
         }),
       });
 
       const purchaseData = await purchaseResponse.json().catch(() => ({}));
-      if (!purchaseResponse.ok || !purchaseData?.checkout_request_id) {
+      if (!purchaseResponse.ok || !purchaseData?.redirect_url) {
         throw new Error(purchaseData?.error || 'Failed to initiate payment.');
       }
 
-      const checkoutRequestId = purchaseData.checkout_request_id as string;
-      setIsPaymentPending(true);
-      showInfoNotification(
-        'Payment pending',
-        'Check your phone for M-Pesa prompt. Enter your M-Pesa PIN to complete.'
-      );
+      // Store context so the callback page can finish the unlock
+      localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+        order_tracking_id: purchaseData.order_tracking_id,
+        purchase_id: purchaseData.purchase_id,
+        package_id: 'contact_unlock',
+        target_profile_id: String(targetProfileId),
+        housegirl_id: String(housegirlToUnlock.id),
+        redirect_after: '/employer-dashboard',
+      }));
 
-      const timeoutAt = Date.now() + 120000;
-      let paymentStatus = 'pending';
-      while (Date.now() < timeoutAt) {
-        await wait(3000);
-        const statusResponse = await fetch(`${API_BASE_URL}/api/payments/purchase-status/${checkoutRequestId}`, {
-          headers: {
-            'Content-Type': 'application/json',
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-        });
-
-        const statusData = await statusResponse.json().catch(() => ({}));
-        paymentStatus = statusData?.status || 'pending';
-        if (paymentStatus === 'completed') {
-          break;
-        }
-        if (paymentStatus === 'failed') {
-          throw new Error('Payment failed. Please try again.');
-        }
+      // Validate redirect_url is a Pesapal domain before redirecting (prevent open redirect)
+      const redirectUrl = new URL(purchaseData.redirect_url);
+      if (!redirectUrl.hostname.endsWith('pesapal.com')) {
+        throw new Error('Invalid payment redirect destination.');
       }
+      window.location.href = redirectUrl.toString();
 
-      if (paymentStatus !== 'completed') {
-        throw new Error('Payment not confirmed. Please try again.');
-      }
-
-      const unlockResponse = await fetch(`${API_BASE_URL}/api/payments/contact-access`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ target_profile_id: String(targetProfileId), housegirl_id: String(housegirlToUnlock.id) }),
-      });
-      const unlockData = await unlockResponse.json().catch(() => ({}));
-      if (!unlockResponse.ok) {
-        throw new Error(unlockData?.error || 'Failed to unlock contact.');
-      }
-
-      const detailsResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlToUnlock.id}`, {
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-      const detailsData = await detailsResponse.json().catch(() => ({}));
-
-      onUnlockSuccess({
-        housegirlId: housegirlToUnlock.id,
-        phone: detailsData?.phone || detailsData?.phone_number || undefined,
-        email: detailsData?.email || undefined,
-      });
-
-      setShowUnlockModal(false);
-      showSuccessNotification('Contact unlocked successfully!', 'You can now view phone and email details.');
     } catch (error) {
-      showInfoNotification(
+      showErrorNotification(
         'Payment error',
         error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       );
-    } finally {
-      setIsPaymentPending(false);
       setIsUnlocking(false);
     }
   };
@@ -156,7 +106,7 @@ export const UnlockModal = ({
             <span>Unlock Contact - {housegirlToUnlock.name}</span>
           </DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-6">
           {/* Housegirl Info */}
           <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
@@ -188,7 +138,7 @@ export const UnlockModal = ({
           {/* Payment Information */}
           <div className="space-y-3">
             <div className="text-sm font-medium text-gray-700">Payment Details:</div>
-            
+
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-gray-900">Contact Unlock Fee</span>
@@ -198,27 +148,19 @@ export const UnlockModal = ({
                 Get access to phone number and email address
               </div>
             </div>
-            
+
             <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
               <div className="flex items-center space-x-2">
                 <Shield className="h-4 w-4 text-green-600" />
-                <span className="text-sm font-medium text-green-800">Secure Payment</span>
+                <span className="text-sm font-medium text-green-800">Secure Payment via Pesapal</span>
               </div>
               <div className="text-sm text-gray-600 mt-1">
-                Payment will be processed via M-Pesa STK Push
+                Pay with M-Pesa, card, or bank — you'll be redirected to Pesapal's secure checkout.
               </div>
             </div>
+
             {housegirlToUnlock.status === 'unavailable' && (
               <div className="text-sm text-amber-700">⚠️ This person may be unavailable due to high demand.</div>
-            )}
-            {isPaymentPending && (
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <div className="flex items-center space-x-2 text-amber-800">
-                  <div className="w-4 h-4 border-2 border-amber-700 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-sm font-medium">Check your phone for M-Pesa prompt</span>
-                </div>
-                <div className="text-sm text-amber-700 mt-1">Enter your M-Pesa PIN to complete</div>
-              </div>
             )}
           </div>
 
@@ -234,18 +176,19 @@ export const UnlockModal = ({
             </Button>
             <Button
               onClick={handleUnlock}
-              disabled={isUnlocking || isPaymentPending}
+              disabled={isUnlocking}
               className="bg-green-600 hover:bg-green-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
             >
               {isUnlocking ? (
                 <div className="flex items-center space-x-2">
                   <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  <span>{isPaymentPending ? 'Payment Pending...' : 'Initiating Payment...'}</span>
+                  <span>Redirecting to Pesapal...</span>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                                      <CreditCard className="h-4 w-4" />
-                    <span>Pay KES 200</span>
+                  <CreditCard className="h-4 w-4" />
+                  <span>Pay KES 200 via Pesapal</span>
+                  <ExternalLink className="h-3 w-3" />
                 </div>
               )}
             </Button>

@@ -28,6 +28,7 @@ import AgencyPackagesPage from "./pages/AgencyPackagesPage";
 import ContactUsPage from "./pages/ContactUsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
+import PaymentCallbackPage from "./pages/PaymentCallbackPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +101,7 @@ const App = () => (
                 <Route path="/agencies" element={<AgencyPage />} />
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
                 <Route path="/browse-housegirls" element={<BrowseHousegirls />} />
+                <Route path="/payment-callback" element={<PaymentCallbackPage />} />
 
                 {/* Protected Dashboard Routes */}
                 <Route

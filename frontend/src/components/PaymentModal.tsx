@@ -2,20 +2,18 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { API_BASE_URL } from '@/lib/apiConfig';
-import { 
-  CreditCard, 
-  Shield, 
-  CheckCircle, 
-  DollarSign, 
-  Phone, 
+import {
+  CreditCard,
+  Shield,
+  CheckCircle,
   AlertCircle,
   Loader2,
-  CheckCircle2
+  ExternalLink
 } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
+import { PESAPAL_PENDING_KEY } from '@/components/employer/UnlockModal';
 
 export interface PackageDetails {
   id: string;
@@ -60,18 +58,14 @@ interface PaymentModalProps {
     created_at: string;
     agency_client_id: string;
     terms_accepted: boolean;
-    mpesa_checkout_request_id?: string;
-    mpesa_merchant_request_id?: string;
-    transaction_id?: string;
+    order_tracking_id?: string;
   }) => void;
 }
 
 const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: PaymentModalProps) => {
   const { user } = useAuth();
-  const { showSuccessNotification, showErrorNotification } = useNotificationActions();
-  const [phoneNumber, setPhoneNumber] = useState('');
+  const { showErrorNotification } = useNotificationActions();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [paymentStep, setPaymentStep] = useState<'details' | 'processing' | 'success'>('details');
 
   const getAuthHeaders = async () => {
     try {
@@ -84,133 +78,50 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
   };
 
   const handlePayment = async () => {
-    if (!phoneNumber || phoneNumber.length < 10) {
-      showErrorNotification('Invalid Phone Number', 'Please enter a valid phone number');
-      return;
-    }
-
     setIsProcessing(true);
-    setPaymentStep('processing');
 
     try {
       const authHeaders = await getAuthHeaders();
 
-      // Real M-Pesa STK Push
-      const stkPushResponse = await fetch(`${API_BASE_URL}/api/mpesa/stkpush`, {
+      const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
         body: JSON.stringify({
-          phoneNumber: phoneNumber,
+          package_id: packageDetails.id,
           amount: packageDetails.price,
-          reference: `DC_${user?.id}_${Date.now()}`,
-          description: `${packageDetails.name} Package - ${agency.name}`
         }),
       });
 
-      const stkPushResult = await stkPushResponse.json();
+      const purchaseData = await purchaseResponse.json();
 
-      if (!stkPushResult.success) {
-        throw new Error(stkPushResult.message || 'STK Push failed');
+      if (!purchaseResponse.ok || !purchaseData?.redirect_url) {
+        throw new Error(purchaseData?.error || 'Failed to initiate payment');
       }
 
-      // Wait for user to complete payment (in real implementation, you'd poll for status)
-      await new Promise(resolve => setTimeout(resolve, 5000));
-
-      // Check transaction status
-      const statusResponse = await fetch(`${API_BASE_URL}/api/mpesa/transaction-status`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
-        body: JSON.stringify({
-          checkoutRequestId: stkPushResult.checkoutRequestId
-        }),
-      });
-
-      const statusResult = await statusResponse.json();
-
-      if (!statusResult.success || String(statusResult.resultCode) !== '0') {
-        throw new Error('Payment was not completed successfully');
-      }
-
-      // Create payment record
-      const paymentData = {
-        id: `payment_${Date.now()}`,
-        client_id: user?.id,
-        agency_id: agency.id,
+      // Store context for the callback page to complete the agency-client record
+      localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+        order_tracking_id: purchaseData.order_tracking_id,
+        purchase_id: purchaseData.purchase_id,
         package_id: packageDetails.id,
+        agency_id: agency.id,
+        client_id: user?.id,
         amount: packageDetails.price,
         agency_fee: packageDetails.agencyFee,
         platform_fee: packageDetails.platformFee,
-        phone_number: phoneNumber,
-        status: 'completed',
-        payment_method: 'mpesa',
-        created_at: new Date().toISOString(),
-        agency_client_id: `ac_${Date.now()}`,
-        terms_accepted: true,
-        mpesa_checkout_request_id: stkPushResult.checkoutRequestId,
-        mpesa_merchant_request_id: stkPushResult.merchantRequestId,
-        transaction_id: `TXN_${Date.now()}`
-      };
+        agency_name: agency.name,
+        redirect_after: '/employer-dashboard',
+      }));
 
-      // Save to database
-      const response = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders,
-        },
-        body: JSON.stringify(paymentData),
-      });
-
-      if (response.ok) {
-        if (packageDetails.id !== 'contact_unlock') {
-          // Keep legacy agency-client side effect for agency packages only.
-          const agencyClientData = {
-            id: paymentData.agency_client_id,
-            agency_id: agency.id,
-            client_id: user?.id,
-            hiring_fee: packageDetails.price,
-            placement_status: 'registered',
-            hire_date: new Date().toISOString(),
-            package_type: packageDetails.id,
-            commission_paid: packageDetails.agencyFee,
-            platform_fee_paid: packageDetails.platformFee,
-            dispute_resolution: null,
-            terms_accepted: true
-          };
-
-          await fetch(`${API_BASE_URL}/api/agencies/clients`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              ...authHeaders,
-            },
-            body: JSON.stringify(agencyClientData),
-          });
-        }
-
-        setPaymentStep('success');
-        showSuccessNotification(
-          'Payment Successful!', 
-          `You've successfully registered with ${agency.name}. They will contact you within 24 hours.`
-        );
-
-        setTimeout(() => {
-          onSuccess(paymentData);
-        }, 2000);
-      } else {
-        throw new Error('Payment failed');
+      // Validate redirect_url is a Pesapal domain before redirecting (prevent open redirect)
+      const redirectUrl = new URL(purchaseData.redirect_url);
+      if (!redirectUrl.hostname.endsWith('pesapal.com')) {
+        throw new Error('Invalid payment redirect destination.');
       }
+      window.location.href = redirectUrl.toString();
+
     } catch (error) {
       console.error('Payment error:', error);
-      showErrorNotification('Payment Failed', 'Please try again or contact support');
-      setPaymentStep('details');
-    } finally {
+      showErrorNotification('Payment Failed', error instanceof Error ? error.message : 'Please try again or contact support');
       setIsProcessing(false);
     }
   };
@@ -232,54 +143,6 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
       default: return 'border-gray-300';
     }
   };
-
-  if (paymentStep === 'processing') {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <Loader2 className="h-12 w-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Processing Payment</h3>
-            <p className="text-gray-600 mb-4">Please check your phone for M-Pesa prompt</p>
-            <div className="space-y-2 text-sm text-gray-500">
-              <p>• Enter your M-Pesa PIN when prompted</p>
-              <p>• Wait for confirmation SMS</p>
-              <p>• Do not close this window</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
-  if (paymentStep === 'success') {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <Card className="max-w-md w-full">
-          <CardContent className="p-6 text-center">
-            <CheckCircle2 className="h-12 w-12 text-green-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Payment Successful!</h3>
-            <p className="text-gray-600 mb-4">
-              You've been successfully connected to {agency.name}
-            </p>
-            <div className="bg-green-50 rounded-lg p-4 mb-4">
-              <p className="text-sm text-green-800">
-                <strong>Next Steps:</strong>
-              </p>
-              <ul className="text-sm text-green-700 mt-2 space-y-1">
-                <li>• Agency will contact you within 24 hours</li>
-                <li>• Discuss your specific requirements</li>
-                <li>• Get matched with verified workers</li>
-              </ul>
-            </div>
-            <Button onClick={onClose} className="w-full">
-              Close
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -324,31 +187,14 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
           </div>
 
           {/* Payment Method */}
-          <div>
-            <h4 className="font-medium text-gray-900 mb-3">Payment Method</h4>
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-              <div className="flex items-center space-x-2 mb-2">
-                <Phone className="h-5 w-5 text-blue-600" />
-                <span className="font-medium text-blue-900">M-Pesa Payment</span>
-              </div>
-              <p className="text-sm text-blue-700">
-                You'll receive an M-Pesa prompt on your phone to complete the payment.
-              </p>
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center space-x-2 mb-2">
+              <Shield className="h-5 w-5 text-blue-600" />
+              <span className="font-medium text-blue-900">Secure Payment via Pesapal</span>
             </div>
-            
-            <div className="space-y-3">
-              <label className="text-sm font-medium text-gray-700">Phone Number</label>
-              <Input
-                type="tel"
-                placeholder="e.g., 0712345678"
-                value={phoneNumber}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-                className="w-full"
-              />
-              <p className="text-xs text-gray-500">
-                Enter the phone number registered with M-Pesa
-              </p>
-            </div>
+            <p className="text-sm text-blue-700">
+              You'll be redirected to Pesapal's secure checkout page where you can pay via M-Pesa, debit/credit card, or bank transfer.
+            </p>
           </div>
 
           {/* Terms */}
@@ -369,23 +215,24 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
 
           {/* Action Buttons */}
           <div className="flex space-x-3">
-            <Button variant="outline" onClick={onClose} className="flex-1">
+            <Button variant="outline" onClick={onClose} className="flex-1" disabled={isProcessing}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handlePayment}
-              disabled={!phoneNumber || isProcessing}
+              disabled={isProcessing}
               className="flex-1 bg-blue-600 hover:bg-blue-700"
             >
               {isProcessing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Processing...
+                  Redirecting...
                 </>
               ) : (
                 <>
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  Pay KES {packageDetails.price.toLocaleString()}
+                  <CreditCard className="h-4 w-4 mr-2" />
+                  Pay KES {packageDetails.price.toLocaleString()} via Pesapal
+                  <ExternalLink className="h-3 w-3 ml-1" />
                 </>
               )}
             </Button>
