@@ -46,6 +46,7 @@ type ApiHousegirl = {
   id: string | number;
   first_name?: string;
   last_name?: string;
+  name?: string;
   skills?: string[];
   experience?: string;
   expected_salary?: number;
@@ -56,6 +57,9 @@ type ApiHousegirl = {
   profile_photo_url?: string | null;
   unlock_count?: number;
 };
+
+/** Returns true if the name looks like a real person's name (not an email username). */
+const isRealName = (n: string) => n.length > 1 && !/[_@0-9]/.test(n);
 
 const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
   id: 'contact_unlock',
@@ -172,9 +176,10 @@ const HousegirlsListPage = () => {
         const data = await response.json();
         const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
         const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
-          const firstName = profile.first_name?.trim() || 'Unknown';
+          const firstName = profile.first_name?.trim() || '';
           const lastName = profile.last_name?.trim() || '';
-          const name = `${firstName} ${lastName}`.trim();
+          const rawName = profile.name?.trim() || `${firstName} ${lastName}`.trim();
+          const name = isRealName(rawName) ? rawName : 'Housegirl';
           const location = profile.location || 'Location not provided';
           return {
             id: String(profile.id),
@@ -719,6 +724,15 @@ const HousegirlsListPage = () => {
                       onClick={() => setSelectedProfile(profile)}
                     >
                       <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
+                        <div className="relative flex-shrink-0 mx-auto md:mx-0">
+                          <UserAvatar
+                            src={profile.avatar}
+                            name={profile.name}
+                            size="xl"
+                            isAvailable={profile.available}
+                          />
+                        </div>
+
                         <div className="flex-1 w-full">
                           <div className="flex flex-col gap-1 text-center md:text-left">
                             <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
@@ -937,6 +951,12 @@ const HousegirlsListPage = () => {
             </div>
             <div className="p-5 space-y-4">
               <div className="flex items-center gap-4">
+                <UserAvatar
+                  src={selectedProfile.avatar}
+                  name={selectedProfile.name}
+                  size="2xl"
+                  isAvailable={selectedProfile.available}
+                />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{selectedProfile.name}</h3>
                   <Badge variant="secondary" className={`border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[selectedProfile.role as RoleType]}`}>

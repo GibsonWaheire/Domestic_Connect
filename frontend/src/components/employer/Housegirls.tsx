@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -258,6 +259,13 @@ export const Housegirls = ({
             <CardContent className="p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-4">
+                  <UserAvatar
+                    src={housegirl.profileImage}
+                    name={housegirl.name}
+                    size="2xl"
+                    className="shrink-0"
+                    isAvailable={housegirl.status === 'available'}
+                  />
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-gray-900">{housegirl.name}</h3>

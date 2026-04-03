@@ -9,6 +9,25 @@ interface UserAvatarProps {
   isAvailable?: boolean;
 }
 
+const WomanPlaceholder = () => (
+  <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" className="w-full h-full">
+    {/* Background */}
+    <rect width="100" height="100" fill="#fce7f3" />
+    {/* Head */}
+    <ellipse cx="50" cy="32" rx="16" ry="18" fill="#f9a8d4" />
+    {/* Hair */}
+    <ellipse cx="50" cy="20" rx="17" ry="10" fill="#be185d" />
+    <ellipse cx="35" cy="30" rx="5" ry="12" fill="#be185d" />
+    <ellipse cx="65" cy="30" rx="5" ry="12" fill="#be185d" />
+    {/* Neck */}
+    <rect x="45" y="48" width="10" height="8" rx="3" fill="#f9a8d4" />
+    {/* Body / dress */}
+    <path d="M 28 80 Q 32 56 50 56 Q 68 56 72 80 Z" fill="#ec4899" />
+    {/* Shoulders */}
+    <ellipse cx="50" cy="57" rx="14" ry="5" fill="#f472b6" />
+  </svg>
+);
+
 const UserAvatar: React.FC<UserAvatarProps> = ({
   src,
   name = '?',
@@ -19,11 +38,11 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
   const [imgError, setImgError] = useState(false);
 
   const sizeClasses = {
-    sm: 'h-8 w-8 text-xs',
-    md: 'h-10 w-10 text-sm',
-    lg: 'h-16 w-16 text-lg',
-    xl: 'h-24 w-24 text-2xl',
-    '2xl': 'h-32 w-32 text-3xl'
+    sm:  'h-8 w-8 text-xs',
+    md:  'h-10 w-10 text-sm',
+    lg:  'h-16 w-16 text-lg',
+    xl:  'h-24 w-24 text-2xl',
+    '2xl': 'h-32 w-32 text-3xl',
   };
 
   const showImage = src && !imgError;
@@ -35,7 +54,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
           src={src}
           alt={name}
           className={cn(
-            'rounded-xl object-cover border border-gray-200',
+            'rounded-xl object-cover border-2 border-pink-100',
             sizeClasses[size],
             className
           )}
@@ -44,14 +63,12 @@ const UserAvatar: React.FC<UserAvatarProps> = ({
       ) : (
         <div
           className={cn(
-            'rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center text-gray-400',
+            'rounded-xl overflow-hidden border-2 border-pink-100',
             sizeClasses[size],
             className
           )}
         >
-          <svg className="w-1/2 h-1/2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 20.25a9.75 9.75 0 0115 0" />
-          </svg>
+          <WomanPlaceholder />
         </div>
       )}
 

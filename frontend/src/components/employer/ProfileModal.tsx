@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import UserAvatar from '@/components/ui/UserAvatar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +39,14 @@ export const ProfileModal = ({
         <div className="space-y-6">
           {/* Profile Header */}
           <div className="flex items-start space-x-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
+            <div className="shrink-0">
+              <UserAvatar
+                src={housegirl.profileImage}
+                name={housegirl.name}
+                size="2xl"
+                className="border-4 border-white shadow-lg"
+              />
+            </div>
             <div className="flex-1">
               <div className="flex items-start justify-between mb-3">
                 <div>
