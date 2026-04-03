@@ -118,20 +118,38 @@ def upload_photo():
         except Exception as ue:
             logger.warning(f'Could not update users doc: {ue}')
 
-        # Update housegirl_profiles — try by document ID first, then by query
+        # Update housegirl_profiles — try multiple document ID formats then query
         try:
-            hg_ref = db.collection('housegirl_profiles').document(user_id)
-            if hg_ref.get().exists:
-                hg_ref.update(photo_update)
-            else:
-                hg_docs = list(
-                    db.collection('housegirl_profiles')
-                    .where('user_id', '==', user_id)
-                    .limit(1)
-                    .stream()
-                )
-                if hg_docs:
-                    hg_docs[0].reference.update(photo_update)
+            # Documents are stored as 'user_{uid}' (normalized) or raw uid
+            normalized_uid = f'user_{user_id}' if not str(user_id).startswith('user_') else user_id
+            raw_uid = user_id[5:] if str(user_id).startswith('user_') else user_id
+
+            updated = False
+            for doc_id in [normalized_uid, raw_uid]:
+                ref = db.collection('housegirl_profiles').document(doc_id)
+                if ref.get().exists:
+                    ref.update(photo_update)
+                    updated = True
+                    logger.info(f'Updated housegirl_profiles/{doc_id} with photo')
+                    break
+
+            if not updated:
+                # Fallback: search by user_id field (stored as raw or normalized)
+                for uid_val in [user_id, normalized_uid]:
+                    hg_docs = list(
+                        db.collection('housegirl_profiles')
+                        .where('user_id', '==', uid_val)
+                        .limit(1)
+                        .stream()
+                    )
+                    if hg_docs:
+                        hg_docs[0].reference.update(photo_update)
+                        logger.info(f'Updated housegirl_profiles via query user_id={uid_val}')
+                        updated = True
+                        break
+
+            if not updated:
+                logger.warning(f'No housegirl_profiles doc found for user {user_id}')
         except Exception as he:
             logger.warning(f'Could not update housegirl_profiles doc: {he}')
 

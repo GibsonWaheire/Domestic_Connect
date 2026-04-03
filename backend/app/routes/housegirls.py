@@ -75,25 +75,42 @@ def get_profile_id_for_user(user_id):
 
 
 def find_housegirl_doc_for_user(user_id):
-    by_user_id = next(
-        db.collection('housegirl_profiles')
-        .where('user_id', '==', user_id)
-        .limit(1)
-        .stream(),
-        None
-    )
-    if by_user_id:
-        return by_user_id
-    profile_id = get_profile_id_for_user(user_id)
-    if not profile_id:
-        return None
-    return next(
-        db.collection('housegirl_profiles')
-        .where('profile_id', '==', profile_id)
-        .limit(1)
-        .stream(),
-        None
-    )
+    # user_id may arrive as 'user_{uid}' or raw '{uid}' — try both
+    normalized = f'user_{user_id}' if not str(user_id).startswith('user_') else user_id
+    raw = user_id[5:] if str(user_id).startswith('user_') else user_id
+
+    for uid_val in [user_id, normalized, raw]:
+        doc = next(
+            db.collection('housegirl_profiles')
+            .where('user_id', '==', uid_val)
+            .limit(1)
+            .stream(),
+            None
+        )
+        if doc:
+            return doc
+
+    # Try by document ID directly
+    for doc_id in [normalized, raw]:
+        ref = db.collection('housegirl_profiles').document(doc_id)
+        snap = ref.get()
+        if snap.exists:
+            return snap
+
+    # Try via profiles collection
+    for uid_val in [user_id, normalized, raw]:
+        profile_id = get_profile_id_for_user(uid_val)
+        if profile_id:
+            doc = next(
+                db.collection('housegirl_profiles')
+                .where('profile_id', '==', profile_id)
+                .limit(1)
+                .stream(),
+                None
+            )
+            if doc:
+                return doc
+    return None
 
 
 def get_authenticated_user_id_from_request():

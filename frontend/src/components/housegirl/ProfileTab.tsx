@@ -127,12 +127,15 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
   };
 
   const handlePhotoUploaded = async (photoUrl: string) => {
+    // Optimistically show the photo immediately
     onProfilePhotoChange(photoUrl);
     if (!resolvedUserId) return;
     setIsSavingPhoto(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const response = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
+
+      // Save photo URL to the housegirl profile in the DB
+      const saveRes = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -140,12 +143,23 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         },
         body: JSON.stringify({ profile_photo_url: photoUrl }),
       });
-      if (!response.ok) throw new Error('Failed to save photo');
-      toast({ title: 'Photo saved', description: 'Your profile photo has been updated.' });
+      if (!saveRes.ok) throw new Error('Failed to save photo');
+
+      // Re-fetch the saved profile to confirm the URL is persisted
+      const verifyRes = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (verifyRes.ok) {
+        const saved = await verifyRes.json();
+        const confirmedUrl = toAbsolutePhotoUrl(saved.profile_photo_url || saved.photo_url);
+        if (confirmedUrl) onProfilePhotoChange(confirmedUrl);
+      }
+
+      toast({ title: 'Photo saved', description: 'Your profile photo has been updated and will show to employers.' });
     } catch {
       toast({
         title: 'Save failed',
-        description: 'Photo uploaded but could not be saved. Please try again.',
+        description: 'Photo uploaded but could not be saved to your profile. Please try again.',
         variant: 'destructive',
       });
     } finally {
