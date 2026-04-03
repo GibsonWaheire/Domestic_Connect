@@ -98,13 +98,18 @@ def get_housegirls_for_employer(current_user_id=None, include_unavailable=False)
         user_docs_map = {}
         users_ref = db.collection('users')
 
-        # Pre-fetch all housegirl IDs this employer has unlocked — one query, no N+1
-        unlocked_ids = set()
+        # Pre-fetch all contacts this employer has unlocked — one query, no N+1.
+        # Collect both housegirl_id and target_profile_id so we match regardless
+        # of which field was populated by whichever unlock flow ran.
+        unlocked_housegirl_ids = set()
+        unlocked_profile_ids = set()
         if current_user_id:
             for doc in db.collection('contact_access').where('user_id', '==', current_user_id).stream():
                 d = doc.to_dict()
                 if d.get('housegirl_id'):
-                    unlocked_ids.add(str(d['housegirl_id']))
+                    unlocked_housegirl_ids.add(str(d['housegirl_id']))
+                if d.get('target_profile_id'):
+                    unlocked_profile_ids.add(str(d['target_profile_id']))
         
         # 1. Start with 'users' collection
         users_query = users_ref.where('user_type', '==', 'housegirl')
@@ -149,9 +154,12 @@ def get_housegirls_for_employer(current_user_id=None, include_unavailable=False)
                 .stream()
             ))
 
+            profile_id = str(hg_profile.get('profile_id') or user_id)
+            can_view = str(user_id) in unlocked_housegirl_ids or profile_id in unlocked_profile_ids
+
             result.append({
                 'id': user_id,
-                'profile_id': hg_profile.get('profile_id') or user_id,
+                'profile_id': profile_id,
                 'age': hg_profile.get('age'),
                 'bio': hg_profile.get('bio'),
                 'current_location': hg_profile.get('current_location') or user_data.get('location'),
@@ -166,9 +174,9 @@ def get_housegirls_for_employer(current_user_id=None, include_unavailable=False)
                 'profile_photo_url': hg_profile.get('profile_photo_url') or user_data.get('photo_url'),
                 'first_name': first_name,
                 'last_name': last_name,
-                'contact_unlocked': str(user_id) in unlocked_ids,
-                'email': user_data.get('email', '') if str(user_id) in unlocked_ids else 'Unlock to view',
-                'phone_number': user_data.get('phone_number', '') if str(user_id) in unlocked_ids else 'Unlock to view',
+                'contact_unlocked': can_view,
+                'email': user_data.get('email', '') if can_view else 'Unlock to view',
+                'phone_number': user_data.get('phone_number', '') if can_view else 'Unlock to view',
                 'unlock_count': unlock_count,
                 'created_at': hg_profile.get('created_at') or user_data.get('created_at'),
                 'updated_at': hg_profile.get('updated_at') or user_data.get('updated_at')
