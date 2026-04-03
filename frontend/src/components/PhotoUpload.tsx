@@ -128,7 +128,7 @@ const PhotoUpload = ({ onPhotoUploaded, currentPhoto }: PhotoUploadProps) => {
           <div className="flex space-x-2">
             <Button onClick={handleUpload} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white">
               <Upload className="h-4 w-4 mr-2" />
-              Upload Photo
+              Save Photo
             </Button>
             <Button variant="outline" onClick={handleRetakePhoto} className="flex-1">
               <Camera className="h-4 w-4 mr-2" />
@@ -140,7 +140,7 @@ const PhotoUpload = ({ onPhotoUploaded, currentPhoto }: PhotoUploadProps) => {
         {isUploading && (
           <div className="flex items-center justify-center gap-2 text-sm text-blue-600">
             <div className="h-4 w-4 rounded-full border-2 border-blue-600 border-t-transparent animate-spin" />
-            Uploading to storage...
+            Saving photo...
           </div>
         )}
 
