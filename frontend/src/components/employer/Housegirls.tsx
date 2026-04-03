@@ -14,7 +14,6 @@ import {
 } from '@/constants/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { ProfileModal } from '@/components/employer/ProfileModal';
-import UserAvatar from '@/components/ui/UserAvatar';
 
 interface HousegirlsProps {
   housegirls: Housegirl[];
@@ -259,14 +258,6 @@ export const Housegirls = ({
             <CardContent className="p-5">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex items-start gap-4">
-                  <UserAvatar
-                    src={housegirl.profileImage}
-                    name={housegirl.name}
-                    size="2xl"
-                    className="border-2 border-gray-200 shrink-0"
-                    isAvailable={housegirl.status === 'available'}
-                  />
-
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-gray-900">{housegirl.name}</h3>

@@ -3,11 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { 
-  Phone, Mail, Star, MapPin, Clock, Shield, CreditCard, Lock, Users, Calendar, Award
+  Phone, Mail, MapPin, Clock, CreditCard, Lock, Users, Calendar, Award
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
-import UserAvatar from '@/components/ui/UserAvatar';
 
 interface ProfileModalProps {
   isOpen: boolean;
@@ -39,21 +38,6 @@ export const ProfileModal = ({
         <div className="space-y-6">
           {/* Profile Header */}
           <div className="flex items-start space-x-6 p-6 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg">
-            <div className="relative shrink-0">
-              <UserAvatar
-                src={housegirl.profileImage}
-                name={housegirl.name}
-                size="2xl"
-                className="border-4 border-white shadow-lg"
-              />
-              {housegirl.rating && (
-                <div className="absolute -bottom-2 -right-2 bg-yellow-400 text-white text-sm rounded-full px-2 py-1 flex items-center shadow-lg">
-                  <Star className="h-3 w-3 mr-1 fill-current" />
-                  {housegirl.rating}
-                </div>
-              )}
-            </div>
-            
             <div className="flex-1">
               <div className="flex items-start justify-between mb-3">
                 <div>

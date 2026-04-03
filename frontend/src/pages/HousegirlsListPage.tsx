@@ -719,15 +719,6 @@ const HousegirlsListPage = () => {
                       onClick={() => setSelectedProfile(profile)}
                     >
                       <div className="flex flex-col md:flex-row gap-4 md:gap-5 items-center md:items-center">
-                        <div className="relative flex-shrink-0 mx-auto md:mx-0">
-                          <UserAvatar
-                            src={profile.avatar}
-                            name={profile.name}
-                            size="xl"
-                            isAvailable={profile.available}
-                          />
-                        </div>
-
                         <div className="flex-1 w-full">
                           <div className="flex flex-col gap-1 text-center md:text-left">
                             <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
@@ -946,12 +937,6 @@ const HousegirlsListPage = () => {
             </div>
             <div className="p-5 space-y-4">
               <div className="flex items-center gap-4">
-                <UserAvatar
-                  src={selectedProfile.avatar}
-                  name={selectedProfile.name}
-                  size="xl"
-                  isAvailable={selectedProfile.available}
-                />
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{selectedProfile.name}</h3>
                   <Badge variant="secondary" className={`border bg-transparent text-[13px] px-3 py-1 rounded-[2px] ${ROLE_BADGE[selectedProfile.role as RoleType]}`}>

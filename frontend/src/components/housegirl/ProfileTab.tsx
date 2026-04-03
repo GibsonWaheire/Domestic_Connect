@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AlertCircle, Edit, RefreshCw } from 'lucide-react';
+import { AlertCircle, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import PhotoUpload from '@/components/PhotoUpload';
 import { toast } from '@/hooks/use-toast';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
@@ -270,24 +269,6 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-            <div className="text-center" id="housegirl-photo">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
-              <PhotoUpload
-                onPhotoUploaded={handlePhotoUploaded}
-                currentPhoto={profilePhoto || undefined}
-              />
-              {isSavingPhoto && (
-                <div className="mt-2 flex items-center justify-center gap-2 text-sm text-gray-500">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Saving photo...
-                </div>
-              )}
-              <p className="text-xs text-gray-500 italic mt-2">
-                Note: The photo must be of a real person to be approved.
-              </p>
-            </div>
-
-            <Separator />
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
