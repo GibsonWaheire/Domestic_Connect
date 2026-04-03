@@ -14,6 +14,11 @@ class Config:
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16MB max file size
     ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
     
+    # Session cookie security
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
     # CORS configuration
     cors_origins_env = os.environ.get('CORS_ORIGINS')
     if cors_origins_env:

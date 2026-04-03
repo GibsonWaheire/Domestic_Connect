@@ -41,10 +41,6 @@ def create_app(config_name=None):
     CORS(
         app,
         resources={
-            r"/api/housegirls*": {
-                "origins": "*",
-                "supports_credentials": False
-            },
             r"/*": {
                 "origins": allowed_origins
             }
@@ -65,7 +61,8 @@ def create_app(config_name=None):
     def after_request(response):
         response = add_security_headers(response)
         response = add_performance_headers(response)
-        response.headers['Content-Security-Policy'] = "default-src 'self' 'unsafe-inline' 'unsafe-eval' localhost:* 127.0.0.1:*; frame-ancestors 'self' https://accounts.google.com"
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        response.headers['Content-Security-Policy'] = "default-src 'self'; frame-ancestors 'self' https://accounts.google.com"
         return response
     
     # Register blueprints

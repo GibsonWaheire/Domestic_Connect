@@ -103,7 +103,7 @@ const AuthModal = ({
         const result = await signIn(email, password);
         if (result.error) {
           setError(result.error);
-          toast({ title: 'Sign In Failed', description: result.error, variant: 'destructive' });
+          toast({ title: 'Login Failed', description: result.error, variant: 'destructive' });
         } else if (result.user) {
           onClose();
           navigate(getPostAuthRoute(result.user.user_type, result.user.is_admin));
@@ -148,7 +148,7 @@ const AuthModal = ({
                   onClick={() => setMode('login')}
                   className={`flex-1 py-1.5 text-sm font-medium rounded-full transition-all ${mode === 'login' ? 'bg-white shadow-sm text-black' : 'text-gray-500 hover:text-black'}`}
                 >
-                  Sign In
+                  Login
                 </button>
                 <button
                   type="button"
@@ -162,7 +162,7 @@ const AuthModal = ({
               {mode === 'login' ? (
                 <>
                   <CardTitle className="text-center text-[22px] font-bold text-black mb-1">Welcome back</CardTitle>
-                  <p className="text-center text-sm text-gray-500">Sign in to continue</p>
+                  <p className="text-center text-sm text-gray-500">Log in to continue</p>
                 </>
               ) : (
                 <>
@@ -284,7 +284,7 @@ const AuthModal = ({
                     className="w-full rounded-full bg-black py-3 font-semibold text-white hover:bg-black/90"
                     disabled={isLoading}
                   >
-                    {emailLoading ? 'Processing...' : mode === 'login' ? 'Sign In →' : 'Create Account →'}
+                    {emailLoading ? 'Processing...' : mode === 'login' ? 'Login →' : 'Create Account →'}
                   </Button>
                 </form>
 
@@ -295,7 +295,7 @@ const AuthModal = ({
                     </button>
                   ) : (
                     <button type="button" onClick={() => setMode('login')} className="text-sm text-gray-500 hover:text-black transition-colors">
-                      Already have account? Sign in →
+                      Already have account? Login →
                     </button>
                   )}
                 </div>

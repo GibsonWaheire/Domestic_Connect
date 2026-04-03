@@ -1,12 +1,26 @@
 """
 Health check endpoint for monitoring application health
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from app.firebase_init import db
 from app.middleware.performance import get_cache_stats
 from app.middleware.logging import logger
 import time
 import os
+
+def _require_internal_token(f):
+    """Protect sensitive endpoints with a bearer token from HEALTH_API_KEY env var."""
+    from functools import wraps
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        expected = os.environ.get('HEALTH_API_KEY', '')
+        if not expected:
+            return jsonify({'error': 'Endpoint disabled'}), 403
+        auth = request.headers.get('Authorization', '')
+        if not auth.startswith('Bearer ') or auth[7:] != expected:
+            return jsonify({'error': 'Unauthorized'}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
 try:
     import psutil
@@ -54,6 +68,7 @@ def health_check():
         }), 503
 
 @health_bp.route('/health/detailed', methods=['GET'])
+@_require_internal_token
 def detailed_health_check():
     """Detailed health check with system metrics"""
     try:
@@ -167,6 +182,7 @@ def liveness_check():
         }), 503
 
 @health_bp.route('/metrics', methods=['GET'])
+@_require_internal_token
 def metrics():
     """Prometheus-style metrics endpoint"""
     try:

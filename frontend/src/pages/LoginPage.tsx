@@ -191,7 +191,7 @@ const LoginPage = () => {
                 <>
                   <h2 className="text-xl font-semibold text-gray-900">Welcome to Domestic Connect</h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    {mode === 'login' ? 'Sign in to your account' : 'Create your free account'}
+                    {mode === 'login' ? 'Log in to your account' : 'Create your free account'}
                   </p>
                 </>
               )}
@@ -205,7 +205,7 @@ const LoginPage = () => {
                   onClick={() => { setMode('login'); setError(null); navigate('/login'); }}
                   className={`flex-1 py-2.5 text-sm font-semibold rounded-full transition-all duration-200 ${mode === 'login' ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-white/50'}`}
                 >
-                  Sign In
+                  Login
                 </button>
                 <button
                   type="button"
@@ -263,7 +263,7 @@ const LoginPage = () => {
                   onClick={() => { setMode('login'); setError(null); setResetSent(false); setResetEmailInput(''); }}
                   className="text-sm text-gray-500 hover:text-[#111] transition-colors duration-200 text-center"
                 >
-                  ← Back to Sign In
+                  ← Back to Login
                 </button>
               </div>
             )}
@@ -338,7 +338,7 @@ const LoginPage = () => {
                     <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
                     <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
                   </svg>
-                  {mode === 'login' ? 'Sign In with Google' : 'Sign Up with Google'}
+                  {mode === 'login' ? 'Login with Google' : 'Sign Up with Google'}
                 </Button>
 
                 {/* OR divider */}
@@ -405,7 +405,7 @@ const LoginPage = () => {
                   onClick={handleEmailAuth}
                   className="w-full bg-[#111] text-white rounded-xl h-12 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md"
                 >
-                  {mode === 'login' ? 'Sign In with Email' : 'Create Account with Email'}
+                  {mode === 'login' ? 'Login with Email' : 'Create Account with Email'}
                 </Button>
               </div>
             ))}

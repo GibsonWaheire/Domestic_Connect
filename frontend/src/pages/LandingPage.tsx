@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { API_BASE_URL } from '@/lib/apiConfig';
+import AuthModal from '@/components/AuthModal';
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -13,6 +14,8 @@ const LandingPage = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [featuredHousegirls, setFeaturedHousegirls] = useState<any[]>([]);
   const [loadingHousegirls, setLoadingHousegirls] = useState(true);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState<'login' | 'signup'>('login');
   const { user } = useAuth();
   const localBusinessSchema = {
     "@context": "https://schema.org",
@@ -62,17 +65,20 @@ const LandingPage = () => {
   const drawerRef = useRef<HTMLDivElement | null>(null);
 
   const openRegister = () => {
-    navigate('/login?mode=signup');
+    setAuthModalMode('signup');
+    setAuthModalOpen(true);
     setIsMenuOpen(false);
   };
 
   const openHousegirlRegister = () => {
-    navigate('/login?mode=signup');
+    setAuthModalMode('signup');
+    setAuthModalOpen(true);
     setIsMenuOpen(false);
   };
 
   const openLogin = () => {
-    navigate('/login');
+    setAuthModalMode('login');
+    setAuthModalOpen(true);
     setIsMenuOpen(false);
   };
 
@@ -515,6 +521,12 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      <AuthModal
+        isOpen={authModalOpen}
+        onClose={() => setAuthModalOpen(false)}
+        defaultMode={authModalMode}
+      />
 
       <div className="fixed bottom-5 left-5 z-50 group flex items-center">
         <span className="mr-2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-medium text-[#111] shadow-md opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none">
