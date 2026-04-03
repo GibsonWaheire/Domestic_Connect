@@ -345,7 +345,10 @@ def get_housegirl(housegirl_id):
         if not hg_doc.exists:
             fallback_doc = find_housegirl_doc_for_user(normalized_id)
             if not fallback_doc:
-                empty_profile = {
+                # Return empty profile WITHOUT writing to DB.
+                # Writing an empty profile here caused the photo to be wiped on every refresh
+                # because the empty document was found first on the next GET.
+                return jsonify({
                     'id': normalized_id,
                     'user_id': normalized_id,
                     'full_name': '',
@@ -356,18 +359,12 @@ def get_housegirl(housegirl_id):
                     'bio': '',
                     'location': '',
                     'current_location': '',
-                    'photo_url': '',
-                    'profile_photo_url': '',
+                    'profile_photo_url': None,
                     'is_available': True,
                     'unlock_count': 0,
                     'activation_fee_paid': False,
                     'in_demand_alert': False,
-                    'created_at': datetime.utcnow().isoformat(),
-                    'updated_at': datetime.utcnow().isoformat(),
-                }
-                db.collection('housegirl_profiles').document(normalized_id).set(empty_profile)
-                logger.info(f'Created empty housegirl profile: housegirl_profiles/{normalized_id}')
-                return jsonify(empty_profile), 200
+                }), 200
             hg_doc = fallback_doc
             housegirl_id = fallback_doc.id
             

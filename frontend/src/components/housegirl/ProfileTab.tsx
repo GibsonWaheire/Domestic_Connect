@@ -270,6 +270,30 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
 
   return (
     <div className="space-y-6">
+
+      {/* ── Photo Card (completely separate from profile form) ────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-xl">Profile Photo</CardTitle>
+          <CardDescription>
+            This photo is shown to employers browsing for housegirls. Upload a clear, real photo of yourself.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PhotoUpload
+            onPhotoUploaded={handlePhotoUploaded}
+            currentPhoto={profilePhoto || undefined}
+          />
+          {isSavingPhoto && (
+            <div className="mt-3 flex items-center justify-center gap-2 text-sm text-gray-500">
+              <RefreshCw className="h-4 w-4 animate-spin" />
+              Saving photo to your profile…
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Profile Information Card ──────────────────────────────────────── */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
@@ -285,27 +309,6 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         </CardHeader>
         <CardContent>
           <div className="space-y-6">
-
-            {/* Profile Photo */}
-            <div className="text-center" id="housegirl-photo">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4">Profile Photo</h4>
-              <PhotoUpload
-                onPhotoUploaded={handlePhotoUploaded}
-                currentPhoto={profilePhoto || undefined}
-              />
-              {isSavingPhoto && (
-                <div className="mt-2 flex items-center justify-center gap-2 text-sm text-gray-500">
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  Saving photo...
-                </div>
-              )}
-              <p className="text-xs text-gray-500 italic mt-2">
-                Upload a clear, real photo of yourself. This is shown to employers browsing profiles.
-              </p>
-            </div>
-
-            <Separator />
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div>
                 <h4 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h4>
@@ -410,6 +413,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
           </div>
         </CardContent>
       </Card>
+      {/* ── End Profile Information Card ──────────────────────────────────── */}
 
       <Card className="bg-amber-50 border-amber-200">
         <CardContent className="p-4 flex items-start gap-3">
