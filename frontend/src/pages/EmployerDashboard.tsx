@@ -141,7 +141,11 @@ const EmployerDashboard = () => {
       location: hg.location,
       experience: hg.experience,
       education: hg.education,
-      salary: `KSh ${hg.expected_salary?.toLocaleString() || '0'}`,
+      salary: hg.expected_salary && hg.expected_salary >= 1000
+        ? `KSh ${hg.expected_salary.toLocaleString()}`
+        : hg.expected_salary && hg.expected_salary > 0
+          ? 'KSh 10,000 - 15,000'  // recover corrupted values saved before the bug fix
+          : 'Not specified',
       status: hg.is_available ? 'available' : 'unavailable',
       bio: hg.bio,
       skills: hg.skills || [],

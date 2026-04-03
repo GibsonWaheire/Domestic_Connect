@@ -24,13 +24,15 @@ const salaryToRange = (salary: number): string => {
   if (salary >= 25000) return 'KES 25,000 - 30,000';
   if (salary >= 20000) return 'KES 20,000 - 25,000';
   if (salary >= 15000) return 'KES 15,000 - 20,000';
-  if (salary >= 10000) return 'KES 10,000 - 15,000';
+  if (salary >= 1000) return 'KES 10,000 - 15,000'; // covers any real value incl. corrupted small numbers
   return '';
 };
 
 const salaryRangeToNumber = (range: string): number => {
-  const nums = range.replace(/[^0-9]/g, ' ').trim().split(/\s+/).map(Number).filter(Boolean);
-  return nums[0] || 0;
+  // Extract the first number, keeping commas so "10,000" parses as 10000 not 10
+  const match = range.match(/[\d,]+/);
+  if (!match) return 0;
+  return parseInt(match[0].replace(/,/g, ''), 10) || 0;
 };
 
 const defaultFormData: EditFormData = {
