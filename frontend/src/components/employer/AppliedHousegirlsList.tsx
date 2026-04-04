@@ -165,12 +165,13 @@ const AppliedHousegirlsList = ({ jobId, employerId }: AppliedHousegirlsListProps
                 )}
                 <div className="flex items-center justify-between mt-4">
                   {housegirl.contact_unlocked ? (
-                    <div className="flex items-center gap-3 text-sm text-green-600 font-medium">
-                      <Mail size={16} />
-                      <span>{housegirl.contact_details.email}</span>
-                      <Phone size={16} />
-                      <span>{housegirl.contact_details.phone_number}</span>
-                    </div>
+                    <Button
+                      size="sm"
+                      // onClick={() => handleMessageHousegirl(housegirl.housegirl_id)} // Placeholder for future messaging
+                      className="rounded-full text-xs px-4 bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      Message Housegirl
+                    </Button>
                   ) : (
                     <Button
                       size="sm"

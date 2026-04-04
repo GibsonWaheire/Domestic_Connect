@@ -100,25 +100,13 @@ export const UnlockModal = ({
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Mail className="h-5 w-5 text-green-600" />
-              <span>Contact Unlocked - {housegirlName}</span>
+              <span>Interaction Unlocked - {housegirlName}</span>
             </DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-2">
-            <p className="text-sm text-gray-700">You have successfully unlocked the contact details for {housegirlName}:</p>
-            <Card>
-              <CardContent className="p-4 space-y-2">
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-900">{unlockedContactDetails.email}</span>
-                </div>
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-gray-500" />
-                  <span className="text-sm font-medium text-gray-900">{unlockedContactDetails.phone_number}</span>
-                </div>
-              </CardContent>
-            </Card>
-            <p className="text-xs text-gray-500">These details are also available on the applicant's profile within the job posting.</p>
+            <p className="text-sm text-gray-700">You have successfully unlocked interaction with {housegirlName}. You can now message them through the platform.</p>
+            <p className="text-xs text-gray-500">Look for the "Message Housegirl" button on their profile within the job posting.</p>
           </div>
 
           <div className="flex items-center justify-end space-x-3 pt-4">
