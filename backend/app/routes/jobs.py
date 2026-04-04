@@ -133,6 +133,58 @@ def get_jobs():
             'error': 'Something went wrong. Please try again.'
         }), 500
 
+@jobs_bp.route('/my-applications', methods=['GET'])
+@firebase_auth_required
+def get_my_applications():
+    """Get all applications submitted by the current housegirl"""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        if getattr(user, 'user_type', '') != 'housegirl':
+            return jsonify({'error': 'Only housegirls can view their applications'}), 403
+
+        user_id = getattr(user, 'id')
+        apps_docs = list(db.collection('job_applications').where('housegirl_id', '==', user_id).stream())
+
+        result = []
+        for doc in apps_docs:
+            app_data = doc.to_dict()
+            job_id_ref = app_data.get('job_id')
+            job_title = ''
+            job_location = ''
+            job_salary_min = None
+            job_salary_max = None
+
+            if job_id_ref:
+                job_doc = db.collection('job_postings').document(job_id_ref).get()
+                if job_doc.exists:
+                    jd = job_doc.to_dict()
+                    job_title = jd.get('title', '')
+                    job_location = jd.get('location', '')
+                    job_salary_min = jd.get('salary_min')
+                    job_salary_max = jd.get('salary_max')
+
+            result.append({
+                'id': app_data.get('id'),
+                'job_id': job_id_ref,
+                'job_title': job_title,
+                'job_location': job_location,
+                'job_salary_min': job_salary_min,
+                'job_salary_max': job_salary_max,
+                'cover_letter': app_data.get('cover_letter'),
+                'status': app_data.get('status'),
+                'applied_at': app_data.get('applied_at'),
+            })
+
+        result.sort(key=lambda x: x.get('applied_at', ''), reverse=True)
+        return jsonify({'applications': result}), 200
+
+    except Exception as e:
+        logger.error(f'Error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
 @jobs_bp.route('/<job_id>', methods=['GET'])
 def get_job(job_id):
     """Get specific job posting"""

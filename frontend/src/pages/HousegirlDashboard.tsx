@@ -139,7 +139,7 @@ const HousegirlDashboard = () => {
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'ghost'}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'profile' | 'jobs' | 'messages' | 'settings')}
+              onClick={() => setActiveTab(tab.id as typeof activeTab)}
               className={`flex-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
             >
               {tab.label}
@@ -153,6 +153,7 @@ const HousegirlDashboard = () => {
             resolvedUserId={resolvedUserId}
             onOpenProfile={() => setActiveTab('profile')}
             onOpenSettings={() => setActiveTab('settings')}
+            onOpenJobs={() => setActiveTab('jobs')}
           />
         )}
         {activeTab === 'profile' && (
