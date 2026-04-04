@@ -7,7 +7,6 @@ import { Footer } from '@/components/employer/Footer';
 import { Housegirls } from '@/components/employer/Housegirls';
 import { Settings } from '@/components/employer/Settings';
 import { UnlockModal } from '@/components/employer/UnlockModal';
-import { JobPostingModal } from '@/components/employer/JobPostingModal';
 import AppliedHousegirlsList from '@/components/employer/AppliedHousegirlsList';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
@@ -16,11 +15,18 @@ import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Building2, Briefcase, LogOut, MapPin, MessageCircle, Phone, Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X } from 'lucide-react';
-import { KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS, WORK_TYPE_OPTIONS, EDUCATION_OPTIONS } from '@/constants/employer';
+import { Card, CardContent } from '@/components/ui/card';
+import {
+  Building2, Briefcase, LogOut, MapPin, MessageCircle, Phone,
+  Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X
+} from 'lucide-react';
+import {
+  KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS,
+  WORK_TYPE_OPTIONS, EDUCATION_OPTIONS
+} from '@/constants/employer';
 import { API_BASE_URL } from '@/lib/apiConfig';
 
+// ─── Application status styles ────────────────────────────────────────────────
 const appStatusStyles: Record<string, string> = {
   pending:  'bg-yellow-50 text-yellow-700 border-yellow-200',
   reviewed: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -28,6 +34,7 @@ const appStatusStyles: Record<string, string> = {
   rejected: 'bg-red-50 text-red-600 border-red-200',
 };
 
+// ─── Employer Messages sub-component ─────────────────────────────────────────
 const EmployerMessages = () => {
   const [applications, setApplications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -41,9 +48,7 @@ const EmployerMessages = () => {
     };
   };
 
-  useEffect(() => {
-    loadApplications();
-  }, []);
+  useEffect(() => { loadApplications(); }, []);
 
   const loadApplications = async () => {
     setLoading(true);
@@ -53,23 +58,8 @@ const EmployerMessages = () => {
       if (res.ok) {
         const data = await res.json();
         setApplications(data.applications || []);
-      } else {
-        const errorData = await res.json();
-        toast({
-          title: 'Error loading applications',
-          description: errorData.error || 'Please try again.',
-          variant: 'destructive',
-        });
       }
-    } catch (e: any) {
-      toast({
-        title: 'Error loading applications',
-        description: e.message || 'Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+    } catch { /* silent */ } finally { setLoading(false); }
   };
 
   const updateStatus = async (appId: string, status: string) => {
@@ -77,85 +67,72 @@ const EmployerMessages = () => {
     try {
       const headers = await authHeaders();
       const res = await fetch(`${API_BASE_URL}/api/jobs/applications/${appId}/status`, {
-        method: 'PUT',
-        headers,
-        body: JSON.stringify({ status }),
+        method: 'PUT', headers, body: JSON.stringify({ status }),
       });
-      const data = await res.json();
       if (res.ok) {
-        toast({ title: 'Application status updated', description: `Status set to ${status}.` });
-        loadApplications(); // Refresh list
-      } else {
-        toast({ title: 'Error updating status', description: data.error || 'Please try again.', variant: 'destructive' });
+        setApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
+        toast({ title: 'Status updated', description: `Marked as ${status}.` });
       }
-    } catch (e: any) {
-      toast({ title: 'Error updating status', description: e.message || 'Please try again.', variant: 'destructive' });
-    } finally {
-      setUpdatingId(null);
-    }
+    } finally { setUpdatingId(null); }
   };
 
+  if (loading) return <div className="py-10 text-center text-sm text-gray-400">Loading applications…</div>;
+
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-gray-900">All Job Applications</h2>
-        <Button onClick={loadApplications} variant="outline" size="sm" disabled={loading}>
-          {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : 'Refresh Applications'}
+    <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between">
+        <div>
+          <h2 className="text-lg font-semibold text-gray-900">All Job Applications</h2>
+          <p className="mt-1 text-sm text-gray-600">Housegirls who have applied to your job postings.</p>
+        </div>
+        <Button onClick={loadApplications} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-1" /> Refresh
         </Button>
       </div>
 
-      {loading ? (
-        <div className="grid md:grid-cols-2 gap-4">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="bg-white border border-gray-200 rounded-xl p-5 animate-pulse">
-              <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-              <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
-              <div className="h-4 bg-gray-200 rounded w-2/3" />
-            </div>
-          ))}
+      {applications.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
+          No applications yet. Post a job to start receiving applications from housegirls.
         </div>
-      ) : applications.length === 0 ? (
-        <Card>
-          <CardContent className="text-center py-10">
-            <MessageCircle className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-            <p className="text-sm text-gray-500">No applications received yet.</p>
-            <p className="text-xs text-gray-400 mt-1">Housegirls will appear here when they apply to your jobs.</p>
-          </CardContent>
-        </Card>
       ) : (
         <div className="grid md:grid-cols-2 gap-4">
           {applications.map((app) => (
             <Card key={app.id} className="border-gray-200">
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base leading-tight">{app.job_title}</CardTitle>
-                  <Badge className={`shrink-0 border text-xs ${appStatusStyles[app.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                    {app.status}
-                  </Badge>
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="font-semibold text-gray-900 text-sm">{app.job_title}</p>
+                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
+                      <Users size={11} /> {app.housegirl_name}
+                      {app.job_location && <><MapPin size={11} />{app.job_location}</>}
+                    </p>
+                  </div>
+                  <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${appStatusStyles[app.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                    {app.status || 'pending'}
+                  </span>
                 </div>
-                <CardDescription className="flex flex-wrap gap-2 mt-1 text-xs">
-                  <span className="flex items-center gap-1"><Users size={11} /> {app.housegirl_name}</span>
-                  {app.job_location && <span className="flex items-center gap-1"><MapPin size={11} />{app.job_location}</span>}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
                 {app.cover_letter && (
-                  <p className="text-sm text-gray-600 mb-3 line-clamp-2 italic">"{app.cover_letter}"</p>
+                  <p className="text-xs text-gray-500 italic mb-2 line-clamp-2">"{app.cover_letter}"</p>
                 )}
                 <p className="text-xs text-gray-400">
                   Applied {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
                 </p>
-                {app.status === 'pending' && (
-                  <div className="flex items-center gap-2 mt-4">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="rounded-full text-xs px-4"
-                      disabled={updatingId === app.id}
-                      onClick={() => updateStatus(app.id, 'reviewed')}
-                    >
-                      Mark Reviewed
+                {app.status !== 'accepted' && app.status !== 'rejected' && (
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" variant="outline" className="text-xs rounded-full"
+                      disabled={updatingId === app.id} onClick={() => updateStatus(app.id, 'accepted')}>
+                      Accept
                     </Button>
+                    <Button size="sm" variant="outline" className="text-xs rounded-full text-red-600 hover:bg-red-50"
+                      disabled={updatingId === app.id} onClick={() => updateStatus(app.id, 'rejected')}>
+                      Reject
+                    </Button>
+                    {app.status === 'pending' && (
+                      <Button size="sm" variant="outline" className="text-xs rounded-full"
+                        disabled={updatingId === app.id} onClick={() => updateStatus(app.id, 'reviewed')}>
+                        Mark Reviewed
+                      </Button>
+                    )}
                   </div>
                 )}
               </CardContent>
@@ -167,51 +144,21 @@ const EmployerMessages = () => {
   );
 };
 
-
+// ─── Main EmployerDashboard ───────────────────────────────────────────────────
 const EmployerDashboard = () => {
   const { user, loading, signOut } = useAuth();
   const navigate = useNavigate();
 
-  // Added states
-  const [activeTab, setActiveTab] = useState('housegirls');
-  const [showJobModal, setShowJobModal] = useState(false);
-  const [selectedJobIdForApplicants, setSelectedJobIdForApplicants] = useState<string | null>(null);
-
-  const handleViewApplicants = (jobId: string) => {
-    setSelectedJobIdForApplicants(jobId);
-  };
-
-  // Additional auth check - ensure only employers can access this dashboard
-  useEffect(() => {
-    if (!loading && user) {
-      if (user.user_type !== 'employer' && !user.is_admin) {
-        toast({
-          title: "Access Denied",
-          description: "This dashboard is only accessible to employers.",
-          variant: "destructive"
-        });
-
-        // Redirect based on user type
-        if (user.user_type === 'housegirl') {
-          navigate('/housegirl-dashboard');
-        } else if (user.user_type === 'agency') {
-          navigate('/agency-dashboard');
-        } else {
-          navigate('/');
-        }
-        return;
-      }
-    }
-  }, [user, loading, navigate]);
-
-  // State
+  // Navigation
   const [activeSection, setActiveSection] = useState('housegirls');
+
+  // Unlock modal
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);
   const [isUnlocking, setIsUnlocking] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  // Pagination and filtering state
+  // Search / filters
+  const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
   const [selectedCommunity, setSelectedCommunity] = useState('');
@@ -221,9 +168,8 @@ const EmployerDashboard = () => {
   const [selectedWorkType, setSelectedWorkType] = useState('');
   const [selectedExperience, setSelectedExperience] = useState('');
   const [selectedLivingArrangement, setSelectedLivingArrangement] = useState('');
-  const [unlockRestrictionMessage, setUnlockRestrictionMessage] = useState<string | null>(null);
 
-  // State for real data
+  // Data
   const [housegirls, setHousegirls] = useState<Housegirl[]>([]);
   const [jobPostings, setJobPostings] = useState<any[]>([]);
   const [showJobForm, setShowJobForm] = useState(false);
@@ -237,33 +183,29 @@ const EmployerDashboard = () => {
     experience: '', education: '', skills: [] as string[], deadline: '',
   });
   const [employerProfileData, setEmployerProfileData] = useState<{
-    full_name?: string;
-    first_name?: string;
-    last_name?: string;
-    location?: string;
-    phone?: string;
-    profile_photo_url?: string;
-    company_name?: string;
-    description?: string;
+    full_name?: string; first_name?: string; last_name?: string;
+    location?: string; phone?: string; profile_photo_url?: string;
+    company_name?: string; description?: string;
   } | null>(null);
 
-  // Use real-time data hook
-  const {
-    dashboardData,
-    loading: dataLoading,
-    error: dataError,
-    refreshing,
-    refreshData,
-  } = useRealTimeData();
+  // Real-time data
+  const { dashboardData, loading: dataLoading, error: dataError, refreshing, refreshData, lastUpdated } = useRealTimeData();
 
-  const refreshAllData = () => refreshData(true);
-  const fetchJobPostings = () => refreshData(true);
-  const fetchEmployerProfile = () => refreshData(true);
+  // Auth guard
+  useEffect(() => {
+    if (!loading && user) {
+      if (user.user_type !== 'employer' && !user.is_admin) {
+        if (user.user_type === 'housegirl') navigate('/housegirl-dashboard');
+        else if (user.user_type === 'agency') navigate('/agency-dashboard');
+        else navigate('/');
+      }
+    }
+  }, [user, loading, navigate]);
 
-  // Transform dashboard data when it changes
+  // Transform dashboard data
   useEffect(() => {
     const apiHousegirls = dashboardData?.available_data?.housegirls || [];
-    const transformed: Housegirl[] = apiHousegirls.map((hg: any) => ({
+    const transformed: Housegirl[] = (apiHousegirls as any[]).map((hg) => ({
       id: String(hg.id),
       name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
       age: hg.age,
@@ -291,369 +233,457 @@ const EmployerDashboard = () => {
       return 0;
     });
     setHousegirls(transformed);
-    setJobPostings(dashboardData?.available_data?.job_postings || []);
+    setJobPostings((dashboardData?.available_data as any)?.job_postings || []);
     setEmployerProfileData((dashboardData?.available_data as any)?.employer_profile || null);
   }, [dashboardData]);
 
-  // Derived filtered housegirls for current page
-  const filteredHousegirls = filterHousegirls(
-    housegirls,
-    searchTerm,
-    selectedCommunity,
-    selectedAgeRange,
-    selectedSalaryRange,
-    selectedEducation,
-    selectedWorkType,
-    selectedExperience,
-    selectedLivingArrangement
-  );
-  const totalPages = Math.ceil(filteredHousegirls.length / itemsPerPage);
-  const paginatedHousegirls = filteredHousegirls.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  useEffect(() => {
+    if (dataError) toast({ title: 'Data Sync Error', description: 'Failed to sync latest data.', variant: 'destructive' });
+  }, [dataError]);
 
-  const handlePageChange = (page: number) => {
-    setCurrentPage(page);
+  // Profile completion
+  const employerCompletionItems = [
+    { key: 'first-name', label: 'Add your first name', weight: 20, completed: Boolean((employerProfileData?.first_name || user?.first_name || '').trim()) },
+    { key: 'last-name', label: 'Add your last name', weight: 20, completed: Boolean((employerProfileData?.last_name || user?.last_name || '').trim()) },
+    { key: 'location', label: 'Add your location', weight: 15, completed: Boolean((employerProfileData?.location || (user as any)?.location || '').trim()) },
+    { key: 'photo', label: 'Upload a profile photo', weight: 20, completed: Boolean(employerProfileData?.profile_photo_url || (user as any)?.profile_photo_url) },
+    { key: 'company_name', label: 'Add your company name', weight: 10, completed: Boolean((employerProfileData?.company_name || '').trim()) },
+    { key: 'phone', label: 'Add your phone number', weight: 10, completed: Boolean((employerProfileData?.phone || (user as any)?.phone_number || '').trim()) },
+    { key: 'description', label: 'Add a company description', weight: 5, completed: Boolean((employerProfileData?.description || '').trim()) },
+  ] as const;
+
+  const employerProfileCompletion = employerCompletionItems.reduce((sum, item) => sum + (item.completed ? item.weight : 0), 0);
+
+  // Filtered / paginated housegirls
+  const filteredHousegirls = filterHousegirls(housegirls, searchTerm, selectedCommunity, selectedAgeRange, selectedSalaryRange, selectedEducation, selectedWorkType, selectedExperience, selectedLivingArrangement);
+  const stats = { activeJobs: jobPostings.filter((j: any) => j.status === 'active').length };
+
+  // Handlers
+  const handleLogout = async () => {
+    try { await signOut(); navigate('/'); }
+    catch { toast({ title: 'Logout failed', description: 'Please try again.', variant: 'destructive' }); }
   };
 
-  const handleSearchChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(event.target.value);
-    setCurrentPage(1); // Reset to first page on new search
-  };
-
-  const clearFilters = () => {
-    setSearchTerm('');
-    setSelectedCommunity('');
-    setSelectedAgeRange('');
-    setSelectedSalaryRange('');
-    setSelectedEducation('');
-    setSelectedWorkType('');
-    setSelectedExperience('');
-    setSelectedLivingArrangement('');
-    setCurrentPage(1);
-  };
-
-
-  const openUnlockModal = (housegirl: Housegirl) => {
+  const handleUnlockAttempt = (housegirl: Housegirl) => {
     setHousegirlToUnlock(housegirl);
     setShowUnlockModal(true);
-    setIsUnlocking(false); // Reset unlocking state
+    setIsUnlocking(false);
   };
 
-  const handleUnlockSuccess = () => {
-    // This will trigger a re-fetch in AppliedHousegirlsList if that's open
-    // For general housegirl list, we simply close the modal
+  const handleUnlockSuccess = async () => {
     setShowUnlockModal(false);
-    // Optionally refresh specific housegirl data here if needed for general list
+    await refreshData(false);
   };
 
-  const handleCreateOrUpdateJob = async () => {
-    if (!user) {
-      toast({ title: 'Error', description: 'User not authenticated.', variant: 'destructive' });
+  const handleJobSkillToggle = (skill: string) => {
+    setJobFormData(prev => ({
+      ...prev,
+      skills: prev.skills.includes(skill) ? prev.skills.filter(s => s !== skill) : [...prev.skills, skill],
+    }));
+  };
+
+  const handleCreateJob = async () => {
+    if (!jobFormData.title || !jobFormData.location || !jobFormData.salaryMin || !jobFormData.salaryMax) {
+      toast({ title: 'Missing required fields', description: 'Please fill in title, location, and salary range.', variant: 'destructive' });
       return;
     }
-
     setIsCreatingJob(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-
-      const payload = {
-        title: jobFormData.title,
-        description: jobFormData.description,
-        location: jobFormData.location,
-        salary_min: parseInt(jobFormData.salaryMin),
-        salary_max: parseInt(jobFormData.salaryMax),
-        accommodation_type: jobFormData.workType,
-        required_experience: jobFormData.experience,
-        required_education: jobFormData.education,
-        skills_required: jobFormData.skills,
-        application_deadline: jobFormData.deadline,
-        // status: 'active' (default in backend)
-      };
-
-      let res;
-      if (expandedJobId) { // Update existing job
-        res = await fetch(`${API_BASE_URL}/api/jobs/${expandedJobId}`, {
-          method: 'PUT',
-          headers,
-          body: JSON.stringify(payload),
-        });
-      } else { // Create new job
-        res = await fetch(`${API_BASE_URL}/api/jobs/`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(payload),
-        });
-      }
-
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: 'Error', description: data.error || 'Failed to save job.', variant: 'destructive' });
-        return;
-      }
-
-      toast({ title: 'Success', description: expandedJobId ? 'Job updated successfully!' : 'Job posted successfully!', });
-      setShowJobModal(false);
-      setExpandedJobId(null);
-      setJobFormData({
-        title: '', description: '', location: '',
-        salaryMin: '', salaryMax: '', workType: '',
-        experience: '', education: '', skills: [] as string[], deadline: '',
+      const res = await fetch(`${API_BASE_URL}/api/jobs/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({
+          title: jobFormData.title, description: jobFormData.description,
+          location: jobFormData.location,
+          salary_min: parseInt(jobFormData.salaryMin) || 0,
+          salary_max: parseInt(jobFormData.salaryMax) || 0,
+          accommodation_type: jobFormData.workType,
+          required_experience: jobFormData.experience,
+          required_education: jobFormData.education,
+          skills_required: jobFormData.skills,
+          application_deadline: jobFormData.deadline,
+        }),
       });
-      fetchJobPostings(); // Refresh job list
-
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'An unexpected error occurred.', variant: 'destructive' });
-    } finally {
-      setIsCreatingJob(false);
-    }
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to create job'); }
+      const newJob = await res.json();
+      setJobPostings(prev => [newJob, ...prev]);
+      setShowJobForm(false);
+      setJobFormData({ title: '', description: '', location: '', salaryMin: '', salaryMax: '', workType: '', experience: '', education: '', skills: [], deadline: '' });
+      toast({ title: 'Job posted!', description: `"${newJob.title}" is now live.` });
+      refreshData(false);
+    } catch (err: unknown) {
+      toast({ title: 'Failed to post job', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+    } finally { setIsCreatingJob(false); }
   };
 
-  const handleEditJob = (job: any) => {
-    setExpandedJobId(job.id);
-    setJobFormData({
-      title: job.title,
-      description: job.description,
-      location: job.location,
-      salaryMin: job.salary_min.toString(),
-      salaryMax: job.salary_max.toString(),
-      workType: job.accommodation_type,
-      experience: job.required_experience,
-      education: job.required_education,
-      skills: job.skills_required,
-      deadline: job.application_deadline,
-    });
-    setShowJobModal(true);
+  const handleViewApplicants = (jobId: string) => {
+    if (expandedJobId === jobId) { setExpandedJobId(null); return; }
+    setExpandedJobId(jobId);
   };
-
 
   const handleDeleteJob = async (jobId: string) => {
-    if (!user || !window.confirm('Are you sure you want to delete this job posting? This action cannot be undone.')) {
-      return;
-    }
-
+    if (!window.confirm('Delete this job posting? This cannot be undone.')) return;
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const headers = {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-
       const res = await fetch(`${API_BASE_URL}/api/jobs/${jobId}`, {
         method: 'DELETE',
-        headers,
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
-
-      if (!res.ok) {
-        const errorData = await res.json();
-        toast({ title: 'Error', description: errorData.error || 'Failed to delete job.', variant: 'destructive' });
-        return;
-      }
-
-      toast({ title: 'Success', description: 'Job posting deleted successfully.' });
-      fetchJobPostings(); // Refresh job list
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message || 'An unexpected error occurred.', variant: 'destructive' });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+      setJobPostings(prev => prev.filter((j: any) => j.id !== jobId));
+      toast({ title: 'Job deleted.' });
+    } catch (err: unknown) {
+      toast({ title: 'Failed to delete job', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     }
   };
 
+  const sidebarItems = [
+    { id: 'housegirls', label: 'Browse Housegirls', icon: Users },
+    { id: 'contacts',   label: 'My Contacts',       icon: Phone },
+    { id: 'jobs',       label: 'Post a Job',         icon: Briefcase },
+    { id: 'messages',   label: 'Messages',           icon: MessageCircle },
+    { id: 'agency',     label: 'Agency Services',    icon: Building2 },
+    { id: 'settings',   label: 'Settings',           icon: SettingsIcon },
+  ] as const;
 
-  if (loading || dataLoading) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-100">Loading dashboard...</div>;
-  }
+  // ─── Section renderer ────────────────────────────────────────────────────────
+  const renderSection = () => {
+    switch (activeSection) {
 
-  if (!user || dataError) {
-    return <div className="min-h-screen flex items-center justify-center bg-gray-100 text-red-600">Error loading user data or dashboard. Please try again.</div>;
-  }
+      case 'housegirls':
+        return (
+          <Housegirls
+            housegirls={housegirls}
+            filteredHousegirls={filteredHousegirls}
+            searchTerm={searchTerm}
+            selectedCommunity={selectedCommunity} setSelectedCommunity={setSelectedCommunity}
+            selectedAgeRange={selectedAgeRange} setSelectedAgeRange={setSelectedAgeRange}
+            selectedSalaryRange={selectedSalaryRange} setSelectedSalaryRange={setSelectedSalaryRange}
+            selectedEducation={selectedEducation} setSelectedEducation={setSelectedEducation}
+            selectedWorkType={selectedWorkType} setSelectedWorkType={setSelectedWorkType}
+            selectedExperience={selectedExperience} setSelectedExperience={setSelectedExperience}
+            selectedLivingArrangement={selectedLivingArrangement} setSelectedLivingArrangement={setSelectedLivingArrangement}
+            currentPage={currentPage} setCurrentPage={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            onUnlock={handleUnlockAttempt}
+          />
+        );
 
-  return (
-    <NotificationProvider>
-      <div className="min-h-screen bg-gray-100 flex flex-col">
-        <Header user={user} signOut={signOut} />
-
-        <main className="flex-1 container mx-auto px-4 py-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-6">Employer Dashboard</h1>
-          <div className="flex space-x-4 border-b border-gray-200 mb-6">
-            <Button
-              variant="ghost"
-              className={activeTab === 'housegirls' ? 'border-b-2 border-[#111] text-[#111] rounded-none' : 'text-gray-500'}
-              onClick={() => { setActiveTab('housegirls'); setSelectedJobIdForApplicants(null); }}
-            >
-              <Users className="h-4 w-4 mr-2" /> Housegirls
-            </Button>
-            <Button
-              variant="ghost"
-              className={activeTab === 'jobs' ? 'border-b-2 border-[#111] text-[#111] rounded-none' : 'text-gray-500'}
-              onClick={() => { setActiveTab('jobs'); setSelectedJobIdForApplicants(null); }}
-            >
-              <Briefcase className="h-4 w-4 mr-2" /> My Jobs
-            </Button>
-            <Button
-              variant="ghost"
-              className={activeTab === 'messages' ? 'border-b-2 border-[#111] text-[#111] rounded-none' : 'text-gray-500'}
-              onClick={() => { setActiveTab('messages'); setSelectedJobIdForApplicants(null); }}
-            >
-              <MessageCircle className="h-4 w-4 mr-2" /> Messages
-            </Button>
-            <Button
-              variant="ghost"
-              className={activeTab === 'settings' ? 'border-b-2 border-[#111] text-[#111] rounded-none' : 'text-gray-500'}
-              onClick={() => { setActiveTab('settings'); setSelectedJobIdForApplicants(null); }}
-            >
-              <SettingsIcon className="h-4 w-4 mr-2" /> Settings
-            </Button>
-          </div>
-
-          {/* Main content area based on activeTab */}
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            {/* Conditional rendering for tabs */}
-            {activeTab === 'housegirls' && (
-              <Housegirls
-                housegirls={housegirls}
-                filteredHousegirls={filteredHousegirls}
-                searchTerm={searchTerm}
-                selectedCommunity={selectedCommunity}
-                setSelectedCommunity={setSelectedCommunity}
-                selectedAgeRange={selectedAgeRange}
-                setSelectedAgeRange={setSelectedAgeRange}
-                selectedSalaryRange={selectedSalaryRange}
-                setSelectedSalaryRange={setSelectedSalaryRange}
-                selectedEducation={selectedEducation}
-                setSelectedEducation={setSelectedEducation}
-                selectedWorkType={selectedWorkType}
-                setSelectedWorkType={setSelectedWorkType}
-                selectedExperience={selectedExperience}
-                setSelectedExperience={setSelectedExperience}
-                selectedLivingArrangement={selectedLivingArrangement}
-                setSelectedLivingArrangement={setSelectedLivingArrangement}
-                currentPage={currentPage}
-                setCurrentPage={setCurrentPage}
-                itemsPerPage={itemsPerPage}
-                onUnlock={openUnlockModal}
-              />
-            )}
-            {activeTab === 'jobs' && (
-              <div className="space-y-6">
-                {selectedJobIdForApplicants && user?.id ? (
-                  <>
-                    <Button variant="outline" onClick={() => setSelectedJobIdForApplicants(null)} className="mb-4">
-                      Back to All Jobs
-                    </Button>
-                    <AppliedHousegirlsList jobId={selectedJobIdForApplicants} employerId={user.id} />
-                  </>
-                ) : (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-2xl font-bold text-gray-900">Your Job Postings</h2>
-                      <Button onClick={() => setShowJobModal(true)} className="bg-[#111] hover:bg-[#333] text-white">
-                        <Plus className="h-4 w-4 mr-2" /> Post a New Job
-                      </Button>
-                    </div>
-                    {dataLoading ? (
-                      <div className="grid md:grid-cols-2 gap-4">
-                        {[1, 2].map(i => (
-                          <Card key={i} className="animate-pulse">
-                            <CardHeader>
-                              <div className="h-5 bg-gray-200 rounded w-3/4 mb-2" />
-                              <div className="h-3 bg-gray-200 rounded w-1/2" />
-                            </CardHeader>
-                            <CardContent>
-                              <div className="h-4 bg-gray-200 rounded mb-2" />
-                              <div className="h-4 bg-gray-200 rounded w-5/6" />
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    ) : jobPostings.length === 0 ? (
-                      <Card>
-                        <CardContent className="text-center py-10">
-                          <Briefcase className="h-10 w-10 text-gray-300 mx-auto mb-3" />
-                          <p className="text-sm text-gray-500">You haven't posted any jobs yet.</p>
-                          <p className="text-xs text-gray-400 mt-1">Click "Post a New Job" to get started.</p>
-                          <Button onClick={() => setShowJobModal(true)} className="mt-6 bg-[#111] hover:bg-[#333] text-white">
-                            <Plus className="h-4 w-4 mr-2" /> Post a New Job
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    ) : (
-                      <div className="grid md:grid-cols-2 gap-4">
-                        {jobPostings.map((job) => (
-                          <Card key={job.id} className="border-gray-200 hover:shadow-md transition-shadow">
-                            <CardHeader className="pb-2">
-                              <div className="flex items-start justify-between gap-2">
-                                <CardTitle className="text-lg leading-tight">{job.title}</CardTitle>
-                                <Badge className="shrink-0 bg-green-50 text-green-700 text-xs font-medium px-2.5 py-1 rounded-full border border-green-200">
-                                  {job.status}
-                                </Badge>
-                              </div>
-                              <CardDescription className="flex flex-wrap gap-2 mt-1 text-xs">
-                                {job.location && <span className="flex items-center gap-1"><MapPin size={11} />{job.location}</span>}
-                                {(job.salary_min || job.salary_max) && (
-                                  <span>💰 KSh {(job.salary_min || 0).toLocaleString()}{job.salary_max ? ` – ${job.salary_max.toLocaleString()}` : '+'}/mo</span>
-                                )}
-                                {job.accommodation_type && <span>🏠 {job.accommodation_type}</span>}
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              {job.description && (
-                                <p className="text-sm text-gray-600 mb-3 line-clamp-2">{job.description}</p>
-                              )}
-                              <div className="flex flex-wrap gap-1.5 mb-3">
-                                {job.skills_required?.slice(0, 4).map((s: string) => (
-                                  <span key={s} className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">{s}</span>
-                                ))}
-                              </div>
-                              <div className="flex items-center justify-between mt-4">
-                                <span className="text-xs text-gray-400">{(job.applications_count || 0)} applicant{(job.applications_count || 0) !== 1 ? 's' : ''}</span>
-                                <div className="flex gap-2">
-                                  <Button variant="outline" size="sm" onClick={() => handleEditJob(job)} className="rounded-full text-xs px-4">
-                                    Edit
-                                  </Button>
-                                  <Button size="sm" onClick={() => handleViewApplicants(job.id)} className="rounded-full text-xs px-4 bg-blue-600 hover:bg-blue-700 text-white">
-                                    View Applicants
-                                  </Button>
-                                  <Button variant="destructive" size="sm" onClick={() => handleDeleteJob(job.id)} className="rounded-full text-xs px-4">
-                                    <Trash2 className="h-3 w-3 mr-1" /> Delete
-                                  </Button>
-                                </div>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
+      case 'contacts': {
+        const unlockedContacts = housegirls.filter(h => h.contactUnlocked);
+        return (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="text-lg font-semibold text-gray-900">My Contacts</h2>
+              <p className="mt-1 text-sm text-gray-600">Housegirls whose contact details you have unlocked.</p>
+            </div>
+            {unlockedContacts.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-600">
+                No contacts unlocked yet. Browse housegirls and click Unlock Contact.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                {unlockedContacts.map((c) => (
+                  <div key={c.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                    <p className="text-base font-semibold text-gray-900">{c.name}</p>
+                    <p className="mt-1 text-sm text-gray-600">{c.location}</p>
+                    <p className="mt-2 text-sm text-gray-700 flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-green-500" />{c.phone || 'Not available'}</p>
+                    <p className="text-sm text-gray-700 flex items-center gap-2"><Phone className="h-3.5 w-3.5 text-blue-500" />{c.email || 'Not available'}</p>
+                  </div>
+                ))}
               </div>
             )}
-            {activeTab === 'messages' && <EmployerMessages />}
-            {activeTab === 'settings' && <Settings user={user} employerProfile={employerProfileData} refreshEmployerProfile={fetchEmployerProfile} />}
           </div>
-        </main>
-        <Footer />
+        );
+      }
 
-        <JobPostingModal
-          isOpen={showJobModal}
-          onClose={() => { setShowJobModal(false); setExpandedJobId(null); setJobFormData({ title: '', description: '', location: '', salaryMin: '', salaryMax: '', workType: '', experience: '', education: '', skills: [] as string[], deadline: '', }); }}
-          onSubmit={handleCreateOrUpdateJob}
-          isSubmitting={isCreatingJob}
-          formData={jobFormData}
-          setFormData={setJobFormData}
-          isEditing={!!expandedJobId}
-        />
+      case 'jobs':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Post a Job</h2>
+                <p className="mt-1 text-sm text-gray-600">Create job postings and manage applications.</p>
+              </div>
+              <Button type="button" onClick={() => setShowJobForm(v => !v)}>
+                {showJobForm ? <><X className="h-4 w-4 mr-2" />Cancel</> : <><Plus className="h-4 w-4 mr-2" />New Job</>}
+              </Button>
+            </div>
 
-        {/* This modal is for general housegirl profile unlocks, not job-specific */}
+            {showJobForm && (
+              <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">Job Details</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    { label: 'Job Title *', field: 'title', type: 'text', placeholder: 'e.g. Full-time Housegirl' },
+                    { label: 'Salary Min (KES) *', field: 'salaryMin', type: 'number', placeholder: '15000' },
+                    { label: 'Salary Max (KES) *', field: 'salaryMax', type: 'number', placeholder: '25000' },
+                  ].map(({ label, field, type, placeholder }) => (
+                    <div key={field}>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+                      <input type={type} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                        value={(jobFormData as any)[field]} placeholder={placeholder}
+                        onChange={e => setJobFormData(p => ({ ...p, [field]: e.target.value }))} />
+                    </div>
+                  ))}
+                  {/* Location */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Location *</label>
+                    <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.location} onChange={e => setJobFormData(p => ({ ...p, location: e.target.value }))}>
+                      <option value="">Select city</option>
+                      {KENYA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  {/* Work Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Work Type</label>
+                    <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.workType} onChange={e => setJobFormData(p => ({ ...p, workType: e.target.value }))}>
+                      <option value="">Any</option>
+                      {WORK_TYPE_OPTIONS.map(w => <option key={w} value={w}>{w}</option>)}
+                    </select>
+                  </div>
+                  {/* Experience */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Experience Required</label>
+                    <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.experience} onChange={e => setJobFormData(p => ({ ...p, experience: e.target.value }))}>
+                      <option value="">Any</option>
+                      {EXPERIENCE_OPTIONS.map(ex => <option key={ex} value={ex}>{ex}</option>)}
+                    </select>
+                  </div>
+                  {/* Education */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Education Required</label>
+                    <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.education} onChange={e => setJobFormData(p => ({ ...p, education: e.target.value }))}>
+                      <option value="">Any</option>
+                      {EDUCATION_OPTIONS.map(ed => <option key={ed} value={ed}>{ed}</option>)}
+                    </select>
+                  </div>
+                  {/* Deadline */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Application Deadline</label>
+                    <input type="date" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400"
+                      value={jobFormData.deadline} min={new Date().toISOString().split('T')[0]}
+                      onChange={e => setJobFormData(p => ({ ...p, deadline: e.target.value }))} />
+                  </div>
+                </div>
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400" rows={3}
+                    value={jobFormData.description} placeholder="Describe duties, requirements, and expectations…"
+                    onChange={e => setJobFormData(p => ({ ...p, description: e.target.value }))} />
+                </div>
+                {/* Skills */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Skills Required</label>
+                  <div className="flex flex-wrap gap-2">
+                    {SKILLS_OPTIONS.map(skill => (
+                      <button key={skill} type="button" onClick={() => handleJobSkillToggle(skill)}
+                        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${jobFormData.skills.includes(skill) ? 'bg-gray-900 text-white border-gray-900' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-500'}`}>
+                        {skill}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <Button type="button" variant="outline" onClick={() => setShowJobForm(false)}>Cancel</Button>
+                  <Button type="button" onClick={handleCreateJob} disabled={isCreatingJob}>
+                    {isCreatingJob ? 'Posting…' : 'Post Job'}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Job postings list */}
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h3 className="text-base font-semibold text-gray-900 mb-3">My Job Postings</h3>
+              {jobPostings.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">No job postings yet. Click "New Job" to get started.</p>
+              ) : (
+                <div className="space-y-3">
+                  {jobPostings.map((job: any) => (
+                    <div key={job.id} className="rounded-lg border border-gray-100 bg-gray-50 overflow-hidden">
+                      <div className="flex items-start justify-between p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-gray-900">{job.title}</p>
+                            <Badge variant={job.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                              {job.status || 'active'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {job.location} · KES {job.salary_min?.toLocaleString()} – {job.salary_max?.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {job.applications_count ?? 0} applicant{(job.applications_count ?? 0) !== 1 ? 's' : ''} ·{' '}
+                            Posted {job.created_at ? new Date(job.created_at).toLocaleDateString() : '—'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                          <button type="button" onClick={() => handleViewApplicants(job.id)}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
+                            <Users className="h-3.5 w-3.5" />
+                            {expandedJobId === job.id ? 'Hide' : 'View Applicants'}
+                          </button>
+                          <button type="button" onClick={() => handleDeleteJob(job.id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors" title="Delete job">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* AppliedHousegirlsList with unlock flow */}
+                      {expandedJobId === job.id && user?.id && (
+                        <div className="border-t border-gray-200 bg-white p-4">
+                          <AppliedHousegirlsList jobId={job.id} employerId={user.id} />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+
+      case 'messages':
+        return <EmployerMessages />;
+
+      case 'settings':
+        return <Settings stats={stats} profileData={employerProfileData} />;
+
+      case 'agency':
+        return (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <h2 className="text-lg font-semibold text-gray-900">Agency Services</h2>
+              <p className="mt-1 text-sm text-gray-600">
+                Explore trusted agency options and packages when you need fully managed hiring support.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-base font-semibold text-gray-900">Agency Marketplace</p>
+                <p className="mt-1 text-sm text-gray-600">Compare agencies by services and location before you hire.</p>
+                <Button type="button" className="mt-3" onClick={() => navigate('/agency-marketplace')}>
+                  Browse Agencies
+                </Button>
+              </div>
+              <div className="rounded-xl border border-gray-200 bg-white p-4">
+                <p className="text-base font-semibold text-gray-900">Agency Packages</p>
+                <p className="mt-1 text-sm text-gray-600">View package plans with replacement and support options.</p>
+                <Button type="button" variant="outline" className="mt-3" onClick={() => navigate('/agency-packages')}>
+                  View Packages
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  // ─── Loading / auth states ────────────────────────────────────────────────────
+  if (loading || dataLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-16 h-16 rounded-full border border-gray-200 bg-white flex items-center justify-center mx-auto mb-4">
+            <div className="w-8 h-8 border-2 border-gray-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Loading Dashboard</h2>
+          <p className="text-gray-600">Please wait while we load your account and data…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) return null;
+
+  // ─── Render ───────────────────────────────────────────────────────────────────
+  return (
+    <NotificationProvider>
+      <div className="min-h-screen bg-gray-50">
+        <div className="flex flex-col overflow-hidden">
+          <Header searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
+
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+            {/* Welcome */}
+            <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-3 mb-1">
+                  <h1 className="text-2xl font-bold text-gray-900">
+                    {user?.first_name ? `Welcome back, ${user.first_name}` : 'Welcome, Employer'}
+                  </h1>
+                  <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-xs font-medium border border-gray-200">
+                    👔 Employer Account
+                  </span>
+                </div>
+                <p className="text-gray-500 text-sm">Find and manage the perfect domestic staff for your home.</p>
+              </div>
+            </div>
+
+            {/* Profile completion banner */}
+            <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-semibold text-blue-900">Profile Live ({employerProfileCompletion}%)</h3>
+                <p className="text-sm text-blue-800 mt-1">
+                  You can unlock contacts and post jobs! Add more details to stand out to candidates.
+                </p>
+              </div>
+              <Button onClick={() => setActiveSection('settings')} className="bg-blue-600 hover:bg-blue-700 text-white shrink-0" size="sm">
+                {employerProfileCompletion < 100 ? 'Add Details →' : 'Edit Profile'}
+              </Button>
+            </div>
+
+            {/* Navigation bar */}
+            <div className="mb-4 flex flex-wrap items-center gap-2 bg-white rounded-xl p-2 border border-gray-200 shadow-sm">
+              <div className="flex overflow-x-auto gap-2 w-full md:w-auto flex-1">
+                {sidebarItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = activeSection === item.id;
+                  return (
+                    <Button key={item.id} type="button" variant="outline"
+                      onClick={() => item.id === 'housegirls' ? navigate('/housegirls') : setActiveSection(item.id)}
+                      className={isActive ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-gray-700'}>
+                      <Icon className="h-4 w-4 mr-2" />{item.label}
+                    </Button>
+                  );
+                })}
+                <Button type="button" variant="outline" className="ml-auto" onClick={() => refreshData(false)} disabled={refreshing}>
+                  <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button type="button" variant="outline" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4 mr-2" />Log Out
+                </Button>
+              </div>
+            </div>
+
+            {lastUpdated && (
+              <p className="mb-3 text-xs text-gray-500">Last updated: {lastUpdated.toLocaleTimeString()}</p>
+            )}
+
+            {renderSection()}
+          </main>
+
+          <Footer filteredHousegirlsCount={filteredHousegirls.length} />
+        </div>
+
+        {/* Unlock modal */}
         <UnlockModal
           isOpen={showUnlockModal}
-          onClose={() => setShowUnlockModal(false)}
+          onClose={() => { setShowUnlockModal(false); setHousegirlToUnlock(null); }}
           housegirlId={housegirlToUnlock?.id || ''}
           housegirlName={housegirlToUnlock?.name || ''}
-          jobId={''} // Pass empty string as it's not job-specific
+          jobId=""
           onPaymentInitiated={() => setIsUnlocking(true)}
           onContactUnlocked={handleUnlockSuccess}
         />
