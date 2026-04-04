@@ -17,6 +17,79 @@ import JobsTab from '@/components/housegirl/JobsTab';
 import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
 import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 
+const statusStyles: Record<string, string> = {
+  pending:  'bg-yellow-50 text-yellow-700 border-yellow-200',
+  reviewed: 'bg-blue-50 text-blue-700 border-blue-200',
+  accepted: 'bg-green-50 text-green-700 border-green-200',
+  rejected: 'bg-red-50 text-red-600 border-red-200',
+};
+
+const HousegirlMessages = () => {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const token = await FirebaseAuthService.getIdToken().catch(() => null);
+        const res = await fetch(`${API_BASE_URL}/api/jobs/my-applications`, {
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setApplications(data.applications || []);
+        }
+      } catch { /* ignore */ } finally { setLoading(false); }
+    };
+    load();
+  }, []);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-xl flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-blue-600" />
+          My Applications
+        </CardTitle>
+        <CardDescription>Status updates for jobs you have applied to</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {loading ? (
+          <div className="flex justify-center py-10">
+            <div className="w-7 h-7 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : applications.length === 0 ? (
+          <div className="text-center py-12">
+            <MessageCircle className="h-14 w-14 text-gray-300 mx-auto mb-3" />
+            <h3 className="text-base font-medium text-gray-700 mb-1">No applications yet</h3>
+            <p className="text-sm text-gray-500">Apply to jobs from the Jobs tab and track their status here.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {applications.map((app: any) => (
+              <div key={app.id} className="rounded-xl border border-gray-200 bg-white p-4 flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{app.job_title || 'Job Opening'}</p>
+                  {app.job_location && <p className="text-xs text-gray-500 mt-0.5">{app.job_location}</p>}
+                  {app.cover_letter && (
+                    <p className="text-xs text-gray-400 italic mt-1.5 line-clamp-2">"{app.cover_letter}"</p>
+                  )}
+                  <p className="text-xs text-gray-400 mt-1">
+                    Applied {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
+                  </p>
+                </div>
+                <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${statusStyles[app.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                  {app.status || 'pending'}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const HousegirlDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
@@ -184,23 +257,7 @@ const HousegirlDashboard = () => {
           />
         )}
         {activeTab === 'jobs' && <JobsTab user={user} />}
-        {activeTab === 'messages' && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Messages</CardTitle>
-              <CardDescription>Communicate with potential employers</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12">
-                <MessageCircle className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No messages yet</h3>
-                <p className="text-gray-600 mb-4">
-                  When employers contact you about job opportunities, you will see their messages here.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        )}
+        {activeTab === 'messages' && <HousegirlMessages />}
         {activeTab === 'settings' && <SettingsTab />}
       </div>
     </div>

@@ -14,9 +14,135 @@ import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Briefcase, LogOut, Phone, Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X } from 'lucide-react';
+import { Building2, Briefcase, LogOut, MessageCircle, Phone, Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X } from 'lucide-react';
 import { KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS, WORK_TYPE_OPTIONS, EDUCATION_OPTIONS } from '@/constants/employer';
 import { API_BASE_URL } from '@/lib/apiConfig';
+
+const appStatusStyles: Record<string, string> = {
+  pending:  'bg-yellow-50 text-yellow-700 border-yellow-200',
+  reviewed: 'bg-blue-50 text-blue-700 border-blue-200',
+  accepted: 'bg-green-50 text-green-700 border-green-200',
+  rejected: 'bg-red-50 text-red-600 border-red-200',
+};
+
+const EmployerMessages = () => {
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const token = await FirebaseAuthService.getIdToken().catch(() => null);
+        const res = await fetch(`${API_BASE_URL}/api/jobs/employer-applications`, {
+          headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setApplications(data.applications || []);
+        }
+      } catch { /* ignore */ } finally { setLoading(false); }
+    };
+    load();
+  }, []);
+
+  const updateStatus = async (appId: string, status: string) => {
+    setUpdatingId(appId);
+    try {
+      const token = await FirebaseAuthService.getIdToken().catch(() => null);
+      const res = await fetch(`${API_BASE_URL}/api/jobs/applications/${appId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ status }),
+      });
+      if (res.ok) {
+        setApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
+        toast({ title: 'Status updated', description: `Marked as ${status}.` });
+      }
+    } catch {
+      toast({ title: 'Update failed', variant: 'destructive' });
+    } finally { setUpdatingId(null); }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="rounded-xl border border-gray-200 bg-white p-4">
+        <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+          <MessageCircle className="h-5 w-5 text-blue-600" />
+          Job Applications Received
+        </h2>
+        <p className="mt-1 text-sm text-gray-600">Housegirls who have applied to your job postings.</p>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-10">
+          <div className="w-7 h-7 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+        </div>
+      ) : applications.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center text-sm text-gray-500">
+          <MessageCircle className="h-10 w-10 text-gray-300 mx-auto mb-3" />
+          No applications yet. Post a job to start receiving applications from housegirls.
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {applications.map((app: any) => (
+            <div key={app.id} className="rounded-xl border border-gray-200 bg-white p-4 space-y-2">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900">{app.housegirl_name || 'Applicant'}</p>
+                  <p className="text-xs text-gray-500">Applied for: <span className="font-medium text-gray-700">{app.job_title}</span></p>
+                  {app.job_location && <p className="text-xs text-gray-400">{app.job_location}</p>}
+                </div>
+                <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${appStatusStyles[app.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
+                  {app.status || 'pending'}
+                </span>
+              </div>
+              {app.cover_letter && (
+                <p className="text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2 italic">"{app.cover_letter}"</p>
+              )}
+              <div className="flex items-center gap-2 flex-wrap text-xs text-gray-400">
+                {app.applied_at && <span>Applied {new Date(app.applied_at).toLocaleDateString()}</span>}
+                {app.housegirl_phone && <span>📞 {app.housegirl_phone}</span>}
+              </div>
+              {app.status !== 'accepted' && app.status !== 'rejected' && (
+                <div className="flex gap-2 pt-1">
+                  <Button
+                    size="sm"
+                    className="bg-green-600 hover:bg-green-700 text-white rounded-full text-xs px-4"
+                    disabled={updatingId === app.id}
+                    onClick={() => updateStatus(app.id, 'accepted')}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-red-600 border-red-200 hover:bg-red-50 rounded-full text-xs px-4"
+                    disabled={updatingId === app.id}
+                    onClick={() => updateStatus(app.id, 'rejected')}
+                  >
+                    Reject
+                  </Button>
+                  {app.status === 'pending' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="rounded-full text-xs px-4"
+                      disabled={updatingId === app.id}
+                      onClick={() => updateStatus(app.id, 'reviewed')}
+                    >
+                      Mark Reviewed
+                    </Button>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const EmployerDashboard = () => {
   const { user, loading, signOut } = useAuth();
@@ -436,6 +562,7 @@ const EmployerDashboard = () => {
     { id: 'housegirls', label: 'Browse Housegirls', icon: Users },
     { id: 'contacts', label: 'My Contacts', icon: Phone },
     { id: 'jobs', label: 'Post a Job', icon: Briefcase },
+    { id: 'messages', label: 'Messages', icon: MessageCircle },
     { id: 'agency', label: 'Agency Services', icon: Building2 },
     { id: 'settings', label: 'Settings', icon: SettingsIcon },
   ] as const;
@@ -745,6 +872,8 @@ const EmployerDashboard = () => {
             </div>
           </div>
         );
+      case 'messages':
+        return <EmployerMessages />;
       case 'settings':
         return (
           <Settings

@@ -522,9 +522,99 @@ def get_job_applications(job_id):
             })
         
         return jsonify({'applications': result}), 200
-        
+
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
+
+
+@jobs_bp.route('/employer-applications', methods=['GET'])
+@firebase_auth_required
+def get_employer_applications():
+    """All applications across all jobs posted by the logged-in employer"""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        job_docs = list(
+            db.collection('job_postings')
+            .where('employer_id', '==', getattr(user, 'id'))
+            .stream()
+        )
+
+        result = []
+        for job_doc in job_docs:
+            job = job_doc.to_dict()
+            job_id = job_doc.id
+            app_docs = list(
+                db.collection('job_applications').where('job_id', '==', job_id).stream()
+            )
+            for app_doc in app_docs:
+                app = app_doc.to_dict()
+                hg_id = app.get('housegirl_id', '')
+                hg_name, hg_phone = '', ''
+                if hg_id:
+                    hg_doc = db.collection('users').document(hg_id).get()
+                    if hg_doc.exists:
+                        hg = hg_doc.to_dict()
+                        hg_name = f"{hg.get('first_name', '')} {hg.get('last_name', '')}".strip()
+                        hg_phone = hg.get('phone_number', '')
+                result.append({
+                    'id': app.get('id') or app_doc.id,
+                    'job_id': job_id,
+                    'job_title': job.get('title', ''),
+                    'job_location': job.get('location', ''),
+                    'housegirl_id': hg_id,
+                    'housegirl_name': hg_name or 'Applicant',
+                    'housegirl_phone': hg_phone,
+                    'cover_letter': app.get('cover_letter', ''),
+                    'status': app.get('status', 'pending'),
+                    'applied_at': app.get('applied_at', ''),
+                })
+
+        result.sort(key=lambda x: x.get('applied_at') or '', reverse=True)
+        return jsonify({'applications': result}), 200
+
+    except Exception as e:
+        logger.error(f'get_employer_applications error: {str(e)}')
+        return jsonify({'error': 'Something went wrong.'}), 500
+
+
+@jobs_bp.route('/applications/<app_id>/status', methods=['PUT'])
+@firebase_auth_required
+def update_application_status(app_id):
+    """Employer updates an application status"""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+
+        data = request.get_json() or {}
+        new_status = data.get('status', '')
+        if new_status not in ('pending', 'reviewed', 'accepted', 'rejected'):
+            return jsonify({'error': 'Invalid status'}), 400
+
+        app_ref = db.collection('job_applications').document(app_id)
+        app_snap = app_ref.get()
+        if not app_snap.exists:
+            docs = list(db.collection('job_applications').where('id', '==', app_id).limit(1).stream())
+            if not docs:
+                return jsonify({'error': 'Application not found'}), 404
+            app_ref = docs[0].reference
+            app_snap = docs[0]
+
+        app = app_snap.to_dict()
+        job_doc = db.collection('job_postings').document(app.get('job_id', '')).get()
+        if not job_doc.exists or job_doc.to_dict().get('employer_id') != getattr(user, 'id'):
+            return jsonify({'error': 'Forbidden'}), 403
+
+        from datetime import datetime
+        app_ref.update({'status': new_status, 'reviewed_at': datetime.utcnow().isoformat()})
+        return jsonify({'success': True, 'status': new_status}), 200
+
+    except Exception as e:
+        logger.error(f'update_application_status error: {str(e)}')
+        return jsonify({'error': 'Something went wrong.'}), 500
