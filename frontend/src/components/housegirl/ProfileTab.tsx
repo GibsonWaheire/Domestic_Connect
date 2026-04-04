@@ -47,6 +47,7 @@ const defaultFormData: EditFormData = {
   languages: '',
   role: '',
   age: '',
+  phone: '',
 };
 
 const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }: ProfileTabProps) => {
@@ -89,6 +90,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
           languages: apiLanguages.join(', '),
           role: result?.role || '',
           age: result?.age ? String(result.age) : '',
+          phone: result?.phone_number || user?.phone_number || '',
         });
       } catch {
         setEditFormData(defaultFormData);
@@ -196,6 +198,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
     if (!resolvedUserId) return;
 
     const requiredFields = [
+      { key: 'phone', label: 'Phone Number' },
       { key: 'role', label: 'Role' },
       { key: 'location', label: 'Location' },
       { key: 'expectedSalary', label: 'Expected Salary' },
@@ -229,6 +232,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         },
         body: JSON.stringify({
           full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          phone_number: editFormData.phone,
           role: editFormData.role,
           skills: editFormData.skills,
           languages: normalizedLanguages,
@@ -274,6 +278,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
         languages: savedLanguages.join(', '),
         role: saved?.role || editFormData.role,
         age: saved?.age ? String(saved.age) : editFormData.age,
+        phone: saved?.phone_number || editFormData.phone,
       });
       if (saved?.profile_photo_url) {
         onProfilePhotoChange(toAbsolutePhotoUrl(saved.profile_photo_url) || saved.profile_photo_url);
@@ -398,7 +403,11 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Phone</label>
-                    <p className="text-gray-900">{user.phone_number || 'Not provided'}</p>
+                    {editFormData.phone || user.phone_number ? (
+                      <p className="text-gray-900">{editFormData.phone || user.phone_number}</p>
+                    ) : (
+                      <p className="text-red-600 font-medium text-sm">⚠ Phone number required — add it to appear in search results</p>
+                    )}
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Age</label>

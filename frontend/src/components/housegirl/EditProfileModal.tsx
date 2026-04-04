@@ -22,6 +22,7 @@ export interface EditFormData {
   languages: string;
   role: string;
   age: string;
+  phone: string;
 }
 
 interface EditProfileModalProps {
@@ -62,6 +63,20 @@ const EditProfileModal = ({
           </div>
 
           <div className="space-y-6">
+            <div>
+              <label className="text-sm font-medium text-gray-700">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="tel"
+                className="w-full mt-1 p-2 border border-gray-300 rounded-md text-sm"
+                placeholder="e.g., 0712345678"
+                value={data.phone || ''}
+                onChange={(e) => onChange('phone', e.target.value)}
+              />
+              <p className="text-xs text-gray-500 mt-1">This is the number employers will call after unlocking your profile. Required.</p>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="text-sm font-medium text-gray-700">

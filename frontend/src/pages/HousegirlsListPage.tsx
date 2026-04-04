@@ -166,7 +166,10 @@ const HousegirlsListPage = () => {
         setLoading(true);
         setError(null);
 
-        const response = await fetch(`${API_BASE_URL}/api/housegirls/`);
+        const token = await FirebaseAuthService.getIdToken().catch(() => null);
+        const response = await fetch(`${API_BASE_URL}/api/housegirls/`, {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        });
 
         if (!response.ok) {
           setProfiles([]);
@@ -177,12 +180,18 @@ const HousegirlsListPage = () => {
 
         const data = await response.json();
         const apiProfiles: ApiHousegirl[] = data?.housegirls || [];
+        const alreadyUnlocked: Record<string, { phone?: string; email?: string }> = {};
         const mappedProfiles: Profile[] = apiProfiles.map((profile) => {
           const firstName = profile.first_name?.trim() || '';
           const lastName = profile.last_name?.trim() || '';
           const rawName = profile.name?.trim() || `${firstName} ${lastName}`.trim();
           const name = isRealName(rawName) ? rawName : 'Housegirl';
           const location = profile.location || 'Location not provided';
+          const phone = profile.phone_number || profile.phone || '';
+          const isContactVisible = phone && phone !== 'Unlock to view';
+          if (isContactVisible) {
+            alreadyUnlocked[String(profile.id)] = { phone };
+          }
           return {
             id: String(profile.id),
             name,
@@ -192,13 +201,16 @@ const HousegirlsListPage = () => {
             experienceYears: parseExperienceYears(profile.experience),
             monthlyRate: Number(profile.expected_salary) || 0,
             available: Boolean(profile.is_available),
-            phone: profile.phone_number || profile.phone || 'Unlock to view',
+            phone: isContactVisible ? phone : 'Unlock to view',
             exactLocation: location,
             avatar: toAbsolutePhotoUrl(profile.profile_photo_url),
             unlockCount: Number(profile.unlock_count) || 0,
           };
         });
         setProfiles(mappedProfiles);
+        if (Object.keys(alreadyUnlocked).length > 0) {
+          setUnlockedProfiles((prev) => ({ ...prev, ...alreadyUnlocked }));
+        }
         setError(null);
       } catch (err) {
         console.error('Fetch error:', err);
@@ -241,7 +253,7 @@ const HousegirlsListPage = () => {
     }
     const found = profiles.find((profile) => profile.id === profileId);
     if (found && found.unlockCount >= 3) {
-      setHighDemandWarning(`⚡ High demand — unlocked ${found.unlockCount} times. They may not be available.`);
+      setHighDemandWarning(`⚠ This profile has already been contacted by ${found.unlockCount} employers and may already be hired. You can still unlock to try reaching them.`);
     } else {
       setHighDemandWarning(null);
     }
@@ -781,12 +793,12 @@ const HousegirlsListPage = () => {
                             <h3 className="text-[18px] font-semibold text-[#111] leading-none mb-1">{profile.name}</h3>
 
                             {profile.unlockCount >= 3 ? (
-                              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-300 px-2 py-0.5 rounded-full w-fit mx-auto md:mx-0">
-                                ⚡ High demand · unlocked {profile.unlockCount} times
+                              <div className="text-[11px] text-red-700 bg-red-50 border border-red-300 px-2 py-0.5 rounded-full w-fit mx-auto md:mx-0">
+                                ⚠ Already contacted by {profile.unlockCount} employer{profile.unlockCount !== 1 ? 's' : ''} — may be hired
                               </div>
                             ) : profile.unlockCount > 0 ? (
-                              <div className="text-[11px] text-amber-600 w-fit mx-auto md:mx-0">
-                                🔓 Unlocked {profile.unlockCount} times
+                              <div className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full w-fit mx-auto md:mx-0">
+                                👁 Viewed by {profile.unlockCount} employer{profile.unlockCount !== 1 ? 's' : ''}
                               </div>
                             ) : null}
 

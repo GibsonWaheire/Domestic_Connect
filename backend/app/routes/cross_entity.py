@@ -149,6 +149,10 @@ def get_housegirls_for_employer(current_user_id=None, include_unavailable=False)
             user_data = data_bundle['user_data']
             hg_profile = data_bundle['hg_profile']
 
+            # Exclude profiles without a phone number — they cannot be contacted
+            if not user_data.get('phone_number') and not hg_profile.get('phone_number'):
+                continue
+
             # Visibility/Availability logic
             profile_is_available = hg_profile.get('is_available', True)
 

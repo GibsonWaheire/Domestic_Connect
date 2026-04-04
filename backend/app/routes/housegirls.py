@@ -288,6 +288,10 @@ def get_housegirls():
                 if profile_is_available != is_avail_bool:
                     continue
 
+            # Exclude profiles without a phone number — they cannot be contacted
+            if not user_data.get('phone_number') and not hg_profile.get('phone_number'):
+                continue
+
             # Unlock count — use pre-fetched maps, no extra queries
             profile_id_str = str(hg_profile.get('profile_id') or '')
             uid_str = str(user_id)
@@ -423,7 +427,13 @@ def get_housegirl(housegirl_id):
             last_name = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
 
         current_user_id = get_authenticated_user_id_from_request()
-        can_view_contact = has_contact_access(current_user_id, housegirl_id)
+        # Owner can always see their own contact details
+        is_own_profile = current_user_id and (
+            current_user_id == housegirl_id or
+            current_user_id == normalize_id(housegirl_id) or
+            housegirl_id == normalize_id(str(current_user_id))
+        )
+        can_view_contact = is_own_profile or has_contact_access(current_user_id, housegirl_id)
         unlock_count = get_unlock_count(housegirl_id, profile_id)
         computed_is_available = housegirl.get('is_available', True)
         
@@ -453,6 +463,7 @@ def get_housegirl(housegirl_id):
             'first_name': first_name,
             'last_name': last_name,
             'phone': phone_number if can_view_contact else 'Unlock to view',
+            'phone_number': phone_number if can_view_contact else '',
             'email': email if can_view_contact else 'Unlock to view',
             'created_at': housegirl.get('created_at'),
             'updated_at': housegirl.get('updated_at')
