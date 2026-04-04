@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock, Star } from 'lucide-react';
+import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock, Star, ShieldCheck, Zap, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 
@@ -9,7 +9,21 @@ const LandingPage = () => {
   const navigate = useNavigate();
   const heroImage = '/woooies.avif';
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [heroSlide, setHeroSlide] = useState(0);
   const { user } = useAuth();
+
+  const heroSlides = [
+    { type: 'image' },
+    { type: 'features' },
+    { type: 'stats' },
+  ];
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setHeroSlide(prev => (prev + 1) % heroSlides.length);
+    }, 4500);
+    return () => clearInterval(timer);
+  }, []);
 
   const localBusinessSchema = {
     "@context": "https://schema.org",
@@ -141,14 +155,14 @@ const LandingPage = () => {
             )}
           </div>
 
-          {/* hamburger — mobile only */}
+          {/* hamburger — all screen sizes (full site nav lives here) */}
           <button
             type="button"
             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
             aria-controls="landing-main-menu"
             onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="md:hidden inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors border-0"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors border-0"
           >
             <Menu className="h-5 w-5" />
           </button>
@@ -270,15 +284,83 @@ const LandingPage = () => {
             </a>
           </div>
 
-          {/* Hero image — profiles removed, shown on /housegirls instead */}
+          {/* Hero Carousel */}
           <div className="w-full max-w-md mx-auto">
-            <div className="w-full rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-              <img src={heroImage} alt="House help in Kenya" className="h-56 w-full object-cover" />
-              <div className="p-4 flex items-center justify-between">
-                <p className="text-sm font-medium text-[#111]">500+ verified workers listed</p>
-                <Button onClick={() => navigate('/housegirls')} size="sm" className="rounded-full bg-[#111] hover:bg-[#333] text-white text-xs px-4">
-                  Browse →
+            <style>{`
+              @keyframes kenBurns {
+                0%   { transform: scale(1)    translate(0%,   0%); }
+                100% { transform: scale(1.12) translate(-3%, -2%); }
+              }
+              .hero-ken-burns { animation: kenBurns 9s ease-in-out infinite alternate; }
+            `}</style>
+            <div className="w-full rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden relative h-72">
+
+              {/* Slide 0 — Image with Ken Burns */}
+              <div className={`absolute inset-0 transition-opacity duration-700 ${heroSlide === 0 ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                <div className="relative h-full overflow-hidden">
+                  <img src={heroImage} alt="House help in Kenya" className="hero-ken-burns h-full w-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                  <div className="absolute bottom-9 left-4 right-4">
+                    <p className="text-white font-semibold text-sm drop-shadow">500+ verified workers listed</p>
+                    <Button onClick={() => navigate('/housegirls')} size="sm" className="mt-2 rounded-full bg-white text-[#111] hover:bg-gray-100 text-xs px-4 h-7 shadow">
+                      Browse →
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Slide 1 — Feature highlights */}
+              <div className={`absolute inset-0 transition-opacity duration-700 ${heroSlide === 1 ? 'opacity-100' : 'opacity-0 pointer-events-none'} bg-white px-6 py-7 flex flex-col justify-center`}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-700 mb-5">Why families trust us</p>
+                <div className="flex flex-col gap-4">
+                  {[
+                    { icon: <ShieldCheck size={18} />, title: 'Verified Profiles', desc: 'Every worker is ID-checked and background-verified.' },
+                    { icon: <Zap size={18} />, title: 'Same-Day Access', desc: 'Pay KES 200 and call directly — no waiting.' },
+                    { icon: <ThumbsUp size={18} />, title: 'No Hidden Fees', desc: 'One payment. Direct contact. Zero commissions.' },
+                  ].map(({ icon, title, desc }) => (
+                    <div key={title} className="flex items-start gap-3">
+                      <div className="w-9 h-9 rounded-full bg-amber-50 text-amber-700 flex items-center justify-center flex-shrink-0">{icon}</div>
+                      <div>
+                        <p className="font-semibold text-[#111] text-sm leading-snug">{title}</p>
+                        <p className="text-gray-500 text-xs leading-relaxed">{desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Slide 2 — Stats / trust */}
+              <div className={`absolute inset-0 transition-opacity duration-700 ${heroSlide === 2 ? 'opacity-100' : 'opacity-0 pointer-events-none'} bg-[#111] px-6 py-7 flex flex-col justify-center`}>
+                <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-6">By the numbers</p>
+                <div className="grid grid-cols-2 gap-5">
+                  {[
+                    { value: '500+', label: 'Verified Workers' },
+                    { value: '15+', label: 'Cities in Kenya' },
+                    { value: 'KES 200', label: 'One-time fee' },
+                    { value: '< 48 hrs', label: 'Avg. time to hire' },
+                  ].map(({ value, label }) => (
+                    <div key={label} className="text-center">
+                      <p className="text-2xl font-extrabold text-white leading-none">{value}</p>
+                      <p className="text-[11px] text-gray-400 mt-1">{label}</p>
+                    </div>
+                  ))}
+                </div>
+                <Button onClick={() => navigate('/housegirls')} className="mt-7 rounded-full bg-amber-500 hover:bg-amber-600 text-white text-xs px-4 h-8 w-full">
+                  Browse Workers →
                 </Button>
+              </div>
+
+              {/* Dot indicators */}
+              <div className="absolute bottom-2.5 left-0 right-0 flex justify-center gap-1.5 z-20">
+                {heroSlides.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    aria-label={`Go to slide ${i + 1}`}
+                    onClick={() => setHeroSlide(i)}
+                    className={`h-2 rounded-full transition-all duration-300 ${heroSlide === i ? 'w-5 bg-white' : 'w-2 bg-white/40'}`}
+                  />
+                ))}
               </div>
             </div>
           </div>
