@@ -7,7 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import UnlockModal, { PESAPAL_PENDING_KEY } from '@/components/employer/UnlockModal';
+import { UnlockModal, PESAPAL_PENDING_KEY } from '@/components/employer/UnlockModal';
 
 interface AppliedHousegirlsListProps {
   jobId: string;
