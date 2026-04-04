@@ -660,13 +660,31 @@ const HousegirlsListPage = () => {
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
 
-        <main id="profiles-list" className="mt-4 py-8">
+        <main id="profiles-list" className="mt-10 md:mt-4 py-8">
           <div className="w-full px-0 md:px-10">
             <div className="flex flex-col w-full relative">
               <div className="flex flex-col gap-[8px] w-full">
                 {loading && (
-                  <div className="rounded-lg border border-gray-200 bg-white p-4 text-sm text-gray-600">
-                    Loading profiles...
+                  <div className="flex flex-col items-center justify-center py-16 gap-5">
+                    <div className="relative">
+                      <div className="w-14 h-14 rounded-full border-4 border-gray-100 border-t-[#111] animate-spin" />
+                    </div>
+                    <div className="text-center">
+                      <p className="text-lg font-semibold text-gray-800">Loading profiles...</p>
+                      <p className="text-sm text-gray-400 mt-1">Fetching available house help near you</p>
+                    </div>
+                    <div className="w-full space-y-3 mt-2">
+                      {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-white border border-gray-100 rounded-xl p-5 animate-pulse flex gap-4 items-center">
+                          <div className="w-16 h-16 rounded-full bg-gray-200 shrink-0" />
+                          <div className="flex-1 space-y-2">
+                            <div className="h-4 bg-gray-200 rounded w-1/3" />
+                            <div className="h-3 bg-gray-200 rounded w-1/2" />
+                            <div className="h-3 bg-gray-200 rounded w-2/3" />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {!loading && error && (

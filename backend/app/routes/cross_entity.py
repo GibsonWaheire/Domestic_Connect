@@ -118,27 +118,37 @@ def get_housegirls_for_employer(include_unavailable=False):
             else:
                 user_docs_map[uid]['hg_profile'] = hg_data
 
+        # Pre-fetch ALL contact_access docs in one query — avoid N+1 per housegirl.
+        all_access_docs = [d.to_dict() for d in db.collection('contact_access').stream()]
+        unlock_count_by_hg_id: dict = {}
+        unlock_count_by_profile_id: dict = {}
+        for ad in all_access_docs:
+            hgid = str(ad.get('housegirl_id') or '')
+            pid  = str(ad.get('target_profile_id') or '')
+            if hgid:
+                unlock_count_by_hg_id[hgid] = unlock_count_by_hg_id.get(hgid, 0) + 1
+            if pid:
+                unlock_count_by_profile_id[pid] = unlock_count_by_profile_id.get(pid, 0) + 1
+
         result = []
         for user_id, data_bundle in user_docs_map.items():
             user_data = data_bundle['user_data']
             hg_profile = data_bundle['hg_profile']
-            
+
             # Visibility/Availability logic
             profile_is_available = hg_profile.get('is_available', True)
-            
+
             # If not admin and not available, we honor the flag (but default to True)
             if not include_unavailable and not profile_is_available:
                 continue
 
             first_name = user_data.get('first_name') or hg_profile.get('first_name', '')
             last_name = user_data.get('last_name') or hg_profile.get('last_name', '')
-            
-            # Count unlocks
-            unlock_count = len(list(
-                db.collection('contact_access')
-                .where('housegirl_id', '==', user_id)
-                .stream()
-            ))
+
+            # Count unlocks — use pre-fetched maps, no extra queries
+            uid_str = str(user_id)
+            profile_id_str = str(hg_profile.get('profile_id') or '')
+            unlock_count = unlock_count_by_hg_id.get(uid_str, 0) or unlock_count_by_profile_id.get(profile_id_str, 0)
 
             result.append({
                 'id': user_id,
