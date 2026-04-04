@@ -30,7 +30,7 @@ const LandingPage = () => {
     "@type": "LocalBusiness",
     "name": "Domestic Connect Kenya",
     "alternateName": "Domestic Connect",
-    "description": "Kenya's trusted platform for finding verified housegirls, nannies, cooks, caregivers and domestic workers in Nairobi, Mombasa, Kisumu and across Kenya.",
+    "description": "Kenya's trusted platform for finding verified housegirls, maids, nannies, cooks, caregivers, house managers and cleaners in Nairobi, Mombasa, Kisumu and across Kenya.",
     "url": "https://domestic-connect.co.ke",
     "image": "https://domestic-connect.co.ke/og-image.jpg",
     "priceRange": "KES 200",
@@ -113,7 +113,7 @@ const LandingPage = () => {
       <Helmet>
         <title>Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers</title>
         <meta name="description" content="Domestic Connect Kenya — find verified housegirls, nannies, cooks and caregivers in Nairobi, Mombasa, Kisumu and across Kenya. Browse 1,000+ profiles. Pay only KES 200 to connect." />
-        <meta name="keywords" content="domestic connect kenya, domestic connect nairobi, find housegirl kenya, nanny nairobi, caregiver kenya, house help kenya, domestic worker nairobi, cook kenya, house manager nairobi, housegirl agency kenya" />
+        <meta name="keywords" content="domestic connect kenya, domestic connect nairobi, find housegirl kenya, maid nairobi, nanny kenya, caregiver kenya, house help kenya, house manager nairobi, houseboy kenya, cook kenya, cleaner nairobi, housegirl agency kenya, find maid kenya, maid agency nairobi" />
         <link rel="canonical" href="https://domestic-connect.co.ke/" />
         <meta property="og:title" content="Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers" />
         <meta property="og:description" content="Find verified housegirls, nannies, cooks and caregivers in Nairobi, Mombasa, Kisumu and across Kenya. Pay only KES 200 to connect." />

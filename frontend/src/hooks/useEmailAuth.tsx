@@ -137,7 +137,11 @@ export const useEmailAuth = (
                 try {
                     const pendingUnlock = JSON.parse(pendingUnlockRawSignin);
                     sessionStorage.removeItem('unlock_after_login');
-                    navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                    if (pendingUnlock.profileId) {
+                        navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                    } else if (pendingUnlock.packageId) {
+                        navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
+                    }
                     return { error: null, user: response.user };
                 } catch {
                     sessionStorage.removeItem('unlock_after_login');

@@ -16,9 +16,12 @@ payments_bp = Blueprint('payments', __name__)
 
 CONTACT_BUNDLE_PACKAGE_ID = 'contact_unlock'
 CONTACT_BUNDLE_PRICE = 200
-CONTACT_BUNDLE_CONTACTS = 3
+CONTACT_BUNDLE_CONTACTS = 1
 ACTIVATION_PACKAGE_ID = 'high_demand_activation'
 ACTIVATION_PACKAGE_PRICE = 500
+BUNDLE_UNLOCK_PACKAGE_ID = 'bundle_unlock'
+BUNDLE_UNLOCK_PRICE = 500
+BUNDLE_UNLOCK_CONTACTS = 3
 JOB_ACCESS_PACKAGE_ID = 'job_access'
 JOB_ACCESS_PACKAGE_PRICE = 100
 
@@ -305,6 +308,18 @@ def create_purchase():
                     'created_at': datetime.utcnow().isoformat()
                 }
                 db.collection('payment_packages').document(JOB_ACCESS_PACKAGE_ID).set(package_data)
+                package_dict = package_data
+            elif package_id == BUNDLE_UNLOCK_PACKAGE_ID:
+                package_data = {
+                    'id': BUNDLE_UNLOCK_PACKAGE_ID,
+                    'name': '3 Contacts Bundle',
+                    'description': 'Unlock 3 contacts for KES 500 — save KES 100',
+                    'price': BUNDLE_UNLOCK_PRICE,
+                    'contacts_included': BUNDLE_UNLOCK_CONTACTS,
+                    'is_active': True,
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                db.collection('payment_packages').document(BUNDLE_UNLOCK_PACKAGE_ID).set(package_data)
                 package_dict = package_data
             else:
                 return jsonify({'error': 'Payment package not found'}), 404

@@ -11,7 +11,7 @@ const faqSchema = {
       "name": "How do I find a housegirl on Domestic Connect Kenya?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Create a free account, browse verified domestic worker profiles filtered by location, role, and skills, then pay KES 200 via M-Pesa to unlock the contact details of any worker you want to hire."
+        "text": "Create a free account, browse verified housegirl, maid and nanny profiles filtered by location, role, and skills, then pay KES 200 via M-Pesa to unlock the contact details of any person you want to hire."
       }
     },
     {
@@ -19,15 +19,15 @@ const faqSchema = {
       "name": "How much does it cost to use Domestic Connect?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Browsing profiles is completely free. You only pay KES 200 via M-Pesa when you want to unlock and see the contact details of a specific domestic worker. There are no monthly fees or hidden charges."
+        "text": "Browsing profiles is completely free. You only pay KES 200 via M-Pesa when you want to unlock and see the contact details of a specific housegirl, maid or nanny. There are no monthly fees or hidden charges."
       }
     },
     {
       "@type": "Question",
-      "name": "Are the domestic workers on Domestic Connect verified?",
+      "name": "Are the housegirls and maids on Domestic Connect verified?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. All domestic workers listed on Domestic Connect Kenya go through a registration and profile verification process. Workers provide their ID details, work history, skills, and references. Agencies on the platform are also vetted before listing their workers."
+        "text": "Yes. All housegirls, maids, nannies and caregivers listed on Domestic Connect Kenya go through a registration and profile verification process. They provide their ID details, work history, skills, and references. Agencies on the platform are also vetted before listing their workers."
       }
     },
     {
@@ -40,7 +40,7 @@ const faqSchema = {
     },
     {
       "@type": "Question",
-      "name": "What types of domestic workers can I find on Domestic Connect?",
+      "name": "What types of house help can I find on Domestic Connect?",
       "acceptedAnswer": {
         "@type": "Answer",
         "text": "You can find housegirls, nannies, babysitters, cooks, house managers, caregivers, elderly care assistants, cleaners, and house helps across Kenya on Domestic Connect."
@@ -55,7 +55,7 @@ const HowItWorksPage = () => {
       <Helmet>
         <title>How It Works | Domestic Connect Kenya</title>
         <meta name="description" content="Learn how Domestic Connect Kenya works — browse verified housegirl, nanny and caregiver profiles, connect in minutes, and pay only KES 200 per contact." />
-        <meta name="keywords" content="how domestic connect works, find housegirl kenya, hire nanny nairobi, domestic connect kenya process, how to find house help kenya" />
+        <meta name="keywords" content="how domestic connect works, find housegirl kenya, hire maid nairobi, hire nanny kenya, house manager kenya, houseboy kenya, domestic connect kenya process, how to find house help kenya, find cook kenya, cleaner nairobi" />
         <link rel="canonical" href="https://domestic-connect.co.ke/how-it-works" />
         <meta property="og:title" content="How It Works | Domestic Connect Kenya" />
         <meta property="og:description" content="Simple steps to find your perfect housegirl, nanny or caregiver in Kenya. Browse free, pay only KES 200 to connect." />

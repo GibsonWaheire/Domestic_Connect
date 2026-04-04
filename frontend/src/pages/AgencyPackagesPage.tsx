@@ -30,15 +30,15 @@ const AgencyPackagesPage = () => {
       <Helmet>
         <title>Agency Packages & Pricing | Domestic Connect Kenya</title>
         <meta name="description" content="Choose a Domestic Connect Kenya agency package to list verified housegirls, nannies and caregivers. Affordable plans starting from KES 1,200. Reach thousands of Kenyan families." />
-        <meta name="keywords" content="domestic worker agency packages kenya, housegirl agency nairobi pricing, domestic connect agency plan, hire domestic workers kenya" />
+        <meta name="keywords" content="housegirl agency packages kenya, maid agency nairobi pricing, domestic connect agency plan, hire housegirl kenya, nanny agency kenya" />
         <link rel="canonical" href="https://domestic-connect.co.ke/agency-packages" />
         <meta property="og:title" content="Agency Packages & Pricing | Domestic Connect Kenya" />
-        <meta property="og:description" content="Affordable agency packages to list and place verified domestic workers across Kenya." />
+        <meta property="og:description" content="Affordable agency packages to list and place verified housegirls, maids and nannies across Kenya." />
         <meta property="og:url" content="https://domestic-connect.co.ke/agency-packages" />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="Agency Packages & Pricing | Domestic Connect Kenya" />
-        <meta name="twitter:description" content="Affordable packages for domestic worker agencies to list and place verified workers across Kenya. Plans from KES 1,200." />
+        <meta name="twitter:description" content="Affordable packages for housegirl and maid agencies to list and place verified workers across Kenya. Plans from KES 1,200." />
       </Helmet>
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
