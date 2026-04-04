@@ -35,7 +35,11 @@ const LoginPage = () => {
 
   useEffect(() => {
     const urlMode = searchParams.get('mode');
+    const urlUserType = searchParams.get('userType');
     const uid = searchParams.get('uid') || '';
+    if (urlUserType === 'housegirl' || urlUserType === 'employer') {
+      setUserType(urlUserType);
+    }
     if (urlMode === 'signup') {
       setMode('signup');
       setPendingUid('');

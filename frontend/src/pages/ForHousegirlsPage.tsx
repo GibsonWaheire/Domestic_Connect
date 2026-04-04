@@ -95,7 +95,7 @@ const ForHousegirlsPage = () => {
                 <Button onClick={() => navigate('/login')} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">
                   Login
                 </Button>
-                <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
+                <Button onClick={() => navigate('/login?mode=signup&userType=housegirl')} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
                   Register Free
                 </Button>
               </>
@@ -134,7 +134,7 @@ const ForHousegirlsPage = () => {
                   <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl border-black text-black">
                     Login
                   </Button>
-                  <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="w-full rounded-xl bg-black text-white">
+                  <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup&userType=housegirl'); }} className="w-full rounded-xl bg-black text-white">
                     Register Free
                   </Button>
                 </>
@@ -158,7 +158,7 @@ const ForHousegirlsPage = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
-              onClick={() => navigate('/login?mode=signup')}
+              onClick={() => navigate('/login?mode=signup&userType=housegirl')}
               className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-8 text-[15px] font-semibold"
             >
               Register Free — Start Today
@@ -225,7 +225,7 @@ const ForHousegirlsPage = () => {
               <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Latest job openings</h2>
               <p className="text-[#666] text-sm mt-1">Posted by verified families — updated daily</p>
             </div>
-            <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-[#111] text-white hover:bg-[#333] hidden sm:flex">
+            <Button onClick={() => navigate('/login?mode=signup&userType=housegirl')} className="rounded-full bg-[#111] text-white hover:bg-[#333] hidden sm:flex">
               View All Jobs →
             </Button>
           </div>
@@ -280,7 +280,7 @@ const ForHousegirlsPage = () => {
                     </span>
                     <Button
                       size="sm"
-                      onClick={() => navigate('/login?mode=signup')}
+                      onClick={() => navigate('/login?mode=signup&userType=housegirl')}
                       className="rounded-full bg-[#111] text-white hover:bg-[#333] text-xs px-4"
                     >
                       Apply Now →
@@ -296,7 +296,7 @@ const ForHousegirlsPage = () => {
               <p className="font-semibold mb-1">Want to see full job details + apply?</p>
               <p className="text-sm text-white/70 mb-3">Register free, browse all jobs, and pay KSh 100 only when you apply.</p>
               <Button
-                onClick={() => navigate('/login?mode=signup')}
+                onClick={() => navigate('/login?mode=signup&userType=housegirl')}
                 className="rounded-full bg-white text-[#111] hover:bg-gray-100 font-semibold px-6"
               >
                 Register Free & Browse Jobs
@@ -357,7 +357,7 @@ const ForHousegirlsPage = () => {
           <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">Ready to find your next job?</h2>
           <p className="text-white/70 mb-6 text-sm">Register free today. Browse all jobs for free. Pay KSh 100 only when you apply for a job.</p>
           <Button
-            onClick={() => navigate('/login?mode=signup')}
+            onClick={() => navigate('/login?mode=signup&userType=housegirl')}
             className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-10 text-base font-semibold"
           >
             Register Free Now →
