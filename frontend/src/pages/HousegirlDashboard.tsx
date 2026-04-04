@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Heart, Home, LogOut, MessageCircle, Settings, User } from 'lucide-react';
+import { Briefcase, Heart, Home, LogOut, MessageCircle, Settings, User } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
@@ -13,12 +13,13 @@ import UserAvatar from '@/components/ui/UserAvatar';
 import OverviewTab from '@/components/housegirl/OverviewTab';
 import ProfileTab from '@/components/housegirl/ProfileTab';
 import SettingsTab from '@/components/housegirl/SettingsTab';
+import JobsTab from '@/components/housegirl/JobsTab';
 import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
 
 const HousegirlDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'messages' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'jobs' | 'messages' | 'settings'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
 
   const resolvedUserId =
@@ -131,13 +132,14 @@ const HousegirlDashboard = () => {
           {[
             { id: 'overview', label: 'Overview', icon: Home },
             { id: 'profile', label: 'My Profile', icon: User },
+            { id: 'jobs', label: 'Jobs', icon: Briefcase },
             { id: 'messages', label: 'Messages', icon: MessageCircle },
             { id: 'settings', label: 'Settings', icon: Settings },
           ].map((tab) => (
             <Button
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'ghost'}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'profile' | 'messages' | 'settings')}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'profile' | 'jobs' | 'messages' | 'settings')}
               className={`flex-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
             >
               {tab.label}
@@ -161,6 +163,7 @@ const HousegirlDashboard = () => {
             onProfilePhotoChange={setProfilePhoto}
           />
         )}
+        {activeTab === 'jobs' && <JobsTab user={user} />}
         {activeTab === 'messages' && (
           <Card>
             <CardHeader>

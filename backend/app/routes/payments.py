@@ -18,6 +18,8 @@ CONTACT_BUNDLE_PRICE = 200
 CONTACT_BUNDLE_CONTACTS = 3
 ACTIVATION_PACKAGE_ID = 'high_demand_activation'
 ACTIVATION_PACKAGE_PRICE = 500
+JOB_ACCESS_PACKAGE_ID = 'job_access'
+JOB_ACCESS_PACKAGE_PRICE = 100
 
 PESAPAL_BASE_URL = os.getenv('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3')
 PESAPAL_CONSUMER_KEY = os.getenv('PESAPAL_CONSUMER_KEY', '')
@@ -146,6 +148,17 @@ def _complete_purchase(purchase_doc_id, purchase_data, pesapal_status_data):
                             'activation_fee_paid': True,
                             'updated_at': datetime.utcnow().isoformat()
                         }, merge=True)
+
+    # Activate job access for job_access purchases
+    if purchase_data.get('package_id') == JOB_ACCESS_PACKAGE_ID:
+        user_id = purchase_data.get('user_id')
+        if user_id:
+            db.collection('job_access').document(user_id).set({
+                'user_id': user_id,
+                'status': 'active',
+                'paid_at': datetime.utcnow().isoformat(),
+                'purchase_id': purchase_doc_id
+            }, merge=True)
 
     # Auto-unlock contact for contact_unlock purchases (idempotent)
     target_profile_id = purchase_data.get('target_profile_id')
@@ -277,6 +290,18 @@ def create_purchase():
                     'created_at': datetime.utcnow().isoformat()
                 }
                 db.collection('payment_packages').document(ACTIVATION_PACKAGE_ID).set(package_data)
+                package_dict = package_data
+            elif package_id == JOB_ACCESS_PACKAGE_ID:
+                package_data = {
+                    'id': JOB_ACCESS_PACKAGE_ID,
+                    'name': 'Job Access',
+                    'description': 'Access all job listings posted by employers',
+                    'price': JOB_ACCESS_PACKAGE_PRICE,
+                    'contacts_included': 0,
+                    'is_active': True,
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                db.collection('payment_packages').document(JOB_ACCESS_PACKAGE_ID).set(package_data)
                 package_dict = package_data
             else:
                 return jsonify({'error': 'Payment package not found'}), 404
@@ -638,6 +663,24 @@ def get_contact_credits():
             return jsonify({'error': 'Unauthorized'}), 401
 
         return jsonify(get_contact_credit_summary(getattr(user, 'id'))), 200
+    except Exception as e:
+        logger.error(f'Error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@payments_bp.route('/job-access-status', methods=['GET'])
+@firebase_auth_required
+def get_job_access_status():
+    """Check if current housegirl has paid for job access"""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        user_id = getattr(user, 'id')
+        doc = db.collection('job_access').document(user_id).get()
+        if doc.exists and doc.to_dict().get('status') == 'active':
+            return jsonify({'has_access': True, 'paid_at': doc.to_dict().get('paid_at')}), 200
+        return jsonify({'has_access': False}), 200
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({'error': 'Something went wrong. Please try again.'}), 500

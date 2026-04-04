@@ -29,6 +29,7 @@ import ContactUsPage from "./pages/ContactUsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import PaymentCallbackPage from "./pages/PaymentCallbackPage";
+import ForHousegirlsPage from "./pages/ForHousegirlsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -53,7 +54,8 @@ const PAGE_TITLES: Record<string, string> = {
   "/agency-packages": "Agency Packages & Pricing | Domestic Connect Kenya",
   "/contact-us": "Contact Us | Domestic Connect Kenya",
   "/contact": "Contact Us | Domestic Connect Kenya",
-  "/login": "Sign In | Domestic Connect Kenya",
+  "/login": "Login | Domestic Connect Kenya",
+  "/for-housegirls": "Find House Help Jobs in Kenya | Domestic Connect",
   "/privacy-policy": "Privacy Policy | Domestic Connect Kenya",
   "/terms": "Terms of Service | Domestic Connect Kenya",
 };
@@ -102,6 +104,7 @@ const App = () => (
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
                 <Route path="/browse-housegirls" element={<BrowseHousegirls />} />
                 <Route path="/payment-callback" element={<PaymentCallbackPage />} />
+                <Route path="/for-housegirls" element={<ForHousegirlsPage />} />
 
                 {/* Protected Dashboard Routes */}
                 <Route
