@@ -69,6 +69,9 @@ const EmployerDashboard = () => {
   const [jobPostings, setJobPostings] = useState<any[]>([]);
   const [showJobForm, setShowJobForm] = useState(false);
   const [isCreatingJob, setIsCreatingJob] = useState(false);
+  const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
+  const [jobApplicants, setJobApplicants] = useState<Record<string, any[]>>({});
+  const [fetchingApplicants, setFetchingApplicants] = useState<string | null>(null);
   const [jobFormData, setJobFormData] = useState({
     title: '', description: '', location: '',
     salaryMin: '', salaryMax: '', workType: '',
@@ -363,6 +366,30 @@ const EmployerDashboard = () => {
     }
   };
 
+  const handleViewApplicants = async (jobId: string) => {
+    if (expandedJobId === jobId) {
+      setExpandedJobId(null);
+      return;
+    }
+    setExpandedJobId(jobId);
+    if (jobApplicants[jobId]) return; // already fetched
+    setFetchingApplicants(jobId);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/jobs/${jobId}/applications`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJobApplicants(prev => ({ ...prev, [jobId]: data.applications || [] }));
+      }
+    } catch {
+      toast({ title: 'Error loading applicants', variant: 'destructive' });
+    } finally {
+      setFetchingApplicants(null);
+    }
+  };
+
   const handleDeleteJob = async (jobId: string) => {
     try {
       const token = await FirebaseAuthService.getIdToken();
@@ -630,30 +657,81 @@ const EmployerDashboard = () => {
               ) : (
                 <div className="space-y-3">
                   {jobPostings.map((job: any) => (
-                    <div key={job.id} className="flex items-start justify-between p-3 rounded-lg border border-gray-100 bg-gray-50">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <p className="text-sm font-semibold text-gray-900">{job.title}</p>
-                          <Badge variant={job.status === 'active' ? 'default' : 'secondary'} className="text-xs">
-                            {job.status || 'active'}
-                          </Badge>
+                    <div key={job.id} className="rounded-lg border border-gray-100 bg-gray-50 overflow-hidden">
+                      <div className="flex items-start justify-between p-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-semibold text-gray-900">{job.title}</p>
+                            <Badge variant={job.status === 'active' ? 'default' : 'secondary'} className="text-xs">
+                              {job.status || 'active'}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            {job.location} · KES {job.salary_min?.toLocaleString()} – {job.salary_max?.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {job.applications_count ?? 0} applicant{(job.applications_count ?? 0) !== 1 ? 's' : ''} ·{' '}
+                            Posted {job.created_at ? new Date(job.created_at).toLocaleDateString() : '—'}
+                          </p>
                         </div>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          {job.location} · KES {job.salary_min?.toLocaleString()} – {job.salary_max?.toLocaleString()}
-                        </p>
-                        <p className="text-xs text-gray-500">
-                          {job.applications_count ?? 0} applicant{(job.applications_count ?? 0) !== 1 ? 's' : ''} ·{' '}
-                          Posted {job.created_at ? new Date(job.created_at).toLocaleDateString() : '—'}
-                        </p>
+                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                          {(job.applications_count ?? 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => handleViewApplicants(job.id)}
+                              className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 transition-colors"
+                            >
+                              <Users className="h-3.5 w-3.5" />
+                              {expandedJobId === job.id ? 'Hide' : 'View Applicants'}
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteJob(job.id)}
+                            className="text-gray-400 hover:text-red-600 transition-colors"
+                            title="Delete job"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteJob(job.id)}
-                        className="ml-3 text-gray-400 hover:text-red-600 transition-colors shrink-0"
-                        title="Delete job"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+
+                      {expandedJobId === job.id && (
+                        <div className="border-t border-gray-200 bg-white p-3">
+                          {fetchingApplicants === job.id ? (
+                            <p className="text-xs text-gray-400 text-center py-3">Loading applicants...</p>
+                          ) : (jobApplicants[job.id] || []).length === 0 ? (
+                            <p className="text-xs text-gray-400 text-center py-3">No applicants yet.</p>
+                          ) : (
+                            <div className="space-y-2">
+                              {(jobApplicants[job.id] || []).map((app: any) => (
+                                <div key={app.id} className="flex items-start justify-between p-2.5 rounded-lg border border-gray-100 bg-gray-50">
+                                  <div className="min-w-0">
+                                    <p className="text-sm font-medium text-gray-900">{app.housegirl?.name || 'Applicant'}</p>
+                                    {app.housegirl?.email && (
+                                      <p className="text-xs text-gray-500">{app.housegirl.email}</p>
+                                    )}
+                                    {app.cover_letter && (
+                                      <p className="text-xs text-gray-400 mt-1 italic line-clamp-2">"{app.cover_letter}"</p>
+                                    )}
+                                    <p className="text-xs text-gray-400 mt-0.5">
+                                      Applied {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
+                                    </p>
+                                  </div>
+                                  <span className={`shrink-0 ml-3 text-xs font-medium px-2 py-0.5 rounded-full border ${
+                                    app.status === 'accepted' ? 'bg-green-50 text-green-700 border-green-200' :
+                                    app.status === 'rejected' ? 'bg-red-50 text-red-600 border-red-200' :
+                                    app.status === 'reviewed' ? 'bg-blue-50 text-blue-700 border-blue-200' :
+                                    'bg-yellow-50 text-yellow-700 border-yellow-200'
+                                  }`}>
+                                    {app.status || 'pending'}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

@@ -26,9 +26,10 @@ interface OverviewTabProps {
   resolvedUserId: string;
   onOpenProfile: () => void;
   onOpenSettings: () => void;
+  onOpenJobs: () => void;
 }
 
-const OverviewTab = ({ user, resolvedUserId, onOpenProfile, onOpenSettings }: OverviewTabProps) => {
+const OverviewTab = ({ user, resolvedUserId, onOpenProfile, onOpenSettings, onOpenJobs }: OverviewTabProps) => {
   const [jobOpportunities, setJobOpportunities] = useState<JobOpportunity[]>([]);
   const [hasProfile, setHasProfile] = useState<boolean | null>(null);
   const {
@@ -89,11 +90,8 @@ const OverviewTab = ({ user, resolvedUserId, onOpenProfile, onOpenSettings }: Ov
     loadProfileStatus();
   }, [resolvedUserId]);
 
-  const handleApplyNow = (jobTitle: string) => {
-    toast({
-      title: 'Application Started',
-      description: `Application flow for ${jobTitle} is being prepared.`,
-    });
+  const handleApplyNow = () => {
+    onOpenJobs();
   };
 
   const handleSaveJob = (jobTitle: string) => {
@@ -192,7 +190,7 @@ const OverviewTab = ({ user, resolvedUserId, onOpenProfile, onOpenSettings }: Ov
                           <Button
                             size="sm"
                             className="bg-blue-600 hover:bg-blue-700 flex-1"
-                            onClick={() => handleApplyNow(job.title)}
+                            onClick={handleApplyNow}
                           >
                             Apply Now
                           </Button>
@@ -232,7 +230,7 @@ const OverviewTab = ({ user, resolvedUserId, onOpenProfile, onOpenSettings }: Ov
             <Button
               variant="outline"
               className="h-16 sm:h-20 flex-col space-y-2 border-green-200 hover:bg-green-50"
-              onClick={() => toast({ title: 'Search Jobs', description: 'Browse open opportunities in your dashboard list.' })}
+              onClick={onOpenJobs}
             >
               <Search className="h-5 w-5 sm:h-6 sm:w-6 text-green-600" />
               <span className="text-xs sm:text-sm">Search Jobs</span>
