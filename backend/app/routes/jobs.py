@@ -439,7 +439,7 @@ def apply_to_job(job_id):
                         .where('housegirl_id', '==', user_id).limit(1).stream())
         
         if existing:
-            return jsonify({'error': 'You have already applied to this job'}), 400
+            return jsonify({'error': 'You have already applied to this job'}), 409
         
         data = request.get_json() or {}
 
@@ -454,7 +454,7 @@ def apply_to_job(job_id):
             'job_id': job_id,
             'housegirl_id': user_id,
             'cover_letter': cover_letter,
-            'status': 'pending',
+            'status': 'applied',
             'applied_at': datetime.utcnow().isoformat()
         }
         

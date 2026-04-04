@@ -13,29 +13,31 @@ import { FirebaseAuthService } from '@/lib/firebaseAuth';
 export const PESAPAL_PENDING_KEY = 'pesapal_pending_payment';
 
 interface UnlockModalProps {
-  showUnlockModal: boolean;
-  setShowUnlockModal: (show: boolean) => void;
-  housegirlToUnlock: Housegirl | null;
-  isUnlocking: boolean;
-  setIsUnlocking: (unlocking: boolean) => void;
-  employerPhone?: string;
-  onUnlockSuccess: (payload: { housegirlId: number; phone?: string; email?: string }) => void;
+  isOpen: boolean;
+  onClose: () => void;
+  housegirlId: string;
+  housegirlName: string;
+  jobId: string;
+  onPaymentInitiated: () => void;
+  onContactUnlocked: () => void;
 }
 
 export const UnlockModal = ({
-  showUnlockModal,
-  setShowUnlockModal,
-  housegirlToUnlock,
-  isUnlocking,
-  setIsUnlocking,
-  onUnlockSuccess
+  isOpen,
+  onClose,
+  housegirlId,
+  housegirlName,
+  jobId,
+  onPaymentInitiated,
+  onContactUnlocked,
 }: UnlockModalProps) => {
   const { showErrorNotification } = useNotificationActions();
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [unlockedContactDetails, setUnlockedContactDetails] = useState<{ email: string | null; phone_number: string | null } | null>(null);
 
   const handleUnlock = async () => {
-    if (!housegirlToUnlock) return;
-
     setIsUnlocking(true);
+    onPaymentInitiated(); // Notify parent that payment initiation has started
 
     try {
       const token = await FirebaseAuthService.getIdToken();
@@ -44,58 +46,88 @@ export const UnlockModal = ({
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      // Fetch the housegirl's profile_id for contact-access
-      const housegirlResponse = await fetch(`${API_BASE_URL}/api/housegirls/${housegirlToUnlock.id}`, { headers });
-      const housegirlData = await housegirlResponse.json().catch(() => ({}));
-      const targetProfileId = housegirlData?.profile_id;
-      if (!targetProfileId) {
-        throw new Error('Unable to identify this profile for unlock.');
-      }
-
-      // Create Pesapal order
-      const purchaseResponse = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
+      const response = await fetch(`${API_BASE_URL}/api/employers/jobs/${jobId}/housegirls/${housegirlId}/unlock-contact`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          package_id: 'contact_unlock',
-          amount: 200,
-          target_profile_id: String(targetProfileId),
-          housegirl_id: String(housegirlToUnlock.id),
-        }),
       });
 
-      const purchaseData = await purchaseResponse.json().catch(() => ({}));
-      if (!purchaseResponse.ok || !purchaseData?.redirect_url) {
-        throw new Error(purchaseData?.error || 'Failed to initiate payment.');
-      }
+      const data = await response.json();
 
-      // Store context so the callback page can finish the unlock
-      localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
-        order_tracking_id: purchaseData.order_tracking_id,
-        purchase_id: purchaseData.purchase_id,
-        package_id: 'contact_unlock',
-        target_profile_id: String(targetProfileId),
-        housegirl_id: String(housegirlToUnlock.id),
-        redirect_after: '/employer-dashboard',
-      }));
-
-      // Validate redirect_url is a Pesapal domain before redirecting (prevent open redirect)
-      const redirectUrl = new URL(purchaseData.redirect_url);
-      if (!redirectUrl.hostname.endsWith('pesapal.com')) {
-        throw new Error('Invalid payment redirect destination.');
+      if (response.ok) {
+        // If contact was already unlocked, backend returns details directly
+        if (data.contact_details) {
+          setUnlockedContactDetails(data.contact_details);
+          onContactUnlocked();
+        } else if (data.redirect_url) {
+          // Payment initiated, redirect to Pesapal
+          const redirectUrl: string = data.redirect_url;
+          try {
+            const parsed = new URL(redirectUrl);
+            if (!parsed.hostname.endsWith('pesapal.com')) throw new Error('Invalid redirect');
+          } catch {
+            throw new Error('Invalid payment redirect destination.');
+          }
+          localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+            order_tracking_id: data.order_tracking_id,
+            package_id: 'apply_contact_unlock',
+            job_id: jobId,
+            housegirl_id: housegirlId,
+            redirect_after: window.location.pathname, // Redirect back to current page
+          }));
+          window.location.href = redirectUrl;
+        }
+      } else {
+        throw new Error(data?.error || 'Failed to initiate contact unlock.');
       }
-      window.location.href = redirectUrl.toString();
 
     } catch (error) {
       showErrorNotification(
-        'Payment error',
+        'Contact Unlock Error',
         error instanceof Error ? error.message : 'Something went wrong. Please try again.'
       );
+    } finally {
       setIsUnlocking(false);
     }
   };
 
-  if (!housegirlToUnlock) return null;
+  if (!isOpen) return null;
+
+  // When contact is unlocked, display details directly
+  if (unlockedContactDetails) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Mail className="h-5 w-5 text-green-600" />
+              <span>Contact Unlocked - {housegirlName}</span>
+            </DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            <p className="text-sm text-gray-700">You have successfully unlocked the contact details for {housegirlName}:</p>
+            <Card>
+              <CardContent className="p-4 space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-900">{unlockedContactDetails.email}</span>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Phone className="h-4 w-4 text-gray-500" />
+                  <span className="text-sm font-medium text-gray-900">{unlockedContactDetails.phone_number}</span>
+                </div>
+              </CardContent>
+            </Card>
+            <p className="text-xs text-gray-500">These details are also available on the applicant's profile within the job posting.</p>
+          </div>
+
+          <div className="flex items-center justify-end space-x-3 pt-4">
+            <Button onClick={onClose} className="bg-[#111] hover:bg-[#333] text-white">Done</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog open={showUnlockModal} onOpenChange={setShowUnlockModal}>
@@ -110,45 +142,12 @@ export const UnlockModal = ({
         <div className="space-y-6">
           {/* Housegirl Info */}
           <div className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-            <img
-              src={housegirlToUnlock.profileImage || '/placeholder.svg'}
-              alt={housegirlToUnlock.name}
-              className="w-12 h-12 rounded-full object-cover"
-            />
+            {/* Removed housegirlToUnlock specific display - will be handled by parent for now */}
             <div className="flex-1">
-              <h3 className="font-semibold text-gray-900">{housegirlToUnlock.name}</h3>
-              <div className="flex items-center space-x-4 text-sm text-gray-600">
-                <span>{housegirlToUnlock.age} years</span>
-                <span>•</span>
-                <span>{housegirlToUnlock.experience}</span>
-              </div>
-              <div className="flex items-center space-x-2 text-sm text-gray-600">
-                <MapPin className="h-3 w-3" />
-                <span>{housegirlToUnlock.location}</span>
-              </div>
+              <h3 className="font-semibold text-gray-900">{housegirlName}</h3>
+              <p className="text-sm text-gray-600">Applicant for Job ID: {jobId}</p>
             </div>
-            {housegirlToUnlock.rating && (
-              <div className="flex items-center space-x-1 text-sm">
-                <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                <span className="font-medium">{housegirlToUnlock.rating}</span>
-              </div>
-            )}
           </div>
-
-          {/* Unlock count warning */}
-          {(housegirlToUnlock.unlockCount ?? 0) > 0 && (
-            <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
-              <div>
-                <p className="text-sm font-semibold text-amber-800">
-                  Unlocked {housegirlToUnlock.unlockCount} time{housegirlToUnlock.unlockCount !== 1 ? 's' : ''} by other employers
-                </p>
-                <p className="text-sm text-amber-700 mt-0.5">
-                  This contact has already been viewed by {housegirlToUnlock.unlockCount} other employer{housegirlToUnlock.unlockCount !== 1 ? 's' : ''}. They may already be in talks with someone — proceed with that in mind.
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Payment Information */}
           <div className="space-y-3">
@@ -157,7 +156,7 @@ export const UnlockModal = ({
             <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between mb-2">
                 <span className="font-medium text-gray-900">Contact Unlock Fee</span>
-                <span className="font-bold text-blue-600">KES 200</span>
+                <span className="font-bold text-blue-600">KES 100</span>
               </div>
               <div className="text-sm text-gray-600">
                 Get access to phone number and email address
@@ -202,7 +201,7 @@ export const UnlockModal = ({
               ) : (
                 <div className="flex items-center space-x-2">
                   <CreditCard className="h-4 w-4" />
-                  <span>Pay KES 200 via Pesapal</span>
+                  <span>Pay KES 100 via Pesapal</span>
                   <ExternalLink className="h-3 w-3" />
                 </div>
               )}

@@ -75,7 +75,7 @@ const JobsTab = ({ user }: JobsTabProps) => {
         setAppliedJobIds(prev => new Set([...prev, job_id]));
         toast({ title: 'Application submitted!', description: 'Good luck! The employer will be in touch.' });
         fetchMyApplications();
-      } else if (res.status === 400 && data.error?.includes('already applied')) {
+      } else if (res.status === 409) {
         setAppliedJobIds(prev => new Set([...prev, job_id]));
       } else {
         toast({ title: 'Could not submit application', description: data.error || 'Please try again.', variant: 'destructive' });
@@ -133,7 +133,7 @@ const JobsTab = ({ user }: JobsTabProps) => {
       const res = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ package_id: 'job_access', amount: 100 }),
+        body: JSON.stringify({ package_id: 'apply_contact_unlock', amount: 100 }),
       });
       const data = await res.json();
       if (!res.ok) {

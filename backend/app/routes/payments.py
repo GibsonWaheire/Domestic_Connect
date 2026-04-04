@@ -24,6 +24,8 @@ BUNDLE_UNLOCK_PRICE = 500
 BUNDLE_UNLOCK_CONTACTS = 3
 JOB_ACCESS_PACKAGE_ID = 'job_access'
 JOB_ACCESS_PACKAGE_PRICE = 100
+APPLY_CONTACT_UNLOCK_PACKAGE_ID = 'apply_contact_unlock'
+APPLY_CONTACT_UNLOCK_PRICE = 100
 
 PESAPAL_BASE_URL = os.getenv('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3')
 PESAPAL_CONSUMER_KEY = os.getenv('PESAPAL_CONSUMER_KEY', '')
@@ -168,6 +170,7 @@ def _complete_purchase(purchase_doc_id, purchase_data, pesapal_status_data):
     target_profile_id = purchase_data.get('target_profile_id')
     housegirl_id = purchase_data.get('housegirl_id')
     user_id = purchase_data.get('user_id')
+    job_id = purchase_data.get('job_id') # Add this line to retrieve job_id
 
     if purchase_data.get('package_id') == CONTACT_BUNDLE_PACKAGE_ID and target_profile_id and user_id:
         existing = list(
@@ -202,6 +205,31 @@ def _complete_purchase(purchase_doc_id, purchase_data, pesapal_status_data):
                 user_id=user_id,
                 action=ACTION_CONTACT_UNLOCKED,
                 details={'access_id': access_id, 'target_profile_id': target_profile_id, 'housegirl_id': housegirl_id}
+            )
+
+    # Handle APPLY_CONTACT_UNLOCK_PACKAGE_ID
+    if purchase_data.get('package_id') == APPLY_CONTACT_UNLOCK_PACKAGE_ID and user_id and housegirl_id and job_id:
+        existing = list(
+            db.collection('contact_access')
+            .where('employer_id', '==', user_id)
+            .where('housegirl_id', '==', housegirl_id)
+            .where('job_id', '==', job_id)
+            .limit(1).stream()
+        )
+        if not existing:
+            access_id = str(uuid.uuid4())
+            db.collection('contact_access').document(access_id).set({
+                'id': access_id,
+                'employer_id': user_id,
+                'housegirl_id': housegirl_id,
+                'job_id': job_id,
+                'unlocked_at': datetime.utcnow().isoformat(),
+                'payment_id': purchase_doc_id
+            })
+            write_audit_log(
+                user_id=user_id,
+                action=ACTION_CONTACT_UNLOCKED,
+                details={'access_id': access_id, 'housegirl_id': housegirl_id, 'job_id': job_id, 'package_id': APPLY_CONTACT_UNLOCK_PACKAGE_ID}
             )
 
     write_audit_log(
@@ -320,6 +348,18 @@ def create_purchase():
                     'created_at': datetime.utcnow().isoformat()
                 }
                 db.collection('payment_packages').document(BUNDLE_UNLOCK_PACKAGE_ID).set(package_data)
+                package_dict = package_data
+            elif package_id == APPLY_CONTACT_UNLOCK_PACKAGE_ID:
+                package_data = {
+                    'id': APPLY_CONTACT_UNLOCK_PACKAGE_ID,
+                    'name': 'Applied Housegirl Contact Unlock',
+                    'description': 'Unlock contact details for a housegirl who applied to your job',
+                    'price': APPLY_CONTACT_UNLOCK_PRICE,
+                    'contacts_included': 1,
+                    'is_active': True,
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                db.collection('payment_packages').document(APPLY_CONTACT_UNLOCK_PACKAGE_ID).set(package_data)
                 package_dict = package_data
             else:
                 return jsonify({'error': 'Payment package not found'}), 404
