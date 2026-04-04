@@ -465,6 +465,7 @@ def get_housegirl(housegirl_id):
             'phone': phone_number if can_view_contact else 'Unlock to view',
             'phone_number': phone_number if can_view_contact else '',
             'email': email if can_view_contact else 'Unlock to view',
+            'profile_complete': housegirl.get('profile_complete', False),
             'created_at': housegirl.get('created_at'),
             'updated_at': housegirl.get('updated_at')
         }), 200
@@ -638,7 +639,18 @@ def update_housegirl(housegirl_id):
         if not updated_doc.exists:
             logger.error(f'Write verification failed: {doc_ref.path}')
             return jsonify({'error': 'Save failed — profile could not be verified after write.'}), 500
-        return jsonify(updated_doc.to_dict()), 200
+
+        updated_data = updated_doc.to_dict() or {}
+        # Mark profile as complete once all required fields are present
+        _required = ['phone_number', 'role', 'location', 'experience', 'accommodation_type', 'expected_salary']
+        _has_skills = isinstance(updated_data.get('skills'), list) and len(updated_data.get('skills', [])) > 0
+        if all(updated_data.get(f) for f in _required) and _has_skills:
+            if not updated_data.get('profile_complete'):
+                doc_ref.update({'profile_complete': True})
+                db.collection('users').document(getattr(user, 'id')).set({'profile_complete': True}, merge=True)
+            updated_data['profile_complete'] = True
+
+        return jsonify(updated_data), 200
 
     except Exception as e:
         logger.error(f'Error: {str(e)}')

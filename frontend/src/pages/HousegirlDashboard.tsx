@@ -98,15 +98,13 @@ const HousegirlDashboard = () => {
   const [showCompletionWall, setShowCompletionWall] = useState(false);
 
   const isProfileComplete = (data: Record<string, unknown>): boolean => {
-    const phone = data.phone_number as string | undefined;
-    const hasPhone = phone && phone.trim() !== '' && phone !== 'Unlock to view';
-    const hasName = (data.first_name as string || user?.first_name) && (data.last_name as string || user?.last_name);
+    // Primary: backend sets this flag once all required fields are saved — never re-prompt
+    if (data.profile_complete === true) return true;
+    // Fallback for legacy users (no flag yet): check non-gated fields only
+    // (phone_number is gated and can return '' even for own profile — skip it)
     return !!(
-      hasPhone &&
-      hasName &&
-      data.role &&
-      data.location &&
       data.experience &&
+      data.location &&
       data.accommodation_type &&
       data.expected_salary &&
       Array.isArray(data.skills) && (data.skills as string[]).length > 0
