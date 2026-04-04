@@ -1,6 +1,7 @@
 from functools import wraps
 from flask import request, jsonify, current_app, session
 import bcrypt
+import os
 from app.models import User
 from firebase_admin import auth
 
@@ -71,18 +72,34 @@ def auth_required(f):
     return decorated_function
 
 def admin_required(f):
-    """Decorator to require admin privileges"""
+    """Decorator to require admin privileges.
+
+    When REQUIRE_ADMIN_MFA=true in the environment the admin must have
+    completed a second-factor sign-in (TOTP or SMS) in Firebase Auth.
+    Set this env var once your admin account has MFA enrolled.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if not hasattr(request, 'current_user'):
             return jsonify({'error': 'Authentication required'}), 401
-        
-        # Check if user is admin
+
         if not getattr(request.current_user, 'is_admin', False):
             return jsonify({'error': 'Admin privileges required'}), 403
-        
+
+        # Optional MFA enforcement — enable by setting REQUIRE_ADMIN_MFA=true
+        if os.getenv('REQUIRE_ADMIN_MFA', 'false').lower() == 'true':
+            firebase_user = getattr(request, 'firebase_user', {}) or {}
+            second_factor = (
+                firebase_user.get('firebase', {})
+                             .get('sign_in_second_factor')
+            )
+            if not second_factor:
+                return jsonify({
+                    'error': 'Multi-factor authentication required for admin access'
+                }), 403
+
         return f(*args, **kwargs)
-    
+
     return decorated_function
 
 def verify_firebase_token(token):
