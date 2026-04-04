@@ -1,7 +1,16 @@
 from flask import Flask, request
 from flask_cors import CORS
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import os
 import sys
+
+# Module-level limiter — routes import this to apply decorators
+limiter = Limiter(
+    key_func=get_remote_address,
+    default_limits=[],          # no global limit; apply selectively
+    storage_uri="memory://",    # upgrade to redis:// in production if multiple workers
+)
 
 # Add the backend directory to Python path
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -19,7 +28,8 @@ def create_app(config_name=None):
     from config import config
     app.config.from_object(config[config_name])
     
-    # Initialize extensions with app (none needed for FB right now)
+    # Initialize extensions
+    limiter.init_app(app)
     
     # Configure CORS using environment variables/config
     # Call init_app on config if it exists (for ProductionConfig checks)

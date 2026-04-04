@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
+from app import limiter
 import logging
 # Commenting out middlewares that might rely on SQLAlchemy or need separate refactoring
 # from app.middleware.security import rate_limit, validate_json_input, JOB_POSTING_SCHEMA
@@ -376,6 +377,7 @@ def delete_job(job_id):
         }), 500
 
 @jobs_bp.route('/<job_id>/apply', methods=['POST'])
+@limiter.limit("20 per hour; 5 per minute")
 @firebase_auth_required
 def apply_to_job(job_id):
     """Apply to a job (housegirls only)"""

@@ -88,8 +88,11 @@ def admin_required(f):
 def verify_firebase_token(token):
     """Verify Firebase ID token using the official Admin SDK"""
     try:
-        decoded_token = auth.verify_id_token(token)
+        decoded_token = auth.verify_id_token(token, check_revoked=True)
         return decoded_token
+    except auth.RevokedIdTokenError:
+        print("Firebase token verification error: token has been revoked")
+        return None
     except Exception as e:
         print(f"Firebase token verification error: {e}")
         return None
