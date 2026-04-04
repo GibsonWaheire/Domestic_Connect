@@ -450,7 +450,7 @@ const LandingPage = () => {
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <p className="text-lg mb-3">⭐⭐⭐⭐⭐</p>
               <p className="italic text-[#444] mb-4">
-                "Nilipa kazi in 3 days. Asante Domestic Connect!"
+                "I found work in just 3 days. Domestic Connect truly delivers!"
               </p>
               <p className="text-[13px] font-bold text-[#111]">— Amina, House Help · Mombasa</p>
             </div>
@@ -464,7 +464,7 @@ const LandingPage = () => {
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
               <p className="text-lg mb-3">⭐⭐⭐⭐⭐</p>
               <p className="italic text-[#444] mb-4">
-                "thanks guys, ur amazing!."
+                "This service is amazing. We hired our housekeeper in under 48 hours."
               </p>
               <p className="text-[13px] font-bold text-[#111]">— Joyce, Employer · Kisumu</p>
             </div>

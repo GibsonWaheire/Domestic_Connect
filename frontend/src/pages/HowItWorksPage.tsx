@@ -60,6 +60,10 @@ const HowItWorksPage = () => {
         <meta property="og:title" content="How It Works | Domestic Connect Kenya" />
         <meta property="og:description" content="Simple steps to find your perfect housegirl, nanny or caregiver in Kenya. Browse free, pay only KES 200 to connect." />
         <meta property="og:url" content="https://domestic-connect.co.ke/how-it-works" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="How It Works | Domestic Connect Kenya" />
+        <meta name="twitter:description" content="Simple steps to find your perfect housegirl, nanny or caregiver in Kenya. Browse free, pay only KES 200 to connect." />
         <script type="application/ld+json">{JSON.stringify(faqSchema)}</script>
       </Helmet>
 

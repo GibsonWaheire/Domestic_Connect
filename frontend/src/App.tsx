@@ -71,6 +71,14 @@ const RouteTitleManager = () => {
   return null;
 };
 
+const ScrollToTop = () => {
+  const location = useLocation();
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, [location.pathname]);
+  return null;
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -81,6 +89,7 @@ const App = () => (
         }}
       >
         <RouteTitleManager />
+        <ScrollToTop />
         <AuthProvider>
           <HelmetProvider>
             <TooltipProvider>

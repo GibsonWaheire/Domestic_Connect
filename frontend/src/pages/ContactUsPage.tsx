@@ -15,7 +15,12 @@ const ContactUsPage = () => {
         <meta name="keywords" content="contact domestic connect kenya, domestic connect support, domestic connect nairobi contact" />
         <link rel="canonical" href="https://domestic-connect.co.ke/contact-us" />
         <meta property="og:title" content="Contact Us | Domestic Connect Kenya" />
+        <meta property="og:description" content="Get in touch with Domestic Connect Kenya — we help families find verified house help and domestic workers find jobs across Kenya." />
         <meta property="og:url" content="https://domestic-connect.co.ke/contact-us" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary" />
+        <meta name="twitter:title" content="Contact Us | Domestic Connect Kenya" />
+        <meta name="twitter:description" content="Reach Domestic Connect Kenya for support with your account, listings, or agency services." />
       </Helmet>
 
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">

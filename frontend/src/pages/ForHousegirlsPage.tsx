@@ -59,7 +59,16 @@ const ForHousegirlsPage = () => {
     <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
       <Helmet>
         <title>Find House Help Jobs in Kenya | Domestic Connect</title>
-        <meta name="description" content="Looking for a housegirl, nanny or caregiver job in Kenya? Browse job listings from verified families for free. Register free. Pay KSh 100 per application." />
+        <meta name="description" content="Looking for a housegirl, nanny or caregiver job in Kenya? Browse verified job listings from families for free. Register free — pay KSh 100 only when you apply." />
+        <meta name="keywords" content="housegirl jobs kenya, nanny jobs nairobi, caregiver jobs kenya, domestic worker jobs mombasa, house help jobs kenya, find domestic work kenya" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/for-housegirls" />
+        <meta property="og:title" content="Find House Help Jobs in Kenya | Domestic Connect" />
+        <meta property="og:description" content="Browse free job listings from verified families across Kenya. Register free — pay KSh 100 only when you apply for a job." />
+        <meta property="og:url" content="https://domestic-connect.co.ke/for-housegirls" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Find House Help Jobs in Kenya | Domestic Connect" />
+        <meta name="twitter:description" content="Browse free job listings from verified families across Kenya. Register free — pay KSh 100 only when you apply." />
       </Helmet>
 
       {/* NAVBAR */}
@@ -326,9 +335,9 @@ const ForHousegirlsPage = () => {
           <h2 className="text-2xl font-bold text-center mb-8 tracking-tight">What house help say</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             {[
-              { text: '"Nilipata kazi ndani ya siku 3. Familia nzuri sana. Asante Domestic Connect!"', name: 'Amina W.', loc: 'Mombasa', stars: 5 },
+              { text: '"I got a job in just 3 days. Such a wonderful family. Thank you Domestic Connect!"', name: 'Amina W.', loc: 'Mombasa', stars: 5 },
               { text: '"Free to register and the jobs are real. I got hired in Nairobi within a week."', name: 'Grace K.', loc: 'Nairobi', stars: 5 },
-              { text: '"Sikukatwa mshahara. Employer alinipigia moja kwa moja baada ya kuona profile yangu."', name: 'Fatuma A.', loc: 'Kisumu', stars: 5 },
+              { text: '"No salary deductions at all. The employer called me directly after seeing my profile."', name: 'Fatuma A.', loc: 'Kisumu', stars: 5 },
             ].map((t) => (
               <div key={t.name} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
                 <div className="flex gap-0.5 mb-3">

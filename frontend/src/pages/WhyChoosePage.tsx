@@ -13,6 +13,10 @@ const WhyChoosePage = () => {
         <meta property="og:title" content="Why Choose Domestic Connect Kenya | Trusted House Help Platform" />
         <meta property="og:description" content="Kenya's most trusted platform for finding verified housegirls, nannies and caregivers. Learn why 1,000+ families choose us." />
         <meta property="og:url" content="https://domestic-connect.co.ke/why-choose-us" />
+        <meta property="og:type" content="website" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Why Choose Domestic Connect Kenya | Trusted House Help Platform" />
+        <meta name="twitter:description" content="Kenya's most trusted platform for finding verified housegirls, nannies and caregivers. Learn why 1,000+ families choose us." />
       </Helmet>
 
       {/* Hero */}
