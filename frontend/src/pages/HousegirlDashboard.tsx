@@ -15,12 +15,14 @@ import ProfileTab from '@/components/housegirl/ProfileTab';
 import SettingsTab from '@/components/housegirl/SettingsTab';
 import JobsTab from '@/components/housegirl/JobsTab';
 import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
+import ProfileCompletionModal from '@/components/ProfileCompletionModal';
 
 const HousegirlDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'jobs' | 'messages' | 'settings'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [showCompletionModal, setShowCompletionModal] = useState(false);
 
   const resolvedUserId =
     user?.id ||
@@ -53,7 +55,7 @@ const HousegirlDashboard = () => {
 
   useEffect(() => {
     if (!resolvedUserId) return;
-    const loadPhoto = async () => {
+    const loadProfileData = async () => {
       try {
         const token = await FirebaseAuthService.getIdToken();
         const res = await fetch(`${API_BASE_URL}/api/housegirls/${resolvedUserId}`, {
@@ -63,11 +65,17 @@ const HousegirlDashboard = () => {
           const data = await res.json();
           const photoUrl = toAbsolutePhotoUrl(data.profile_photo_url || data.photo_url);
           if (photoUrl) setProfilePhoto(photoUrl);
+          // Show completion modal if phone number is missing
+          const hasPhone = data.phone_number && data.phone_number !== 'Unlock to view' && data.phone_number.trim() !== '';
+          const userHasPhone = user?.phone_number && user.phone_number.trim() !== '';
+          if (!hasPhone && !userHasPhone) {
+            setShowCompletionModal(true);
+          }
         }
       } catch {}
     };
-    loadPhoto();
-  }, [resolvedUserId]);
+    loadProfileData();
+  }, [resolvedUserId, user?.phone_number]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -86,6 +94,17 @@ const HousegirlDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showCompletionModal && resolvedUserId && (
+        <ProfileCompletionModal
+          userId={resolvedUserId}
+          onComplete={(phone) => {
+            setShowCompletionModal(false);
+            toast({ title: 'Profile updated', description: 'Your phone number has been saved. You are now visible to employers.' });
+            // Reflect the saved phone in the user context display without a full reload
+            void phone;
+          }}
+        />
+      )}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex justify-between items-center">

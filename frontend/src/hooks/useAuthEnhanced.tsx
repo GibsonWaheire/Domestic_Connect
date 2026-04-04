@@ -11,7 +11,7 @@ import { useEmailAuth } from './useEmailAuth';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', additionalData: Record<string, unknown>) => Promise<{ error: string | null }>;
+  signUp: (email: string, password: string, userType: 'employer' | 'housegirl' | 'agency' | 'admin', additionalData: Record<string, unknown>) => Promise<{ error: string | null; needsVerification?: boolean }>;
   signIn: (email: string, password: string) => Promise<{ error: string | null; user?: User }>;
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
   handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;

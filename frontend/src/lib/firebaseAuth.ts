@@ -9,7 +9,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updatePassword,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  sendEmailVerification as firebaseSendEmailVerification
 } from 'firebase/auth';
 import { auth } from './firebase';
 
@@ -89,4 +90,8 @@ export const signUpWithEmail = async (email: string, password: string) => {
 
 export const resetPassword = async (email: string) => {
   return sendPasswordResetEmail(auth, email);
+};
+
+export const sendVerificationEmail = async (user: User) => {
+  return firebaseSendEmailVerification(user);
 };

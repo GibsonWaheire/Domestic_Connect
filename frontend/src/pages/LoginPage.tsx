@@ -31,6 +31,9 @@ const LoginPage = () => {
   const [resetLoading, setResetLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [emailVerificationSent, setEmailVerificationSent] = useState(false);
+  const [verificationEmail, setVerificationEmail] = useState('');
+  const [resendLoading, setResendLoading] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
   useEffect(() => {
@@ -74,7 +77,29 @@ const LoginPage = () => {
       return;
     }
     const result = await signUp(emailInput, passwordInput, userType, {});
-    if (result.error) setError(result.error);
+    if (result.error) {
+      setError(result.error);
+      return;
+    }
+    if (result.needsVerification) {
+      setVerificationEmail(emailInput);
+      setEmailVerificationSent(true);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    setResendLoading(true);
+    try {
+      const { signInWithEmail, sendVerificationEmail } = await import('@/lib/firebaseAuth');
+      const result = await signInWithEmail(verificationEmail, passwordInput);
+      if (!result.user.emailVerified) {
+        await sendVerificationEmail(result.user);
+      }
+    } catch {
+      // Silently ignore — user may not have the password in state anymore
+    } finally {
+      setResendLoading(false);
+    }
   };
 
   const handleSelectRole = async (selectedType: 'employer' | 'housegirl') => {
@@ -224,18 +249,37 @@ const LoginPage = () => {
               </div>
             )}
 
-            {/* Error */}
-            {error && (
-              <div className="mb-6 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium shadow-sm">
-                <div className="flex items-start gap-2">
-                  <span className="shrink-0 mt-0.5">⚠️</span>
-                  <span className="flex-1">{error}</span>
+            {/* Email verification pending screen */}
+            {emailVerificationSent && (
+              <div className="flex flex-col gap-4 animate-in fade-in duration-300">
+                <div className="rounded-xl border border-blue-200 bg-blue-50/80 px-5 py-5 text-sm text-blue-800 shadow-sm">
+                  <div className="text-2xl mb-3 text-center">📧</div>
+                  <p className="font-semibold text-center text-base mb-1">Check your email</p>
+                  <p className="text-center text-blue-700">
+                    We sent a verification link to <strong>{verificationEmail}</strong>.
+                    Click the link in that email to activate your account, then come back and log in.
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  disabled={resendLoading}
+                  onClick={handleResendVerification}
+                  className="text-sm text-gray-500 hover:text-[#111] transition-colors text-center disabled:opacity-50"
+                >
+                  {resendLoading ? 'Sending...' : "Didn't receive it? Resend verification email"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setEmailVerificationSent(false); setMode('login'); setError(null); navigate('/login'); }}
+                  className="text-sm font-semibold text-[#111] hover:underline text-center"
+                >
+                  Go to Login →
+                </button>
               </div>
             )}
 
             {/* Forgot password form */}
-            {mode === 'forgot-password' && (
+            {!emailVerificationSent && mode === 'forgot-password' && (
               <div className="flex flex-col animate-in fade-in duration-300">
                 {resetSent ? (
                   <div className="rounded-xl border border-green-200 bg-green-50/80 px-4 py-4 text-sm text-green-700 font-medium shadow-sm mb-6">
@@ -255,6 +299,14 @@ const LoginPage = () => {
                         onKeyDown={(e) => { if (e.key === 'Enter') handleForgotPassword(); }}
                       />
                     </div>
+                    {error && (
+                      <div className="mb-3 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium shadow-sm">
+                        <div className="flex items-start gap-2">
+                          <span className="shrink-0 mt-0.5">⚠️</span>
+                          <span className="flex-1">{error}</span>
+                        </div>
+                      </div>
+                    )}
                     <Button
                       type="button"
                       disabled={resetLoading}
@@ -276,7 +328,7 @@ const LoginPage = () => {
             )}
 
             {/* Role selector / email form */}
-            {mode !== 'forgot-password' && (mode === 'select-role' ? (
+            {!emailVerificationSent && mode !== 'forgot-password' && (mode === 'select-role' ? (
               <div className="flex flex-col gap-4">
                 <button
                   type="button"
@@ -426,13 +478,23 @@ const LoginPage = () => {
                   </div>
                 )}
 
+                {/* Error — shown at the bottom where it's always visible */}
+                {error && (
+                  <div className="mb-3 rounded-xl border border-red-200 bg-red-50/80 px-4 py-3 text-sm text-red-700 font-medium shadow-sm">
+                    <div className="flex items-start gap-2">
+                      <span className="shrink-0 mt-0.5">⚠️</span>
+                      <span className="flex-1">{error}</span>
+                    </div>
+                  </div>
+                )}
+
                 <Button
                   type="button"
                   disabled={loading}
                   onClick={handleEmailAuth}
                   className="w-full bg-[#111] text-white rounded-xl h-12 text-base font-semibold hover:bg-black transition-all duration-200 shadow-md"
                 >
-                  {mode === 'login' ? 'Login with Email' : 'Create Account with Email'}
+                  {loading ? 'Please wait...' : mode === 'login' ? 'Login with Email' : 'Create Account with Email'}
                 </Button>
               </div>
             ))}

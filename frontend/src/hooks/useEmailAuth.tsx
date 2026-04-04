@@ -18,12 +18,18 @@ export const useEmailAuth = (
         password: string,
         userType: 'employer' | 'housegirl' | 'agency' | 'admin',
         additionalData: Record<string, unknown>
-    ) => {
+    ): Promise<{ error: string | null; needsVerification?: boolean }> => {
         try {
             setLoading(true);
             shouldSyncFirebaseUserRef.current = true;
-            const { signUpWithEmail } = await import('@/lib/firebaseAuth');
+            const { signUpWithEmail, sendVerificationEmail } = await import('@/lib/firebaseAuth');
             const result = await signUpWithEmail(email, password);
+
+            // Send email verification before proceeding
+            await sendVerificationEmail(result.user).catch(() => {
+                // Non-fatal — user can request a resend later
+            });
+
             const token = await result.user.getIdToken();
             const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
                 method: 'POST',
@@ -68,44 +74,9 @@ export const useEmailAuth = (
                 return { error: null };
             }
 
-            if (response.user) {
-                setUser(response.user);
-                setIsFirebaseUser(true);
-            }
-
-            const resolvedUserType = response.user_type;
             setLoading(false);
-
-            const pendingUnlockRawSignup = sessionStorage.getItem('unlock_after_login');
-            if (pendingUnlockRawSignup) {
-                try {
-                    const pendingUnlock = JSON.parse(pendingUnlockRawSignup);
-                    sessionStorage.removeItem('unlock_after_login');
-                    navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
-                    return { error: null };
-                } catch {
-                    sessionStorage.removeItem('unlock_after_login');
-                }
-            }
-
-            switch (resolvedUserType) {
-                case 'employer':
-                    navigate('/employer-dashboard', { replace: true });
-                    break;
-                case 'housegirl':
-                    navigate('/housegirl-dashboard', { replace: true });
-                    break;
-                case 'agency':
-                    navigate('/agency-dashboard', { replace: true });
-                    break;
-                case 'admin':
-                    navigate('/admin-dashboard', { replace: true });
-                    break;
-                default:
-                    navigate('/login?mode=select-role', { replace: true });
-            }
-
-            return { error: null };
+            // Account created — require email verification before dashboard access
+            return { error: null, needsVerification: true };
         } catch (error: unknown) {
             shouldSyncFirebaseUserRef.current = false;
             const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
@@ -114,14 +85,22 @@ export const useEmailAuth = (
         } finally {
             setLoading(false);
         }
-    }, [setLoading, shouldSyncFirebaseUserRef, navigate, setUser, setIsFirebaseUser]);
+    }, [setLoading, shouldSyncFirebaseUserRef, setUser, setIsFirebaseUser]);
 
     const signIn = useCallback(async (email: string, password: string) => {
         try {
             setLoading(true);
             shouldSyncFirebaseUserRef.current = true;
-            const { signInWithEmail } = await import('@/lib/firebaseAuth');
+            const { signInWithEmail, sendVerificationEmail } = await import('@/lib/firebaseAuth');
             const result = await signInWithEmail(email, password);
+
+            // Block unverified email/password accounts
+            if (!result.user.emailVerified) {
+                await sendVerificationEmail(result.user).catch(() => {});
+                setLoading(false);
+                return { error: 'Email not verified. We sent a new verification link to ' + email + '. Please check your inbox and click the link before logging in.' };
+            }
+
             const token = await result.user.getIdToken();
             const response = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
                 method: 'POST',
