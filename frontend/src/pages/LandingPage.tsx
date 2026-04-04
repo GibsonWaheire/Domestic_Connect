@@ -79,7 +79,7 @@ const LandingPage = () => {
   };
 
   const openHousegirlRegister = () => {
-    navigate('/for-housegirls');
+    navigate('/login?mode=signup&userType=housegirl');
     setIsMenuOpen(false);
   };
 
@@ -133,7 +133,7 @@ const LandingPage = () => {
             <Link to="/housegirls" className="bg-black text-white rounded-full px-4 py-1.5 text-sm font-medium hover:bg-[#333] transition-colors">
               Find Househelp
             </Link>
-            <button type="button" onClick={openHousegirlRegister} className="bg-transparent text-black rounded-full px-4 py-1.5 text-sm font-medium border border-black hover:bg-black hover:text-white transition-colors">
+            <button type="button" onClick={() => navigate('/for-housegirls')} className="bg-transparent text-black rounded-full px-4 py-1.5 text-sm font-medium border border-black hover:bg-black hover:text-white transition-colors">
               For Housegirls
             </button>
           </nav>

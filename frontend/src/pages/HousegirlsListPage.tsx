@@ -527,7 +527,7 @@ const HousegirlsListPage = () => {
               ) : (
                 <>
                   <Button
-                    onClick={() => navigate('/login?mode=signup')}
+                    onClick={() => navigate('/login?mode=signup&userType=housegirl')}
                     variant="outline"
                     className="text-sm font-medium text-black border border-black hover:bg-gray-50 rounded-full px-5 py-2 transition-colors"
                   >
@@ -592,7 +592,7 @@ const HousegirlsListPage = () => {
               <div className="bg-gray-50 rounded-xl p-4 mb-3">
                 <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
                 <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup&userType=housegirl'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
                   <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
                 </div>
               </div>
