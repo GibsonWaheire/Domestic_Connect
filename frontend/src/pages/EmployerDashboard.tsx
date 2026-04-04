@@ -16,7 +16,8 @@ import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Building2, Briefcase, LogOut, MessageCircle, Phone, Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Building2, Briefcase, LogOut, MapPin, MessageCircle, Phone, Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X } from 'lucide-react';
 import { KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS, WORK_TYPE_OPTIONS, EDUCATION_OPTIONS } from '@/constants/employer';
 import { API_BASE_URL } from '@/lib/apiConfig';
 
@@ -503,7 +504,7 @@ const EmployerDashboard = () => {
                         <Plus className="h-4 w-4 mr-2" /> Post a New Job
                       </Button>
                     </div>
-                    {jobPostingsLoading ? (
+                    {dataLoading ? (
                       <div className="grid md:grid-cols-2 gap-4">
                         {[1, 2].map(i => (
                           <Card key={i} className="animate-pulse">
@@ -545,7 +546,7 @@ const EmployerDashboard = () => {
                                 {(job.salary_min || job.salary_max) && (
                                   <span>💰 KSh {(job.salary_min || 0).toLocaleString()}{job.salary_max ? ` – ${job.salary_max.toLocaleString()}` : '+'}/mo</span>
                                 )}
-                                {job.accommodation_type && <span>🏠 {WORK_TYPE_OPTIONS.find(opt => opt.value === job.accommodation_type)?.label || job.accommodation_type}</span>}
+                                {job.accommodation_type && <span>🏠 {job.accommodation_type}</span>}
                               </CardDescription>
                             </CardHeader>
                             <CardContent className="pt-0">
