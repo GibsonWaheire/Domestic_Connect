@@ -255,6 +255,14 @@ const HousegirlsListPage = () => {
       navigate('/login?mode=signup');
       return;
     }
+    if (user.user_type === 'housegirl') {
+      toast({
+        title: 'Employer account required',
+        description: 'This is a housegirl account. You cannot unlock contacts. Sign up as an employer to access this feature.',
+        variant: 'destructive',
+      });
+      return;
+    }
     setSelectedProfileId(null);
     setSelectedPaymentPackage(pkg);
     setShowPaymentModal(true);
@@ -292,6 +300,13 @@ const HousegirlsListPage = () => {
 
   useEffect(() => {
     if (!user || profiles.length === 0) return;
+
+    // Housegirls cannot unlock contacts — clear any pending unlock state and bail
+    if (user.user_type === 'housegirl') {
+      sessionStorage.removeItem('unlock_after_login');
+      window.history.replaceState({}, '', '/housegirls');
+      return;
+    }
 
     // Priority 1: ?unlock=profileId in URL (set by auth hooks after login)
     const unlockParam = searchParams.get('unlock');
