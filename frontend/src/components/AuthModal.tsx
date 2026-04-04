@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
-import { X } from 'lucide-react';
+import { Eye, EyeOff, X } from 'lucide-react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -32,6 +32,8 @@ const AuthModal = ({
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [emailLoading, setEmailLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const { signIn, signUp, handleGoogleSignIn, loading, user } = useAuth();
   const navigate = useNavigate();
@@ -253,30 +255,50 @@ const AuthModal = ({
                   </div>
                   <div className="space-y-1">
                     <Label htmlFor="modal-password" className="text-xs text-gray-500">Password</Label>
-                    <Input
-                      id="modal-password"
-                      type="password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                      className="h-11 w-full border-gray-300"
-                      placeholder="••••••••"
-                      autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-                    />
+                    <div className="relative">
+                      <Input
+                        id="modal-password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-11 w-full border-gray-300 pr-10"
+                        placeholder="••••••••"
+                        autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                   {mode === 'signup' && (
                     <div className="space-y-1">
                       <Label htmlFor="modal-confirm-password" className="text-xs text-gray-500">Confirm Password</Label>
-                      <Input
-                        id="modal-confirm-password"
-                        type="password"
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        required
-                        className="h-11 w-full border-gray-300"
-                        placeholder="••••••••"
-                        autoComplete="new-password"
-                      />
+                      <div className="relative">
+                        <Input
+                          id="modal-confirm-password"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                          className="h-11 w-full border-gray-300 pr-10"
+                          placeholder="••••••••"
+                          autoComplete="new-password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPassword(v => !v)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                          tabIndex={-1}
+                        >
+                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                   )}
                   <Button

@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/hooks/useAuthEnhanced';
+import { toast } from '@/hooks/use-toast';
 import PaymentModal, { PackageDetails } from '@/components/PaymentModal';
 import { Lock, MapPin, Menu, Phone, Search, X } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
@@ -213,9 +214,17 @@ const HousegirlsListPage = () => {
       navigate('/login?mode=signup');
       return;
     }
-    const selectedProfile = profiles.find((profile) => profile.id === profileId);
-    if (selectedProfile && !selectedProfile.available) {
-      setHighDemandWarning('This profile has high demand. They may not be available.');
+    if (user.user_type === 'housegirl') {
+      toast({
+        title: 'Employer account required',
+        description: 'This is a housegirl account. You cannot unlock contacts. Sign up as an employer to access this feature.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const found = profiles.find((profile) => profile.id === profileId);
+    if (found && found.unlockCount >= 3) {
+      setHighDemandWarning(`⚡ High demand — unlocked ${found.unlockCount} times. They may not be available.`);
     } else {
       setHighDemandWarning(null);
     }

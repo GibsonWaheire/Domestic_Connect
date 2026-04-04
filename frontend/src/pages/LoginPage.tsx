@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -28,6 +29,8 @@ const LoginPage = () => {
   const [resetEmailInput, setResetEmailInput] = useState('');
   const [resetSent, setResetSent] = useState(false);
   const [resetLoading, setResetLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
 
   useEffect(() => {
@@ -377,25 +380,45 @@ const LoginPage = () => {
                       </button>
                     )}
                   </div>
-                  <Input
-                    id="passwordInput"
-                    type="password"
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
-                  />
+                  <div className="relative">
+                    <Input
+                      id="passwordInput"
+                      type={showPassword ? 'text' : 'password'}
+                      value={passwordInput}
+                      onChange={(e) => setPasswordInput(e.target.value)}
+                      className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200 pr-11"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                      tabIndex={-1}
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 {mode === 'signup' && (
                   <div className="mb-6">
                     <Label htmlFor="confirmPasswordInput" className="block text-sm font-semibold text-[#111] mb-2">Confirm Password</Label>
-                    <Input
-                      id="confirmPasswordInput"
-                      type="password"
-                      value={confirmPasswordInput}
-                      onChange={(e) => setConfirmPasswordInput(e.target.value)}
-                      className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200"
-                    />
+                    <div className="relative">
+                      <Input
+                        id="confirmPasswordInput"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={confirmPasswordInput}
+                        onChange={(e) => setConfirmPasswordInput(e.target.value)}
+                        className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111] transition-all duration-200 pr-11"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(v => !v)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-700 transition-colors"
+                        tabIndex={-1}
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 )}
 
