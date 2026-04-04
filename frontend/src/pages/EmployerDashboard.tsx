@@ -7,7 +7,8 @@ import { Footer } from '@/components/employer/Footer';
 import { Housegirls } from '@/components/employer/Housegirls';
 import { Settings } from '@/components/employer/Settings';
 import { UnlockModal } from '@/components/employer/UnlockModal';
-import AppliedHousegirlsList from '@/components/employer/AppliedHousegirlsList'; // Added import
+import { JobPostingModal } from '@/components/employer/JobPostingModal';
+import AppliedHousegirlsList from '@/components/employer/AppliedHousegirlsList';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';

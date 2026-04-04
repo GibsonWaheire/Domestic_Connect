@@ -1,161 +1,228 @@
-import { useState } from 'react';
+import { Briefcase, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { 
-  Briefcase, MapPin, DollarSign, FileText, Calendar, Users
-} from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS, WORK_TYPE_OPTIONS, EDUCATION_OPTIONS } from '@/constants/employer';
 
-interface JobPostingModalProps {
-  showJobModal: boolean;
-  setShowJobModal: (show: boolean) => void;
+interface JobFormData {
+  title: string;
+  description: string;
+  location: string;
+  salaryMin: string;
+  salaryMax: string;
+  workType: string;
+  experience: string;
+  education: string;
+  skills: string[];
+  deadline: string;
 }
 
-export const JobPostingModal = ({ showJobModal, setShowJobModal }: JobPostingModalProps) => {
-  const [formData, setFormData] = useState({
-    title: '',
-    location: '',
-    salary: '',
-    description: '',
-    requirements: '',
-    workType: 'Lives in',
-    experience: '3-5 years'
-  });
+interface JobPostingModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+  isSubmitting: boolean;
+  formData: JobFormData;
+  setFormData: (data: JobFormData) => void;
+  isEditing: boolean;
+}
+
+export const JobPostingModal = ({
+  isOpen,
+  onClose,
+  onSubmit,
+  isSubmitting,
+  formData,
+  setFormData,
+  isEditing,
+}: JobPostingModalProps) => {
+  const set = (field: keyof JobFormData, value: string | string[]) =>
+    setFormData({ ...formData, [field]: value });
+
+  const toggleSkill = (skill: string) => {
+    const current = formData.skills || [];
+    set('skills', current.includes(skill) ? current.filter(s => s !== skill) : [...current, skill]);
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ 
-      title: "Job Posted Successfully", 
-      description: "Your job posting has been created and is now live.",
-      variant: "default"
-    });
-    setShowJobModal(false);
-    setFormData({
-      title: '',
-      location: '',
-      salary: '',
-      description: '',
-      requirements: '',
-      workType: 'Lives in',
-      experience: '3-5 years'
-    });
+    onSubmit();
   };
 
   return (
-    <Dialog open={showJobModal} onOpenChange={setShowJobModal}>
+    <Dialog open={isOpen} onOpenChange={open => { if (!open) onClose(); }}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="flex items-center space-x-2">
-            <Briefcase className="h-5 w-5 text-blue-600" />
-            <span>Post New Job</span>
+          <DialogTitle className="flex items-center gap-2">
+            <Briefcase className="h-5 w-5 text-gray-700" />
+            {isEditing ? 'Edit Job Posting' : 'Post a New Job'}
           </DialogTitle>
         </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Job Title</label>
-              <Input
-                value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                placeholder="e.g., Experienced House Manager"
-                className="bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-blue-300"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Location</label>
-              <Input
-                value={formData.location}
-                onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                placeholder="e.g., Karen, Nairobi"
-                className="bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-blue-300"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Salary Range</label>
-              <Input
-                value={formData.salary}
-                onChange={(e) => setFormData({ ...formData, salary: e.target.value })}
-                placeholder="e.g., KES 20,000 - 25,000"
-                className="bg-white/50 backdrop-blur-sm border-gray-200 focus:border-blue-300 focus:ring-blue-300"
-                required
-              />
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Work Type</label>
-              <select
-                value={formData.workType}
-                onChange={(e) => setFormData({ ...formData, workType: e.target.value })}
-                className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-              >
-                <option value="Lives in">Lives in</option>
-                <option value="Day job">Day job</option>
-                <option value="Part-time">Part-time</option>
-                <option value="Weekend only">Weekend only</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">Experience Required</label>
-              <select
-                value={formData.experience}
-                onChange={(e) => setFormData({ ...formData, experience: e.target.value })}
-                className="w-full p-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm"
-              >
-                <option value="0-2 years">0-2 years</option>
-                <option value="3-5 years">3-5 years</option>
-                <option value="6-8 years">6-8 years</option>
-                <option value="9-12 years">9-12 years</option>
-                <option value="12+ years">12+ years</option>
-              </select>
-            </div>
-          </div>
-          
+
+        <form onSubmit={handleSubmit} className="space-y-5 pt-1">
+          {/* Title */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Job Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              placeholder="Describe the job responsibilities and what you're looking for..."
-              rows={4}
-              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm resize-none"
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Job Title *</label>
+            <Input
+              value={formData.title}
+              onChange={e => set('title', e.target.value)}
+              placeholder="e.g., Experienced House Manager"
               required
             />
           </div>
-          
+
+          {/* Description */}
           <div>
-            <label className="text-sm font-medium text-gray-700 mb-2 block">Requirements</label>
+            <label className="text-sm font-medium text-gray-700 mb-1 block">Job Description *</label>
             <textarea
-              value={formData.requirements}
-              onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-              placeholder="List any specific requirements or skills needed..."
-              rows={3}
-              className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white/50 backdrop-blur-sm resize-none"
+              value={formData.description}
+              onChange={e => set('description', e.target.value)}
+              placeholder="Describe the role, duties, and what you're looking for…"
+              rows={4}
+              required
+              className="w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring resize-none"
             />
           </div>
-          
-          <div className="flex items-center justify-end space-x-3 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setShowJobModal(false)}
-              className="hover:bg-gray-50 transition-colors"
-            >
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Location */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Location *</label>
+              <select
+                value={formData.location}
+                onChange={e => set('location', e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-white"
+              >
+                <option value="">Select city…</option>
+                {KENYA_CITIES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            {/* Work Type */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Work Type *</label>
+              <select
+                value={formData.workType}
+                onChange={e => set('workType', e.target.value)}
+                required
+                className="w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-white"
+              >
+                <option value="">Select type…</option>
+                {WORK_TYPE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+
+            {/* Salary Min */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Min Salary (KSh) *</label>
+              <Input
+                type="number"
+                value={formData.salaryMin}
+                onChange={e => set('salaryMin', e.target.value)}
+                placeholder="e.g. 15000"
+                min="0"
+                required
+              />
+            </div>
+
+            {/* Salary Max */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Max Salary (KSh) *</label>
+              <Input
+                type="number"
+                value={formData.salaryMax}
+                onChange={e => set('salaryMax', e.target.value)}
+                placeholder="e.g. 25000"
+                min="0"
+                required
+              />
+            </div>
+
+            {/* Experience */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Experience Required</label>
+              <select
+                value={formData.experience}
+                onChange={e => set('experience', e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-white"
+              >
+                <option value="">Any experience</option>
+                {EXPERIENCE_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+
+            {/* Education */}
+            <div>
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Education Required</label>
+              <select
+                value={formData.education}
+                onChange={e => set('education', e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring bg-white"
+              >
+                <option value="">Any education</option>
+                {EDUCATION_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
+            </div>
+
+            {/* Deadline */}
+            <div className="sm:col-span-2">
+              <label className="text-sm font-medium text-gray-700 mb-1 block">Application Deadline</label>
+              <Input
+                type="date"
+                value={formData.deadline}
+                onChange={e => set('deadline', e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+              />
+            </div>
+          </div>
+
+          {/* Skills */}
+          <div>
+            <label className="text-sm font-medium text-gray-700 mb-2 block">
+              Skills Required
+              {formData.skills?.length > 0 && (
+                <span className="ml-2 text-xs text-gray-400">({formData.skills.length} selected)</span>
+              )}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SKILLS_OPTIONS.map(skill => {
+                const selected = formData.skills?.includes(skill);
+                return (
+                  <button
+                    key={skill}
+                    type="button"
+                    onClick={() => toggleSkill(skill)}
+                    className={`text-xs px-3 py-1 rounded-full border transition-colors ${
+                      selected
+                        ? 'bg-[#111] text-white border-[#111]'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+                    }`}
+                  >
+                    {skill}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-3 pt-2 border-t">
+            <Button type="button" variant="outline" onClick={onClose} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <Briefcase className="h-4 w-4 mr-2" />
-              Post Job
+            <Button type="submit" disabled={isSubmitting} className="bg-[#111] hover:bg-[#333] text-white">
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isEditing ? 'Saving…' : 'Posting…'}
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <Briefcase className="h-4 w-4" />
+                  {isEditing ? 'Save Changes' : 'Post Job'}
+                </span>
+              )}
             </Button>
           </div>
         </form>
