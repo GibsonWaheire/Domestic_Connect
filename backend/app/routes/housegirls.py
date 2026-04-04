@@ -216,43 +216,63 @@ def get_housegirls():
                 user_docs_map[uid]['hg_profile'] = hg_data
 
         logger.info(f"get_housegirls: Found {len(user_docs_map)} unique housegirl candidate IDs")
-        
-        all_results = []
+
+        # Pre-fetch ALL contact_access docs in ONE query to avoid N+1 per housegirl.
+        # Build lookup maps so the per-housegirl loop needs zero extra Firestore calls.
+        all_access_docs = [d.to_dict() for d in db.collection('contact_access').stream()]
+        unlock_count_by_hg_id: dict = {}
+        unlock_count_by_profile_id: dict = {}
+        user_unlocked_hg_ids: set = set()
+        user_unlocked_profile_ids: set = set()
         current_user_id = get_authenticated_user_id_from_request()
-        
+        for ad in all_access_docs:
+            hgid = str(ad.get('housegirl_id') or '')
+            pid  = str(ad.get('target_profile_id') or '')
+            if hgid:
+                unlock_count_by_hg_id[hgid] = unlock_count_by_hg_id.get(hgid, 0) + 1
+            if pid:
+                unlock_count_by_profile_id[pid] = unlock_count_by_profile_id.get(pid, 0) + 1
+            if current_user_id and str(ad.get('user_id') or '') == str(current_user_id):
+                if hgid:
+                    user_unlocked_hg_ids.add(hgid)
+                if pid:
+                    user_unlocked_profile_ids.add(pid)
+
+        all_results = []
+
         for user_id, data_bundle in user_docs_map.items():
             user_data = data_bundle['user_data']
             hg_profile = data_bundle['hg_profile']
-            
+
             if not hg_profile:
                 # Final check for profile via profile_id link
                 fallback_profile = find_housegirl_doc_for_user(user_id)
                 if fallback_profile:
                     hg_profile = fallback_profile.to_dict()
-            
+
             # Combine data attributes
             first_name = user_data.get('first_name') or hg_profile.get('first_name', '')
             last_name = user_data.get('last_name') or hg_profile.get('last_name', '')
             full_name = f"{first_name} {last_name}".strip()
-            
+
             # Local filtering (Firestore's limitations make in-memory filtering cleaner here)
             if location:
                 loc = (hg_profile.get('location') or user_data.get('location') or '').lower()
                 curr_loc = hg_profile.get('current_location', '').lower()
                 if location not in loc and location not in curr_loc:
                     continue
-            
+
             if tribe:
                 hg_tribe = hg_profile.get('tribe', '').lower()
                 if tribe not in hg_tribe:
                     continue
-            
+
             if education and education.lower() not in hg_profile.get('education', '').lower():
                 continue
-                
+
             if experience and experience.lower() not in hg_profile.get('experience', '').lower():
                 continue
-                
+
             if accommodation_type and accommodation_type != hg_profile.get('accommodation_type'):
                 continue
 
@@ -261,21 +281,23 @@ def get_housegirls():
                 continue
             if max_salary is not None and expected_salary > max_salary:
                 continue
-            
-            # Availability logic: Universal visibility requested.
-            # We still show the status, but we don't hide them from the list.
-            unlock_count = get_unlock_count(user_id, hg_profile.get('profile_id'))
-            
-            # Use explicit availability flag if set, otherwise default to true
-            # We ignore the 3-unlock limit for VISIBILITY, but can still track it.
+
             profile_is_available = hg_profile.get('is_available', True)
-            
             if is_available_param is not None:
                 is_avail_bool = str(is_available_param).lower() in ['true', '1', 't', 'y', 'yes']
                 if profile_is_available != is_avail_bool:
                     continue
 
-            can_view_contact = has_contact_access(current_user_id, user_id)
+            # Unlock count — use pre-fetched maps, no extra queries
+            profile_id_str = str(hg_profile.get('profile_id') or '')
+            uid_str = str(user_id)
+            unlock_count = unlock_count_by_hg_id.get(uid_str, 0) or unlock_count_by_profile_id.get(profile_id_str, 0)
+
+            # Contact access — use pre-fetched sets, no extra queries
+            can_view_contact = (
+                uid_str in user_unlocked_hg_ids or
+                (profile_id_str and profile_id_str in user_unlocked_profile_ids)
+            )
             
             all_results.append({
                 'id': user_id,
