@@ -253,12 +253,12 @@ const EmployerDashboard = () => {
     loading: dataLoading,
     error: dataError,
     refreshing,
-    refreshAllData,
-    fetchEmployerProfile,
-    fetchHousegirls,
-    fetchJobPostings,
-    fetchUser
-  } = useRealTimeData(user?.id || null);
+    refreshData,
+  } = useRealTimeData();
+
+  const refreshAllData = () => refreshData(true);
+  const fetchJobPostings = () => refreshData(true);
+  const fetchEmployerProfile = () => refreshData(true);
 
   // Update states when real-time data changes
   useEffect(() => {
