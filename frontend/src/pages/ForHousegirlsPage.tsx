@@ -59,7 +59,7 @@ const ForHousegirlsPage = () => {
     <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
       <Helmet>
         <title>Find House Help Jobs in Kenya | Domestic Connect</title>
-        <meta name="description" content="Looking for a housegirl, nanny or caregiver job in Kenya? Browse 500+ job listings from verified families. Register free. Pay KSh 100 to apply." />
+        <meta name="description" content="Looking for a housegirl, nanny or caregiver job in Kenya? Browse job listings from verified families for free. Register free. Pay KSh 100 per application." />
       </Helmet>
 
       {/* NAVBAR */}
@@ -164,7 +164,7 @@ const ForHousegirlsPage = () => {
           </div>
           <div className="flex flex-wrap items-center justify-center gap-4 mt-8 text-[13px] text-white/60 font-medium">
             <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> Free to register</span>
-            <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> KSh 100 to view all jobs</span>
+            <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> KSh 100 per application</span>
             <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> No agency commission</span>
             <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> Direct contact with employer</span>
           </div>
@@ -186,14 +186,14 @@ const ForHousegirlsPage = () => {
               },
               {
                 step: '2',
-                title: 'Pay KSh 100 Once',
-                desc: 'A one-time KSh 100 payment unlocks all job listings from verified employers across Kenya.',
-                icon: '💳',
+                title: 'Browse Jobs Free',
+                desc: 'View all live job listings from verified employers across Kenya — completely free, no payment needed to browse.',
+                icon: '🔍',
               },
               {
                 step: '3',
-                title: 'Apply & Get Hired',
-                desc: 'Browse live job posts, apply directly, and get contacted by employers. No middleman involved.',
+                title: 'Pay KSh 100 to Apply',
+                desc: 'Found the right job? Pay a small KSh 100 application fee, attach a cover letter, and get hired directly.',
                 icon: '🤝',
               },
             ].map((item) => (
@@ -285,12 +285,12 @@ const ForHousegirlsPage = () => {
           <div className="mt-8 text-center">
             <div className="inline-block bg-[#111] text-white rounded-xl px-6 py-4">
               <p className="font-semibold mb-1">Want to see full job details + apply?</p>
-              <p className="text-sm text-white/70 mb-3">Register free, then pay KSh 100 once to unlock all listings.</p>
+              <p className="text-sm text-white/70 mb-3">Register free, browse all jobs, and pay KSh 100 only when you apply.</p>
               <Button
                 onClick={() => navigate('/login?mode=signup')}
                 className="rounded-full bg-white text-[#111] hover:bg-gray-100 font-semibold px-6"
               >
-                Register & Get Access
+                Register Free & Browse Jobs
               </Button>
             </div>
           </div>
@@ -303,7 +303,7 @@ const ForHousegirlsPage = () => {
           <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 tracking-tight">Why use Domestic Connect?</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
             {[
-              { icon: '🆓', title: 'Free to Register', desc: 'Create your profile at no cost. Only pay KSh 100 to unlock full job access.' },
+              { icon: '🆓', title: 'Free to Register & Browse', desc: 'Create your profile and browse all job listings at no cost. Only pay KSh 100 when you apply.' },
               { icon: '💼', title: 'Real Jobs, Real Families', desc: 'All listings are posted by verified employers actively looking for house help.' },
               { icon: '📱', title: 'Direct Contact', desc: 'No agency in between. Employers contact you directly — keep 100% of your salary.' },
               { icon: '🌍', title: 'All Major Cities', desc: 'Jobs in Nairobi, Mombasa, Kisumu, Nakuru and over 15 cities across Kenya.' },
@@ -346,7 +346,7 @@ const ForHousegirlsPage = () => {
       <section className="bg-[#111] text-white py-14">
         <div className="max-w-[700px] mx-auto px-4 text-center">
           <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">Ready to find your next job?</h2>
-          <p className="text-white/70 mb-6 text-sm">Register free today. Pay KSh 100 once to unlock all job listings and start applying.</p>
+          <p className="text-white/70 mb-6 text-sm">Register free today. Browse all jobs for free. Pay KSh 100 only when you apply for a job.</p>
           <Button
             onClick={() => navigate('/login?mode=signup')}
             className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-10 text-base font-semibold"
