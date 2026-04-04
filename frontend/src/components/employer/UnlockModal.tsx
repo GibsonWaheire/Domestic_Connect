@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
-  Phone, Mail, Star, MapPin, Clock, Shield, CreditCard, Lock, ExternalLink
+  Phone, Mail, Star, MapPin, Clock, Shield, CreditCard, Lock, ExternalLink, AlertTriangle
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
@@ -134,6 +134,21 @@ export const UnlockModal = ({
               </div>
             )}
           </div>
+
+          {/* Unlock count warning */}
+          {(housegirlToUnlock.unlockCount ?? 0) > 0 && (
+            <div className="p-4 bg-amber-50 border border-amber-300 rounded-lg flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800">
+                  Unlocked {housegirlToUnlock.unlockCount} time{housegirlToUnlock.unlockCount !== 1 ? 's' : ''} by other employers
+                </p>
+                <p className="text-sm text-amber-700 mt-0.5">
+                  This contact has already been viewed by {housegirlToUnlock.unlockCount} other employer{housegirlToUnlock.unlockCount !== 1 ? 's' : ''}. They may already be in talks with someone — proceed with that in mind.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Payment Information */}
           <div className="space-y-3">

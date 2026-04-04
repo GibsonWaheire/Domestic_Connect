@@ -4,8 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { 
-  Filter, Users, MapPin, Clock, Star, Phone, MessageCircle, Eye, Edit, Trash2
+import {
+  Filter, Users, MapPin, Clock, Star, Phone, MessageCircle, Eye, Edit, Trash2, AlertTriangle
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
 import { 
@@ -273,6 +273,12 @@ export const Housegirls = ({
                         <Badge className="bg-green-100 text-green-800 border-green-200">AVAILABLE</Badge>
                       ) : (
                         <Badge className="bg-amber-100 text-amber-800 border-amber-200">⚡ High Demand</Badge>
+                      )}
+                      {housegirl.unlockCount > 0 && (
+                        <Badge className="bg-orange-50 text-orange-700 border border-orange-300 flex items-center gap-1 text-xs font-medium">
+                          <Eye className="h-3 w-3" />
+                          Unlocked by {housegirl.unlockCount} employer{housegirl.unlockCount !== 1 ? 's' : ''}
+                        </Badge>
                       )}
                     </div>
 

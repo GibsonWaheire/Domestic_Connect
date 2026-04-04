@@ -163,6 +163,10 @@ const EmployerDashboard = () => {
     }));
 
     const sortedRealHousegirls = transformedHousegirls.sort((a, b) => {
+      // Unlocked contacts always bubble to the top
+      if (a.contactUnlocked && !b.contactUnlocked) return -1;
+      if (!a.contactUnlocked && b.contactUnlocked) return 1;
+      // Within each group, sort by newest first
       const aMatch = apiHousegirls.find((hg) => String(hg.id) === String(a.id));
       const bMatch = apiHousegirls.find((hg) => String(hg.id) === String(b.id));
       const aTime = Date.parse((aMatch as { created_at?: string } | undefined)?.created_at || '');
