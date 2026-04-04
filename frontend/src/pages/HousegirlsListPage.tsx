@@ -334,19 +334,36 @@ const HousegirlsListPage = () => {
       return;
     }
 
+    const bundleParam = searchParams.get('bundle');
+    if (bundleParam === BUNDLE_UNLOCK_PACKAGE.id) {
+        window.history.replaceState({}, '', '/housegirls');
+        setSelectedProfileId(null);
+        setSelectedPaymentPackage(BUNDLE_UNLOCK_PACKAGE);
+        setShowPaymentModal(true);
+        return;
+    }
+
     // Priority 2: sessionStorage (set by handleGetContact before redirect)
     const raw = sessionStorage.getItem('unlock_after_login');
     if (!raw) return;
 
     let pendingId: string | null = null;
+    let pendingPackageId: string | null = null;
     try {
       const parsed = JSON.parse(raw);
       pendingId = parsed.profileId || null;
+      pendingPackageId = parsed.packageId || null;
     } catch {
-      pendingId = raw; // fallback for plain string
+      pendingId = raw;
     }
 
     sessionStorage.removeItem('unlock_after_login');
+    if (pendingPackageId === BUNDLE_UNLOCK_PACKAGE.id) {
+        setSelectedProfileId(null);
+        setSelectedPaymentPackage(BUNDLE_UNLOCK_PACKAGE);
+        setShowPaymentModal(true);
+        return;
+    }
     if (!pendingId) return;
 
     const matchingProfile = profiles.find((p) => p.id === pendingId);

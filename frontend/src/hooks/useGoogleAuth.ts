@@ -88,7 +88,11 @@ export const useGoogleAuth = (
                         try {
                             const pendingUnlock = JSON.parse(pendingUnlockRawSignup);
                             sessionStorage.removeItem('unlock_after_login');
-                            navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                            if (pendingUnlock.profileId) {
+                                navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                            } else if (pendingUnlock.packageId) {
+                                navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
+                            }
                             return { error: null, user: signupResponse.user };
                         } catch {
                             sessionStorage.removeItem('unlock_after_login');
@@ -137,7 +141,11 @@ export const useGoogleAuth = (
                 try {
                     const pendingUnlock = JSON.parse(pendingUnlockRaw);
                     sessionStorage.removeItem('unlock_after_login');
-                    navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                    if (pendingUnlock.profileId) {
+                        navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                    } else if (pendingUnlock.packageId) {
+                        navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
+                    }
                     return { error: null, user: response.user };
                 } catch {
                     sessionStorage.removeItem('unlock_after_login');
