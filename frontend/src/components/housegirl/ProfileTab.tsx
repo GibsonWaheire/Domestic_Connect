@@ -403,7 +403,10 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
                 <div className="space-y-4">
                   <div>
                     <label className="text-sm font-medium text-gray-700">Full Name</label>
-                    <p className="text-gray-900">{user.first_name} {user.last_name}</p>
+                    <p className="text-gray-900">
+                      {(editFormData.firstName || user.first_name || '').trim()}{' '}
+                      {(editFormData.lastName || user.last_name || '').trim()}
+                    </p>
                   </div>
                   <div>
                     <label className="text-sm font-medium text-gray-700">Email</label>

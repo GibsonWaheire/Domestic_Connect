@@ -420,7 +420,11 @@ def get_housegirl(housegirl_id):
                         if not profile_photo_url:
                             profile_photo_url = normalize_photo_url(u_data.get('profile_photo_url'))
 
-        # Fallback to fields stored on the housegirl doc if multi-hop lookup yields empty names
+        # Fallback 1: first_name/last_name stored directly on the housegirl doc
+        if not first_name and housegirl.get('first_name'):
+            first_name = housegirl.get('first_name', '')
+            last_name = housegirl.get('last_name', '')
+        # Fallback 2: parse full_name stored on the housegirl doc
         if not first_name and housegirl.get('full_name'):
             name_parts = housegirl.get('full_name').strip().split(' ')
             first_name = name_parts[0]
@@ -604,8 +608,13 @@ def update_housegirl(housegirl_id):
             full_name = (data.get('full_name') or '').strip()
             if full_name:
                 name_parts = full_name.split(' ')
-                user_updates['first_name'] = name_parts[0]
-                user_updates['last_name'] = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+                first_name_val = name_parts[0]
+                last_name_val = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
+                user_updates['first_name'] = first_name_val
+                user_updates['last_name'] = last_name_val
+                # Also write directly to housegirl_profiles so GET doesn't need users chain
+                updates['first_name'] = first_name_val
+                updates['last_name'] = last_name_val
             if 'phone_number' in data:
                 user_updates['phone_number'] = data.get('phone_number')
             if 'profile_photo_url' in updates or 'photo_url' in updates:
