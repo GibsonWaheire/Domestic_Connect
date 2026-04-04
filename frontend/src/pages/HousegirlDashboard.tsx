@@ -15,7 +15,7 @@ import ProfileTab from '@/components/housegirl/ProfileTab';
 import SettingsTab from '@/components/housegirl/SettingsTab';
 import JobsTab from '@/components/housegirl/JobsTab';
 import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
-import ProfileCompletionModal from '@/components/ProfileCompletionModal';
+import ProfileCompletionWall from '@/components/ProfileCompletionWall';
 
 const statusStyles: Record<string, string> = {
   pending:  'bg-yellow-50 text-yellow-700 border-yellow-200',
@@ -95,7 +95,23 @@ const HousegirlDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'jobs' | 'messages' | 'settings'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
-  const [showCompletionModal, setShowCompletionModal] = useState(false);
+  const [showCompletionWall, setShowCompletionWall] = useState(false);
+
+  const isProfileComplete = (data: Record<string, unknown>): boolean => {
+    const phone = data.phone_number as string | undefined;
+    const hasPhone = phone && phone.trim() !== '' && phone !== 'Unlock to view';
+    const hasName = (data.first_name as string || user?.first_name) && (data.last_name as string || user?.last_name);
+    return !!(
+      hasPhone &&
+      hasName &&
+      data.role &&
+      data.location &&
+      data.experience &&
+      data.accommodation_type &&
+      data.expected_salary &&
+      Array.isArray(data.skills) && (data.skills as string[]).length > 0
+    );
+  };
 
   const resolvedUserId =
     user?.id ||
@@ -138,11 +154,8 @@ const HousegirlDashboard = () => {
           const data = await res.json();
           const photoUrl = toAbsolutePhotoUrl(data.profile_photo_url || data.photo_url);
           if (photoUrl) setProfilePhoto(photoUrl);
-          // Show completion modal if phone number is missing
-          const hasPhone = data.phone_number && data.phone_number !== 'Unlock to view' && data.phone_number.trim() !== '';
-          const userHasPhone = user?.phone_number && user.phone_number.trim() !== '';
-          if (!hasPhone && !userHasPhone) {
-            setShowCompletionModal(true);
+          if (!isProfileComplete(data)) {
+            setShowCompletionWall(true);
           }
         }
       } catch {}
@@ -167,14 +180,13 @@ const HousegirlDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {showCompletionModal && resolvedUserId && (
-        <ProfileCompletionModal
+      {showCompletionWall && resolvedUserId && (
+        <ProfileCompletionWall
           userId={resolvedUserId}
-          onComplete={(phone) => {
-            setShowCompletionModal(false);
-            toast({ title: 'Profile updated', description: 'Your phone number has been saved. You are now visible to employers.' });
-            // Reflect the saved phone in the user context display without a full reload
-            void phone;
+          user={user}
+          onComplete={() => {
+            setShowCompletionWall(false);
+            toast({ title: 'Profile saved!', description: 'You are now visible to employers.' });
           }}
         />
       )}

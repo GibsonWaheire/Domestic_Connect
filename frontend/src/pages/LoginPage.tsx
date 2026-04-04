@@ -21,6 +21,8 @@ const LoginPage = () => {
   const [userType, setUserType] = useState<'employer' | 'housegirl'>('employer');
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [firstNameInput, setFirstNameInput] = useState('');
+  const [lastNameInput, setLastNameInput] = useState('');
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [confirmPasswordInput, setConfirmPasswordInput] = useState('');
@@ -76,7 +78,14 @@ const LoginPage = () => {
       if (result.error) setError(result.error);
       return;
     }
-    const result = await signUp(emailInput, passwordInput, userType, {});
+    if (mode === 'signup') {
+      if (!firstNameInput.trim()) { setError('First name is required.'); return; }
+      if (!lastNameInput.trim()) { setError('Last name is required.'); return; }
+    }
+    const result = await signUp(emailInput, passwordInput, userType, {
+      first_name: firstNameInput.trim(),
+      last_name: lastNameInput.trim(),
+    });
     if (result.error) {
       setError(result.error);
       return;
@@ -409,6 +418,34 @@ const LoginPage = () => {
                     <span className="bg-[#FDF6F0] px-4 text-gray-400">OR</span>
                   </div>
                 </div>
+
+                {/* Name fields — signup only */}
+                {mode === 'signup' && (
+                  <div className="grid grid-cols-2 gap-3 mb-4">
+                    <div>
+                      <Label htmlFor="firstNameInput" className="block text-sm font-semibold text-[#111] mb-2">First Name</Label>
+                      <Input
+                        id="firstNameInput"
+                        type="text"
+                        value={firstNameInput}
+                        onChange={(e) => setFirstNameInput(e.target.value)}
+                        placeholder="Grace"
+                        className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111]"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="lastNameInput" className="block text-sm font-semibold text-[#111] mb-2">Last Name</Label>
+                      <Input
+                        id="lastNameInput"
+                        type="text"
+                        value={lastNameInput}
+                        onChange={(e) => setLastNameInput(e.target.value)}
+                        placeholder="Wanjiku"
+                        className="w-full border border-gray-200 bg-white rounded-xl h-12 shadow-sm focus-visible:ring-1 focus-visible:ring-[#111]"
+                      />
+                    </div>
+                  </div>
+                )}
 
                 {/* Email form */}
                 <div className="mb-4">

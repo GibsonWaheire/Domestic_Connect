@@ -114,12 +114,7 @@ export const useEmailAuth = (
 
             if ((response as { status?: string }).status === 'not_found') {
                 setLoading(false);
-                toast({
-                    title: 'Account not found',
-                    description: 'No account found with this number. Create an account first.',
-                });
-                navigate('/login?mode=signup', { replace: true });
-                return { error: null, user: response.user };
+                return { error: 'No account found with this email. Please create an account first.' };
             }
 
             if ((response as { status?: string; uid?: string }).status === 'role_required') {

@@ -248,7 +248,10 @@ def verify_phone_auth():
             if user_type not in ['employer', 'housegirl', 'agency']:
                 return jsonify({'error': 'A valid user_type is required (employer, housegirl, agency).'}), 400
 
-            if display_name_safe:
+            # Prefer explicit first_name/last_name; fall back to splitting display_name
+            first_name = data.get('first_name') or ''
+            last_name = data.get('last_name') or ''
+            if not first_name and display_name_safe:
                 name_parts = display_name_safe.split(' ')
                 first_name = name_parts[0]
                 if len(name_parts) > 1:

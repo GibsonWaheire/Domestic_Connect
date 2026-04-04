@@ -36,6 +36,8 @@ const salaryRangeToNumber = (range: string): number => {
 };
 
 const defaultFormData: EditFormData = {
+  firstName: '',
+  lastName: '',
   bio: '',
   expectedSalary: '',
   location: '',
@@ -79,6 +81,8 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
           onProfilePhotoChange(apiPhoto);
         }
         setEditFormData({
+          firstName: result?.first_name || user?.first_name || '',
+          lastName: result?.last_name || user?.last_name || '',
           bio: result?.bio || '',
           expectedSalary: result?.expected_salary ? salaryToRange(Number(result.expected_salary)) : '',
           location: result?.location || result?.current_location || '',
@@ -198,6 +202,8 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
     if (!resolvedUserId) return;
 
     const requiredFields = [
+      { key: 'firstName', label: 'First Name' },
+      { key: 'lastName', label: 'Last Name' },
       { key: 'phone', label: 'Phone Number' },
       { key: 'role', label: 'Role' },
       { key: 'location', label: 'Location' },
@@ -231,7 +237,7 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
-          full_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+          full_name: `${editFormData.firstName || user.first_name || ''} ${editFormData.lastName || user.last_name || ''}`.trim(),
           phone_number: editFormData.phone,
           role: editFormData.role,
           skills: editFormData.skills,
@@ -267,6 +273,8 @@ const ProfileTab = ({ user, resolvedUserId, profilePhoto, onProfilePhotoChange }
       const savedSkills = Array.isArray(saved?.skills) ? saved.skills : editFormData.skills;
       const savedLanguages = Array.isArray(saved?.languages) ? saved.languages : normalizedLanguages;
       setEditFormData({
+        firstName: saved?.first_name || editFormData.firstName,
+        lastName: saved?.last_name || editFormData.lastName,
         bio: saved?.bio || editFormData.bio,
         expectedSalary: saved?.expected_salary ? salaryToRange(Number(saved.expected_salary)) : editFormData.expectedSalary,
         location: saved?.location || editFormData.location,

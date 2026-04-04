@@ -34,6 +34,13 @@ export const EXPERIENCE_OPTIONS = [
   '12+ years',
 ];
 
+export const LANGUAGE_OPTIONS = [
+  'English', 'Swahili', 'Kikuyu', 'Luo', 'Kamba', 'Luhya',
+  'Kisii', 'Kalenjin', 'Somali', 'Taita', 'Meru', 'Other',
+];
+
+export const AGE_OPTIONS = Array.from({ length: 43 }, (_, i) => String(i + 18)); // 18–60
+
 export const KENYA_CITIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret', 'Thika',
   'Malindi', 'Kitale', 'Garissa', 'Kakamega', 'Nyeri', 'Machakos',

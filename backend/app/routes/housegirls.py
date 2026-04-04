@@ -559,6 +559,20 @@ def update_housegirl(housegirl_id):
             return jsonify({'error': 'Forbidden'}), 403
             
         data = request.get_json() or {}
+
+        # Phone uniqueness — reject if another account already has this number
+        new_phone = (data.get('phone_number') or '').strip()
+        if new_phone:
+            current_user_id = getattr(user, 'id', None)
+            # Check users collection
+            for u_doc in db.collection('users').where('phone_number', '==', new_phone).limit(5).stream():
+                if u_doc.id != current_user_id:
+                    return jsonify({'error': 'This phone number is already registered to another account.'}), 409
+            # Check housegirl_profiles collection
+            for hg in db.collection('housegirl_profiles').where('phone_number', '==', new_phone).limit(5).stream():
+                if hg.id != housegirl_id:
+                    return jsonify({'error': 'This phone number is already registered to another account.'}), 409
+
         BLOCKED_FIELDS = ['unlock_count', 'is_available', 'in_demand_alert']
         for field in BLOCKED_FIELDS:
             data.pop(field, None)
