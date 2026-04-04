@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Briefcase, Lock, MapPin, CheckCircle2, Loader2, ClipboardList } from 'lucide-react';
+import { Briefcase, MapPin, Loader2, ClipboardList, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
@@ -12,6 +12,8 @@ import { PESAPAL_PENDING_KEY } from '@/components/employer/UnlockModal';
 interface JobsTabProps {
   user: any;
 }
+
+const PENDING_APPLICATION_KEY = 'pending_job_application';
 
 const accommodationLabel: Record<string, string> = {
   live_in: 'Live-in',
@@ -27,33 +29,24 @@ const statusBadge: Record<string, { label: string; className: string }> = {
 };
 
 const JobsTab = ({ user }: JobsTabProps) => {
-  const [hasAccess, setHasAccess] = useState(false);
-  const [checkingAccess, setCheckingAccess] = useState(true);
   const [jobs, setJobs] = useState<any[]>([]);
-  const [loadingJobs, setLoadingJobs] = useState(false);
-  const [paying, setPaying] = useState(false);
+  const [loadingJobs, setLoadingJobs] = useState(true);
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set());
-  const [applyingId, setApplyingId] = useState<string | null>(null);
 
-  // Cover letter modal
+  // Cover letter + payment modal
   const [modalJob, setModalJob] = useState<any | null>(null);
   const [coverLetter, setCoverLetter] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   // My Applications
   const [myApplications, setMyApplications] = useState<any[]>([]);
   const [loadingApps, setLoadingApps] = useState(false);
 
   useEffect(() => {
-    checkAccess();
+    fetchJobs();
+    fetchMyApplications();
+    checkPendingApplication();
   }, []);
-
-  useEffect(() => {
-    if (hasAccess) {
-      fetchJobs();
-      fetchMyApplications();
-    }
-  }, [hasAccess]);
 
   const authHeaders = async () => {
     const token = await FirebaseAuthService.getIdToken().catch(() => null);
@@ -63,16 +56,32 @@ const JobsTab = ({ user }: JobsTabProps) => {
     };
   };
 
-  const checkAccess = async () => {
+  // After returning from Pesapal, auto-submit any pending application stored before redirect
+  const checkPendingApplication = async () => {
+    const raw = localStorage.getItem(PENDING_APPLICATION_KEY);
+    if (!raw) return;
     try {
+      const { job_id, cover_letter: cl } = JSON.parse(raw);
+      localStorage.removeItem(PENDING_APPLICATION_KEY);
+      if (!job_id) return;
       const headers = await authHeaders();
-      const res = await fetch(`${API_BASE_URL}/api/payments/job-access-status`, { headers });
+      const res = await fetch(`${API_BASE_URL}/api/jobs/${job_id}/apply`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ cover_letter: cl || '' }),
+      });
       const data = await res.json();
-      setHasAccess(data.has_access === true);
+      if (res.ok) {
+        setAppliedJobIds(prev => new Set([...prev, job_id]));
+        toast({ title: 'Application submitted!', description: 'Good luck! The employer will be in touch.' });
+        fetchMyApplications();
+      } else if (res.status === 400 && data.error?.includes('already applied')) {
+        setAppliedJobIds(prev => new Set([...prev, job_id]));
+      } else {
+        toast({ title: 'Could not submit application', description: data.error || 'Please try again.', variant: 'destructive' });
+      }
     } catch {
-      setHasAccess(false);
-    } finally {
-      setCheckingAccess(false);
+      localStorage.removeItem(PENDING_APPLICATION_KEY);
     }
   };
 
@@ -110,7 +119,14 @@ const JobsTab = ({ user }: JobsTabProps) => {
     }
   };
 
-  const handlePayForAccess = async () => {
+  const openApplyModal = (job: any) => {
+    setModalJob(job);
+    setCoverLetter('');
+  };
+
+  // Paying KSh 100 to apply — store job intent, redirect to Pesapal
+  const handlePayAndApply = async () => {
+    if (!modalJob) return;
     setPaying(true);
     try {
       const headers = await authHeaders();
@@ -132,10 +148,15 @@ const JobsTab = ({ user }: JobsTabProps) => {
         toast({ title: 'Invalid payment URL', variant: 'destructive' });
         return;
       }
+      // Store the application intent — will be submitted on return
+      localStorage.setItem(PENDING_APPLICATION_KEY, JSON.stringify({
+        job_id: modalJob.id,
+        cover_letter: coverLetter,
+      }));
       localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
         order_tracking_id: data.order_tracking_id,
         package_id: 'job_access',
-        redirect_after: '/housegirl-dashboard',
+        redirect_after: '/housegirl-dashboard?tab=jobs',
       }));
       window.location.href = redirectUrl;
     } catch {
@@ -144,94 +165,6 @@ const JobsTab = ({ user }: JobsTabProps) => {
       setPaying(false);
     }
   };
-
-  const openApplyModal = (job: any) => {
-    setModalJob(job);
-    setCoverLetter('');
-  };
-
-  const handleSubmitApplication = async () => {
-    if (!modalJob) return;
-    setSubmitting(true);
-    try {
-      const headers = await authHeaders();
-      const res = await fetch(`${API_BASE_URL}/api/jobs/${modalJob.id}/apply`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ cover_letter: coverLetter }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setAppliedJobIds(prev => new Set([...prev, modalJob.id]));
-        setMyApplications(prev => [{
-          id: data.id,
-          job_id: modalJob.id,
-          job_title: modalJob.title,
-          job_location: modalJob.location,
-          job_salary_min: modalJob.salary_min,
-          job_salary_max: modalJob.salary_max,
-          cover_letter: coverLetter,
-          status: 'pending',
-          applied_at: new Date().toISOString(),
-        }, ...prev]);
-        toast({ title: 'Application submitted!', description: 'Good luck!' });
-        setModalJob(null);
-      } else if (res.status === 400 && data.error?.includes('already applied')) {
-        setAppliedJobIds(prev => new Set([...prev, modalJob.id]));
-        toast({ title: 'Already applied', description: 'You have already applied to this job.' });
-        setModalJob(null);
-      } else {
-        toast({ title: 'Could not apply', description: data.error || 'Please try again.', variant: 'destructive' });
-      }
-    } catch {
-      toast({ title: 'Error applying', variant: 'destructive' });
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  if (checkingAccess) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
-      </div>
-    );
-  }
-
-  if (!hasAccess) {
-    return (
-      <Card className="max-w-lg mx-auto">
-        <CardContent className="p-8 text-center">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mx-auto mb-5">
-            <Lock className="h-7 w-7 text-gray-400" />
-          </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Unlock All Job Listings</h3>
-          <p className="text-gray-500 text-sm mb-1">
-            Pay <span className="font-bold text-[#111]">KSh 100</span> once to access all job postings from verified families across Kenya.
-          </p>
-          <p className="text-gray-400 text-xs mb-6">One-time payment. No recurring fees.</p>
-
-          <div className="bg-gray-50 rounded-xl p-4 mb-6 text-left space-y-2">
-            {['Browse 100+ active job listings', 'Apply directly to employers', 'Jobs in Nairobi, Mombasa, Kisumu & more', 'Direct contact — no agency cut'].map(f => (
-              <div key={f} className="flex items-center gap-2 text-sm text-gray-700">
-                <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                {f}
-              </div>
-            ))}
-          </div>
-
-          <Button
-            onClick={handlePayForAccess}
-            disabled={paying}
-            className="w-full rounded-full bg-[#111] hover:bg-[#333] text-white h-12 text-base font-semibold"
-          >
-            {paying ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Processing...</> : 'Pay KSh 100 — Unlock Jobs'}
-          </Button>
-          <p className="text-xs text-gray-400 mt-3">Secure payment via M-Pesa, card or bank through Pesapal</p>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <div className="space-y-8">
@@ -299,14 +232,17 @@ const JobsTab = ({ user }: JobsTabProps) => {
                     )}
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-gray-400">{job.applications_count || 0} applicant{job.applications_count !== 1 ? 's' : ''}</span>
-                      <Button
-                        size="sm"
-                        onClick={() => !applied && openApplyModal(job)}
-                        disabled={applied}
-                        className={`rounded-full text-xs px-4 ${applied ? 'bg-green-600 hover:bg-green-600' : 'bg-[#111] hover:bg-[#333]'} text-white`}
-                      >
-                        {applied ? '✓ Applied' : 'Apply Now'}
-                      </Button>
+                      {applied ? (
+                        <span className="text-xs font-medium text-green-600 flex items-center gap-1">✓ Applied</span>
+                      ) : (
+                        <Button
+                          size="sm"
+                          onClick={() => openApplyModal(job)}
+                          className="rounded-full text-xs px-4 bg-[#111] hover:bg-[#333] text-white"
+                        >
+                          Apply — KSh 100
+                        </Button>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -340,7 +276,7 @@ const JobsTab = ({ user }: JobsTabProps) => {
             <CardContent className="text-center py-10">
               <ClipboardList className="h-10 w-10 text-gray-300 mx-auto mb-3" />
               <p className="text-sm text-gray-500">You haven't applied to any jobs yet.</p>
-              <p className="text-xs text-gray-400 mt-1">Browse available listings above and hit Apply Now.</p>
+              <p className="text-xs text-gray-400 mt-1">Browse listings above and click Apply to get started.</p>
             </CardContent>
           </Card>
         ) : (
@@ -372,7 +308,7 @@ const JobsTab = ({ user }: JobsTabProps) => {
         )}
       </div>
 
-      {/* Cover Letter Modal */}
+      {/* Apply Modal — cover letter + payment */}
       <Dialog open={!!modalJob} onOpenChange={(open) => { if (!open) setModalJob(null); }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -392,20 +328,30 @@ const JobsTab = ({ user }: JobsTabProps) => {
               <textarea
                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 resize-none"
                 rows={4}
-                placeholder="Introduce yourself and explain why you're a great fit for this role..."
+                placeholder="Introduce yourself and explain why you're a great fit..."
                 value={coverLetter}
                 onChange={e => setCoverLetter(e.target.value)}
               />
             </div>
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
+              <div className="flex items-center justify-between font-semibold mb-0.5">
+                <span>Application Fee</span>
+                <span>KSh 100</span>
+              </div>
+              <p className="text-xs text-blue-600">One-time fee per application. Pay via M-Pesa, card or bank through Pesapal.</p>
+            </div>
           </div>
           <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setModalJob(null)} disabled={submitting}>Cancel</Button>
+            <Button variant="outline" onClick={() => setModalJob(null)} disabled={paying}>Cancel</Button>
             <Button
-              onClick={handleSubmitApplication}
-              disabled={submitting}
+              onClick={handlePayAndApply}
+              disabled={paying}
               className="bg-[#111] hover:bg-[#333] text-white"
             >
-              {submitting ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Submitting...</> : 'Submit Application'}
+              {paying
+                ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Redirecting...</>
+                : <><CreditCard className="h-4 w-4 mr-2" />Pay KSh 100 &amp; Apply</>
+              }
             </Button>
           </DialogFooter>
         </DialogContent>
