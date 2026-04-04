@@ -260,13 +260,39 @@ const EmployerDashboard = () => {
   const fetchJobPostings = () => refreshData(true);
   const fetchEmployerProfile = () => refreshData(true);
 
-  // Update states when real-time data changes
+  // Transform dashboard data when it changes
   useEffect(() => {
-    if (dashboardData) {
-      setHousegirls(dashboardData.housegirls || []);
-      setJobPostings(dashboardData.jobPostings || []);
-      setEmployerProfileData(dashboardData.employerProfile || null);
-    }
+    const apiHousegirls = dashboardData?.available_data?.housegirls || [];
+    const transformed: Housegirl[] = apiHousegirls.map((hg: any) => ({
+      id: String(hg.id),
+      name: `${hg.first_name || 'Unknown'} ${hg.last_name || ''}`,
+      age: hg.age,
+      location: hg.location,
+      experience: hg.experience,
+      education: hg.education,
+      salary: hg.expected_salary && hg.expected_salary >= 1000
+        ? `KSh ${hg.expected_salary.toLocaleString()}`
+        : 'Not specified',
+      status: hg.is_available ? 'available' : 'unavailable',
+      bio: hg.bio,
+      skills: hg.skills || [],
+      contactUnlocked: Boolean(hg.contact_unlocked || (hg.phone_number && hg.phone_number !== 'Unlock to view')),
+      unlockCount: Number(hg.unlock_count) || 0,
+      phone: hg.phone_number,
+      email: hg.email,
+      community: hg.tribe,
+      workType: hg.accommodation_type,
+      livingArrangement: hg.accommodation_type,
+      profileImage: hg.profile_photo_url,
+    }));
+    transformed.sort((a, b) => {
+      if (a.contactUnlocked && !b.contactUnlocked) return -1;
+      if (!a.contactUnlocked && b.contactUnlocked) return 1;
+      return 0;
+    });
+    setHousegirls(transformed);
+    setJobPostings(dashboardData?.available_data?.job_postings || []);
+    setEmployerProfileData((dashboardData?.available_data as any)?.employer_profile || null);
   }, [dashboardData]);
 
   // Derived filtered housegirls for current page
@@ -486,7 +512,31 @@ const EmployerDashboard = () => {
           {/* Main content area based on activeTab */}
           <div className="bg-white p-6 rounded-lg shadow-sm">
             {/* Conditional rendering for tabs */}
-            {activeTab === 'housegirls' && <Housegirls user={user} />}
+            {activeTab === 'housegirls' && (
+              <Housegirls
+                housegirls={housegirls}
+                filteredHousegirls={filteredHousegirls}
+                searchTerm={searchTerm}
+                selectedCommunity={selectedCommunity}
+                setSelectedCommunity={setSelectedCommunity}
+                selectedAgeRange={selectedAgeRange}
+                setSelectedAgeRange={setSelectedAgeRange}
+                selectedSalaryRange={selectedSalaryRange}
+                setSelectedSalaryRange={setSelectedSalaryRange}
+                selectedEducation={selectedEducation}
+                setSelectedEducation={setSelectedEducation}
+                selectedWorkType={selectedWorkType}
+                setSelectedWorkType={setSelectedWorkType}
+                selectedExperience={selectedExperience}
+                setSelectedExperience={setSelectedExperience}
+                selectedLivingArrangement={selectedLivingArrangement}
+                setSelectedLivingArrangement={setSelectedLivingArrangement}
+                currentPage={currentPage}
+                setCurrentPage={setCurrentPage}
+                itemsPerPage={itemsPerPage}
+                onUnlock={openUnlockModal}
+              />
+            )}
             {activeTab === 'jobs' && (
               <div className="space-y-6">
                 {selectedJobIdForApplicants && user?.id ? (
