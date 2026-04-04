@@ -264,22 +264,54 @@ def create_job():
         if getattr(user, 'user_type', '') != 'employer':
             return jsonify({'error': 'Only employers can create job postings'}), 403
         
-        data = request.get_json()
-        
-        # Validate salary range
-        if data.get('salary_min', 0) > data.get('salary_max', 0):
+        data = request.get_json() or {}
+
+        # Required fields
+        required = ['title', 'description', 'location', 'salary_min', 'salary_max']
+        missing = [f for f in required if not data.get(f) and data.get(f) != 0]
+        if missing:
+            return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
+
+        # Length limits
+        if len(str(data['title'])) > 200:
+            return jsonify({'error': 'Title must be 200 characters or fewer'}), 400
+        if len(str(data['description'])) > 3000:
+            return jsonify({'error': 'Description must be 3000 characters or fewer'}), 400
+        if len(str(data['location'])) > 100:
+            return jsonify({'error': 'Location must be 100 characters or fewer'}), 400
+
+        # Salary must be non-negative numbers
+        try:
+            salary_min = int(data['salary_min'])
+            salary_max = int(data['salary_max'])
+            if salary_min < 0 or salary_max < 0:
+                raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Salary values must be non-negative numbers'}), 400
+
+        # Salary range
+        if salary_min > salary_max:
             return jsonify({'error': 'Minimum salary cannot be greater than maximum salary'}), 400
-        
+
+        # Enum checks
+        valid_accommodation = {'live_in', 'live_out', 'both'}
+        if data.get('accommodation_type') and data['accommodation_type'] not in valid_accommodation:
+            return jsonify({'error': f'accommodation_type must be one of: {", ".join(valid_accommodation)}'}), 400
+
+        valid_experience = {'no_experience', '1_year', '2_years', '3_years', '4_years', '5_plus_years'}
+        if data.get('required_experience') and data['required_experience'] not in valid_experience:
+            return jsonify({'error': 'Invalid required_experience value'}), 400
+
         # Create job posting
         job_id = f'job_{uuid.uuid4().hex[:12]}'
         job_data = {
             'id': job_id,
             'employer_id': getattr(user, 'id'),
-            'title': data['title'],
-            'description': data['description'],
-            'location': data['location'],
-            'salary_min': data['salary_min'],
-            'salary_max': data['salary_max'],
+            'title': str(data['title']).strip(),
+            'description': str(data['description']).strip(),
+            'location': str(data['location']).strip(),
+            'salary_min': salary_min,
+            'salary_max': salary_max,
             'accommodation_type': data.get('accommodation_type'),
             'required_experience': data.get('required_experience'),
             'required_education': data.get('required_education'),
@@ -409,15 +441,19 @@ def apply_to_job(job_id):
         if existing:
             return jsonify({'error': 'You have already applied to this job'}), 400
         
-        data = request.get_json()
-        
+        data = request.get_json() or {}
+
+        cover_letter = str(data.get('cover_letter', '') or '').strip()
+        if len(cover_letter) > 2000:
+            return jsonify({'error': 'Cover letter must be 2000 characters or fewer'}), 400
+
         # Create job application
         app_id = f'app_{uuid.uuid4().hex[:12]}'
         application_data = {
             'id': app_id,
             'job_id': job_id,
             'housegirl_id': user_id,
-            'cover_letter': data.get('cover_letter', ''),
+            'cover_letter': cover_letter,
             'status': 'pending',
             'applied_at': datetime.utcnow().isoformat()
         }

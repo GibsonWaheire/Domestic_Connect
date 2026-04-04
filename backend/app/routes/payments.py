@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import firebase_auth_required
+from app.services.auth_service import firebase_auth_required, email_verified_required
 from app.firebase_init import db
 from app import limiter
 from app.utils.audit_log import write_audit_log, ACTION_PAYMENT_COMPLETED, ACTION_PAYMENT_FAILED, ACTION_CONTACT_UNLOCKED
@@ -243,6 +243,7 @@ def get_payment_packages():
 @payments_bp.route('/purchase', methods=['POST'])
 @limiter.limit("10 per hour; 3 per minute")
 @firebase_auth_required
+@email_verified_required
 def create_purchase():
     """Create a new purchase and return a Pesapal redirect URL"""
     try:

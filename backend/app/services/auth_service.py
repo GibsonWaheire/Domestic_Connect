@@ -114,6 +114,27 @@ def verify_firebase_token(token):
         print(f"Firebase token verification error: {e}")
         return None
 
+def email_verified_required(f):
+    """Decorator to require a verified email before accessing a route.
+
+    Apply on top of @firebase_auth_required (runs after it).
+    Google OAuth users are always verified. Email/password users must have
+    clicked the verification link Firebase sends on sign-up.
+    """
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        firebase_user = getattr(request, 'firebase_user', None)
+        if not firebase_user:
+            return jsonify({'error': 'Authentication required'}), 401
+        if not firebase_user.get('email_verified', False):
+            return jsonify({
+                'error': 'Please verify your email address before making a payment. '
+                         'Check your inbox for a verification link.'
+            }), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 def firebase_auth_required(f):
     """Decorator to require Firebase authentication"""
     @wraps(f)
