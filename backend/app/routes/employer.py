@@ -81,10 +81,10 @@ def get_applied_housegirls(job_id):
             for access_doc in contact_access_ref:
                 if access_doc.exists:
                     contact_unlocked = True
-                    # No longer return actual contact details, only indicate that it's unlocked
-                    unlocked_contact_details['email'] = None
-                    unlocked_contact_details['phone_number'] = None
-                    break # Only need one to confirm unlock
+                    # Return the actual contact details now that access is confirmed
+                    unlocked_contact_details['email'] = housegirl_profile_data.get('email')
+                    unlocked_contact_details['phone_number'] = housegirl_profile_data.get('phone_number')
+                    break
 
             applied_housegirls.append({
                 'application_id': app_data.get('id'),
@@ -151,10 +151,17 @@ def unlock_housegirl_contact(job_id, housegirl_id):
             .limit(1).stream())
 
         if existing_unlock:
-            # If already unlocked, return a message indicating messaging is enabled
+            # Return actual contact details since access is already paid for
+            hg_user_doc = db.collection('users').document(housegirl_id).get()
+            contact_details = {'email': None, 'phone_number': None}
+            if hg_user_doc.exists:
+                hg_data = hg_user_doc.to_dict()
+                contact_details['email'] = hg_data.get('email')
+                contact_details['phone_number'] = hg_data.get('phone_number')
             return jsonify({
-                'message': 'Interaction already unlocked, you can now message this housegirl.',
-                'contact_unlocked': True # Explicitly state that it's unlocked for frontend consumption
+                'message': 'Contact already unlocked.',
+                'contact_unlocked': True,
+                'contact_details': contact_details
             }), 200
 
         # Initiate payment
