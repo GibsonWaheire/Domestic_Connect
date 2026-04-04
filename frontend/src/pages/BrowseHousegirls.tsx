@@ -93,15 +93,23 @@ const BrowseHousegirls = () => {
 
   const handleShowUnlockModal = (housegirl: Housegirl | null) => {
     if (!user) {
-        toast({
-            title: "Authentication Required",
-            description: "Please log in or create an account to unlock contacts.",
-        });
-        navigate('/login');
-    } else {
-        setHousegirlToUnlock(housegirl);
-        setShowUnlockModal(true);
+      toast({
+        title: "Authentication Required",
+        description: "Please log in or create an employer account to unlock contacts.",
+      });
+      navigate('/login');
+      return;
     }
+    if (user.user_type === 'housegirl') {
+      toast({
+        title: "Employer account required",
+        description: "This is a housegirl account. You cannot unlock contacts. Sign up as an employer to access this feature.",
+        variant: "destructive",
+      });
+      return;
+    }
+    setHousegirlToUnlock(housegirl);
+    setShowUnlockModal(true);
   };
 
   const filteredHousegirls = filterHousegirls(
