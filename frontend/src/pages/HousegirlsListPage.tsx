@@ -631,7 +631,7 @@ const HousegirlsListPage = () => {
       </div>
 
       <section className="relative md:sticky top-[73px] z-40 bg-[#111] w-full">
-        <div className="px-4 md:px-12 py-4">
+        <div className="px-4 md:px-12 py-4 pb-5 md:pb-4 border-b border-gray-100 md:border-0">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="flex flex-1 flex-col md:flex-row md:items-center gap-3">
               <div className="relative w-full md:flex-1 md:max-w-md">
@@ -694,7 +694,7 @@ const HousegirlsListPage = () => {
 
       <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
 
-        <main id="profiles-list" className="mt-4 py-8">
+        <main id="profiles-list" className="mt-6 md:mt-4 py-8">
           <div className="w-full px-0 md:px-10">
             <div className="flex flex-col w-full relative">
               <div className="flex flex-col gap-[8px] w-full">
