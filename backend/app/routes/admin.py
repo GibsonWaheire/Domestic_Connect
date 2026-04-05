@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required, admin_required
 from app.firebase_init import db
-from app.utils.audit_log import write_audit_log, ACTION_USER_DEACTIVATED, ACTION_USER_ACTIVATED, ACTION_AGENCY_VERIFIED, ACTION_DATA_EXPORT
+from app.utils.audit_log import write_audit_log, ACTION_USER_DEACTIVATED, ACTION_USER_ACTIVATED, ACTION_AGENCY_VERIFIED, ACTION_DATA_EXPORT, ACTION_ROLE_CHANGED
+from firebase_admin import auth as firebase_admin_auth
 from datetime import datetime, timedelta
 import json
 import logging
@@ -144,6 +145,7 @@ def get_all_users():
                 'last_name': user.get('last_name'),
                 'phone_number': user.get('phone_number'),
                 'is_active': user.get('is_active', True),
+                'is_admin': user.get('is_admin', False),
                 'created_at': user.get('created_at'),
                 'updated_at': user.get('updated_at'),
                 'has_profile': has_profile
@@ -218,6 +220,7 @@ def get_user_details(user_id):
             'last_name': user.get('last_name'),
             'phone_number': user.get('phone_number'),
             'is_active': user.get('is_active', True),
+            'is_admin': user.get('is_admin', False),
             'created_at': user.get('created_at'),
             'updated_at': user.get('updated_at')
         }
@@ -258,7 +261,9 @@ def get_user_details(user_id):
                         'accommodation_type': hg_data.get('accommodation_type'),
                         'tribe': hg_data.get('tribe'),
                         'is_available': hg_data.get('is_available'),
-                        'profile_photo_url': hg_data.get('profile_photo_url')
+                        'profile_photo_url': hg_data.get('profile_photo_url'),
+                        'skills': hg_data.get('skills') or [],
+                        'profile_complete': hg_data.get('profile_complete', False),
                     }
             elif user_type == 'agency':
                 ag_docs = list(db.collection('agency_profiles').where('profile_id', '==', profile_id).limit(1).stream())
@@ -273,15 +278,36 @@ def get_user_details(user_id):
         
         # Add purchase history
         purchases = list(db.collection('user_purchases').where('user_id', '==', user_id).stream())
-        user_data['purchases'] = [{
-            'id': p.to_dict().get('id'),
-            'package_id': p.to_dict().get('package_id'),
-            'amount': p.to_dict().get('amount'),
-            'status': p.to_dict().get('status'),
-            'purchase_date': p.to_dict().get('purchase_date'),
-            'payment_reference': p.to_dict().get('payment_reference')
-        } for p in purchases]
-        
+        pkg_name_cache = {}
+
+        def _package_display_name(package_id):
+            if not package_id:
+                return None
+            if package_id in pkg_name_cache:
+                return pkg_name_cache[package_id]
+            pkg_doc = db.collection('payment_packages').document(str(package_id)).get()
+            if pkg_doc.exists:
+                name = pkg_doc.to_dict().get('name') or str(package_id)
+            else:
+                q = list(db.collection('payment_packages').where('id', '==', str(package_id)).limit(1).stream())
+                name = q[0].to_dict().get('name', str(package_id)) if q else str(package_id)
+            pkg_name_cache[package_id] = name
+            return name
+
+        user_data['purchases'] = []
+        for p in purchases:
+            pd = p.to_dict()
+            pid = pd.get('package_id')
+            user_data['purchases'].append({
+                'id': pd.get('id'),
+                'package_id': pid,
+                'package_name': _package_display_name(pid),
+                'amount': pd.get('amount'),
+                'status': pd.get('status'),
+                'purchase_date': pd.get('purchase_date'),
+                'payment_reference': pd.get('payment_reference')
+            })
+
         return jsonify(user_data), 200
         
     except Exception as e:
@@ -317,7 +343,6 @@ def promote_user(user_id):
         # Sync Firebase custom claim
         if firebase_uid:
             try:
-                from firebase_admin import auth as firebase_admin_auth
                 new_role = 'admin' if make_admin else (user_data.get('user_type') or 'employer')
                 firebase_admin_auth.set_custom_user_claims(firebase_uid, {'role': new_role})
             except Exception as claim_err:
@@ -382,6 +407,381 @@ def toggle_user_status(user_id):
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
+
+
+def _housegirl_profile_ref_for_user(user_id):
+    doc = db.collection('housegirl_profiles').document(user_id).get()
+    if doc.exists:
+        return db.collection('housegirl_profiles').document(user_id)
+    for d in db.collection('housegirl_profiles').where('user_id', '==', user_id).limit(10).stream():
+        return db.collection('housegirl_profiles').document(d.id)
+    profs = list(db.collection('profiles').where('user_id', '==', user_id).limit(1).stream())
+    if profs:
+        pid = profs[0].to_dict().get('id')
+        if pid:
+            for d in db.collection('housegirl_profiles').where('profile_id', '==', pid).limit(1).stream():
+                return db.collection('housegirl_profiles').document(d.id)
+    return None
+
+
+def _delete_subdocs_by_user_id(collection_name, user_id):
+    for d in db.collection(collection_name).where('user_id', '==', user_id).stream():
+        d.reference.delete()
+    ref = db.collection(collection_name).document(user_id)
+    snap = ref.get()
+    if snap.exists:
+        ref.delete()
+
+
+@admin_bp.route('/users/<user_id>', methods=['DELETE'])
+@firebase_auth_required
+@admin_required
+def delete_user(user_id):
+    try:
+        admin_user = getattr(request, 'current_user', None)
+        admin_id = getattr(admin_user, 'id', None)
+        if admin_id and admin_id == user_id:
+            return jsonify({'error': 'You cannot delete your own account'}), 400
+
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+
+        user_data = user_doc.to_dict() or {}
+        firebase_uid = user_data.get('firebase_uid') or user_data.get('uid')
+
+        for ps in db.collection('profiles').where('user_id', '==', user_id).stream():
+            pdata = ps.to_dict() or {}
+            prof_key = pdata.get('id') or ps.id
+            if prof_key:
+                for coll in ('employer_profiles', 'housegirl_profiles', 'agency_profiles'):
+                    db.collection(coll).document(prof_key).delete()
+            ps.reference.delete()
+
+        for coll in ('employer_profiles', 'housegirl_profiles', 'agency_profiles'):
+            _delete_subdocs_by_user_id(coll, user_id)
+
+        for p in db.collection('user_purchases').where('user_id', '==', user_id).stream():
+            p.reference.delete()
+
+        user_ref.delete()
+
+        if firebase_uid:
+            try:
+                firebase_admin_auth.delete_user(firebase_uid)
+            except Exception as fe:
+                logger.warning(f'Firebase Auth delete_user failed for {firebase_uid}: {fe}')
+
+        write_audit_log(
+            user_id=user_id,
+            action='user_deleted',
+            details={'email': user_data.get('email')},
+            performed_by=admin_id or 'unknown_admin',
+        )
+
+        return jsonify({'message': 'User deleted', 'user_id': user_id}), 200
+    except Exception as e:
+        logger.error(f'delete_user error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/users/<user_id>/assign-role', methods=['POST'])
+@firebase_auth_required
+@admin_required
+def admin_assign_user_role(user_id):
+    try:
+        data = request.get_json() or {}
+        user_type = data.get('user_type')
+        if user_type not in ('employer', 'housegirl', 'agency'):
+            return jsonify({'error': 'Invalid user_type'}), 400
+
+        user_doc_ref = db.collection('users').document(user_id)
+        user_doc = user_doc_ref.get()
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+
+        user_data = user_doc.to_dict() or {}
+        old_type = user_data.get('user_type')
+        timestamp = datetime.utcnow().isoformat()
+        user_doc_ref.set({
+            'user_type': user_type,
+            'updated_at': timestamp,
+        }, merge=True)
+
+        user_email = user_data.get('email', '') or ''
+        user_phone = user_data.get('phone_number', '') or ''
+        first_name = user_data.get('first_name', '') or ''
+        last_name = user_data.get('last_name', '') or ''
+
+        profile_docs = list(db.collection('profiles').where('user_id', '==', user_id).limit(1).stream())
+        if profile_docs:
+            profile_id = profile_docs[0].to_dict().get('id') or profile_docs[0].id
+            db.collection('profiles').document(profile_docs[0].id).set({'updated_at': timestamp}, merge=True)
+        else:
+            profile_id = user_id
+            db.collection('profiles').document(profile_id).set({
+                'id': profile_id,
+                'profile_id': profile_id,
+                'user_id': user_id,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': user_email,
+                'phone_number': user_phone,
+                'created_at': timestamp,
+                'updated_at': timestamp,
+            })
+
+        role_collection = {
+            'employer': 'employer_profiles',
+            'housegirl': 'housegirl_profiles',
+            'agency': 'agency_profiles',
+        }[user_type]
+        role_doc = db.collection(role_collection).document(profile_id).get()
+        if not role_doc.exists:
+            role_profile = {
+                'id': profile_id,
+                'profile_id': profile_id,
+                'user_id': user_id,
+                'first_name': first_name,
+                'last_name': last_name,
+                'email': user_email,
+                'phone_number': user_phone,
+                'created_at': timestamp,
+                'updated_at': timestamp,
+            }
+            if user_type == 'housegirl':
+                role_profile.update({
+                    'is_available': True,
+                    'unlock_count': 0,
+                    'activation_fee_paid': False,
+                    'in_demand_alert': False,
+                })
+            elif user_type == 'agency':
+                role_profile.update({
+                    'agency_name': '',
+                    'location': '',
+                    'description': None,
+                    'license_number': None,
+                })
+            db.collection(role_collection).document(profile_id).set(role_profile)
+
+        firebase_uid = user_data.get('firebase_uid') or user_data.get('uid')
+        if firebase_uid:
+            try:
+                firebase_admin_auth.set_custom_user_claims(firebase_uid, {'role': user_type})
+            except Exception as claim_err:
+                logger.warning(f'Could not update custom claim for {firebase_uid}: {claim_err}')
+
+        admin_user = getattr(request, 'current_user', None)
+        write_audit_log(
+            user_id=user_id,
+            action=ACTION_ROLE_CHANGED,
+            details={'old_role': old_type, 'new_role': user_type, 'source': 'admin_assign'},
+            performed_by=getattr(admin_user, 'id', 'unknown_admin'),
+        )
+
+        return jsonify({'success': True, 'user_type': user_type}), 200
+    except Exception as e:
+        logger.error(f'admin_assign_user_role error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/housegirls/<user_id>', methods=['PATCH'])
+@firebase_auth_required
+@admin_required
+def edit_housegirl_profile(user_id):
+    try:
+        user_doc = db.collection('users').document(user_id).get()
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+        if user_doc.to_dict().get('user_type') != 'housegirl':
+            return jsonify({'error': 'User is not a housegirl'}), 400
+
+        data = request.get_json() or {}
+        allowed = {
+            'bio', 'location', 'experience', 'expected_salary',
+            'accommodation_type', 'skills', 'is_available', 'profile_complete',
+        }
+        updates = {k: v for k, v in data.items() if k in allowed}
+        if not updates:
+            return jsonify({'error': 'No valid fields to update'}), 400
+
+        ref = _housegirl_profile_ref_for_user(user_id)
+        if not ref:
+            return jsonify({'error': 'Housegirl profile not found'}), 404
+
+        updates['updated_at'] = datetime.utcnow().isoformat()
+        ref.set(updates, merge=True)
+        return jsonify({'message': 'Profile updated', 'updated': updates}), 200
+    except Exception as e:
+        logger.error(f'edit_housegirl_profile error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/jobs', methods=['GET'])
+@firebase_auth_required
+@admin_required
+def get_admin_jobs():
+    try:
+        status_filter = request.args.get('status')
+        search = (request.args.get('search') or '').lower()
+
+        docs = list(db.collection('job_postings').stream())
+        jobs = [d.to_dict() for d in docs]
+
+        if status_filter:
+            jobs = [j for j in jobs if j.get('status') == status_filter]
+        if search:
+            jobs = [
+                j for j in jobs
+                if search in (j.get('title') or '').lower()
+                or search in (j.get('location') or '').lower()
+            ]
+
+        jobs.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+
+        result = []
+        for job in jobs:
+            emp_id = job.get('employer_id')
+            emp_name = ''
+            if emp_id:
+                udoc = db.collection('users').document(emp_id).get()
+                if udoc.exists:
+                    ud = udoc.to_dict()
+                    emp_name = f"{ud.get('first_name', '')} {ud.get('last_name', '')}".strip()
+            jid = job.get('id')
+            apps_count = len(list(db.collection('job_applications').where('job_id', '==', jid).stream()))
+            result.append({
+                'id': jid,
+                'title': job.get('title'),
+                'location': job.get('location'),
+                'status': job.get('status'),
+                'created_at': job.get('created_at'),
+                'employer_id': emp_id,
+                'employer_name': emp_name or '—',
+                'applications_count': apps_count,
+            })
+
+        return jsonify({'jobs': result}), 200
+    except Exception as e:
+        logger.error(f'get_admin_jobs error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/jobs/<job_id>/status', methods=['PATCH'])
+@firebase_auth_required
+@admin_required
+def patch_job_status(job_id):
+    try:
+        data = request.get_json() or {}
+        new_status = data.get('status')
+        if new_status not in ('active', 'closed', 'removed'):
+            return jsonify({'error': 'Invalid status'}), 400
+
+        job_ref = db.collection('job_postings').document(job_id)
+        job_doc = job_ref.get()
+        if not job_doc.exists:
+            q = list(db.collection('job_postings').where('id', '==', job_id).limit(1).stream())
+            if not q:
+                return jsonify({'error': 'Job not found'}), 404
+            job_ref = q[0].reference
+            job_doc = q[0]
+
+        job_ref.update({
+            'status': new_status,
+            'updated_at': datetime.utcnow().isoformat(),
+        })
+        return jsonify({'message': 'Status updated', 'id': job_id, 'status': new_status}), 200
+    except Exception as e:
+        logger.error(f'patch_job_status error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/payments', methods=['GET'])
+@firebase_auth_required
+@admin_required
+def get_admin_payments():
+    try:
+        status_filter = request.args.get('status')
+
+        purchases_raw = [p.to_dict() for p in db.collection('user_purchases').stream()]
+        current_month = datetime.utcnow().replace(day=1, hour=0, minute=0, second=0, microsecond=0).isoformat()
+
+        total_revenue = 0.0
+        this_month_revenue = 0.0
+
+        for p in purchases_raw:
+            amt = float(p.get('amount') or 0)
+            st = p.get('status') or ''
+            if st == 'completed':
+                total_revenue += amt
+                if (p.get('purchase_date') or '') >= current_month:
+                    this_month_revenue += amt
+
+        try:
+            unlocks_count = len(list(db.collection('contact_access').stream()))
+        except Exception:
+            unlocks_count = 0
+
+        purchases_out = []
+        users_cache = {}
+
+        def user_email(uid):
+            if not uid:
+                return ''
+            if uid in users_cache:
+                return users_cache[uid]
+            u = db.collection('users').document(uid).get()
+            em = u.to_dict().get('email', '') if u.exists else ''
+            users_cache[uid] = em
+            return em
+
+        pkg_cache = {}
+
+        def pkg_name(pid):
+            if not pid:
+                return ''
+            if pid in pkg_cache:
+                return pkg_cache[pid]
+            doc = db.collection('payment_packages').document(str(pid)).get()
+            if doc.exists:
+                name = doc.to_dict().get('name') or str(pid)
+            else:
+                q = list(db.collection('payment_packages').where('id', '==', str(pid)).limit(1).stream())
+                name = q[0].to_dict().get('name', str(pid)) if q else str(pid)
+            pkg_cache[pid] = name
+            return name
+
+        for p in sorted(purchases_raw, key=lambda x: x.get('purchase_date', ''), reverse=True):
+            st = p.get('status') or ''
+            if status_filter and st != status_filter:
+                continue
+            pid = p.get('package_id')
+            purchases_out.append({
+                'id': p.get('id'),
+                'user_id': p.get('user_id'),
+                'user_email': user_email(p.get('user_id')),
+                'amount': p.get('amount'),
+                'package_id': pid,
+                'package_name': pkg_name(pid),
+                'status': st,
+                'purchase_date': p.get('purchase_date'),
+            })
+
+        return jsonify({
+            'purchases': purchases_out,
+            'summary': {
+                'total_revenue': total_revenue,
+                'this_month_revenue': this_month_revenue,
+                'total_purchases': len(purchases_raw),
+                'unlocks_count': unlocks_count,
+            },
+        }), 200
+    except Exception as e:
+        logger.error(f'get_admin_payments error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
 
 @admin_bp.route('/agencies', methods=['GET'])
 @firebase_auth_required
@@ -497,20 +897,14 @@ def verify_agency(agency_id):
 @firebase_auth_required
 @admin_required
 def sync_data():
-    """Sync data from external sources"""
+    """Admin refresh trigger — returns fresh timestamp for clients to reload stats."""
     try:
-        data = request.get_json()
-        sync_type = data.get('type', 'all')
-        
-        if sync_type == 'all':
-            return jsonify({'message': 'Full data sync completed'}), 200
-        elif sync_type == 'users':
-            return jsonify({'message': 'User data sync completed'}), 200
-        elif sync_type == 'agencies':
-            return jsonify({'message': 'Agency data sync completed'}), 200
-        else:
+        data = request.get_json() or {}
+        sync_type = data.get('sync_type') or data.get('type', 'all')
+        synced_at = datetime.utcnow().isoformat()
+        if sync_type not in ('all', 'users', 'agencies'):
             return jsonify({'error': 'Invalid sync type'}), 400
-            
+        return jsonify({'status': 'ok', 'synced_at': synced_at, 'sync_type': sync_type}), 200
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({

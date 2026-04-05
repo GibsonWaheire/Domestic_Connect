@@ -12,6 +12,12 @@ const LoginPage = () => {
   const authContext = useAuthEnhanced();
   const user = authContext?.user || null;
   const loading = authContext?.loading || false;
+
+  useEffect(() => {
+    if (!loading && user?.is_admin) {
+      navigate('/admin-dashboard', { replace: true });
+    }
+  }, [loading, user, navigate]);
   const handleGoogleSignIn = authContext?.handleGoogleSignIn || (async () => ({ error: 'Authentication is unavailable.' }));
   const signIn = authContext?.signIn || (async () => ({ error: 'Authentication is unavailable.' }));
   const signUp = authContext?.signUp || (async () => ({ error: 'Authentication is unavailable.' }));

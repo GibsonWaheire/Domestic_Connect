@@ -475,6 +475,91 @@ export interface AdminUser {
   has_profile: boolean;
 }
 
+export interface AdminUserPurchase {
+  id: string;
+  package_id?: string;
+  package_name?: string | null;
+  amount?: number;
+  status?: string;
+  purchase_date?: string;
+  payment_reference?: string;
+}
+
+export interface AdminUserDetail {
+  id: string;
+  firebase_uid?: string;
+  email: string;
+  user_type: string;
+  first_name: string;
+  last_name: string;
+  phone_number?: string;
+  is_active: boolean;
+  is_admin?: boolean;
+  created_at: string;
+  updated_at: string;
+  profile?: {
+    id?: string;
+    created_at?: string;
+    updated_at?: string;
+    employer?: { company_name?: string | null; location?: string | null; description?: string | null };
+    housegirl?: {
+      age?: number;
+      bio?: string | null;
+      current_location?: string | null;
+      location?: string | null;
+      education?: string;
+      experience?: string;
+      expected_salary?: number;
+      accommodation_type?: string;
+      tribe?: string;
+      is_available?: boolean | null;
+      profile_photo_url?: string | null;
+      skills?: string[];
+      profile_complete?: boolean;
+    };
+    agency?: Record<string, unknown>;
+  };
+  purchases: AdminUserPurchase[];
+}
+
+export interface AdminJobRow {
+  id: string;
+  title: string;
+  location: string;
+  status: string;
+  created_at: string;
+  employer_id: string;
+  employer_name: string;
+  applications_count: number;
+}
+
+export interface AdminPaymentsSummary {
+  total_revenue: number;
+  this_month_revenue: number;
+  total_purchases: number;
+  unlocks_count: number;
+}
+
+export interface AdminPaymentRow {
+  id: string;
+  user_id: string;
+  user_email: string;
+  amount?: number;
+  package_id?: string;
+  package_name: string;
+  status: string;
+  purchase_date?: string;
+}
+
+export interface UserWithoutRole {
+  id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  phone_number?: string;
+  created_at?: string;
+}
+
 export interface AdminAgency {
   id: string;
   name: string;
@@ -520,13 +605,28 @@ export const adminApi = {
     if (params?.user_type) searchParams.append('user_type', params.user_type);
     if (params?.search) searchParams.append('search', params.search);
     
-    return apiRequest<{ users: AdminUser[]; pagination: { page: number; per_page: number; total: number; pages: number } }>(`/api/admin/users?${searchParams}`, {
+    return apiRequest<{
+      users: AdminUser[];
+      pagination: {
+        page: number;
+        per_page: number;
+        total: number;
+        pages: number;
+        has_next?: boolean;
+        has_prev?: boolean;
+      };
+    }>(`/api/admin/users?${searchParams}`, {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
-  
+
+  getUsersWithoutRoles: (token: string) =>
+    apiRequest<{ users: UserWithoutRole[] }>('/api/admin/users-without-roles', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
   getUserDetails: (token: string, userId: string) =>
-    apiRequest<AdminUser>(`/api/admin/users/${userId}`, {
+    apiRequest<AdminUserDetail>(`/api/admin/users/${userId}`, {
       headers: { Authorization: `Bearer ${token}` },
     }),
   
@@ -562,11 +662,73 @@ export const adminApi = {
       body: JSON.stringify({ is_admin: makeAdmin }),
     }),
 
-  syncData: (token: string, syncType: string = 'all') =>
-    apiRequest<{ success: boolean; message: string }>('/api/admin/sync', {
+  deleteUser: (token: string, userId: string) =>
+    apiRequest<{ message: string; user_id: string }>(`/api/admin/users/${userId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  assignUserRole: (token: string, userId: string, userType: 'employer' | 'housegirl' | 'agency') =>
+    apiRequest<{ success: boolean; user_type: string }>(`/api/admin/users/${userId}/assign-role`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ type: syncType }),
+      body: JSON.stringify({ user_type: userType }),
+    }),
+
+  patchHousegirlProfile: (
+    token: string,
+    userId: string,
+    body: Partial<{
+      bio: string;
+      location: string;
+      experience: string;
+      expected_salary: number;
+      accommodation_type: string;
+      skills: string[];
+      is_available: boolean;
+      profile_complete: boolean;
+    }>
+  ) =>
+    apiRequest<{ message: string }>(`/api/admin/housegirls/${userId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    }),
+
+  getJobs: (token: string, params?: { status?: string; search?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    if (params?.search) searchParams.append('search', params.search);
+    const q = searchParams.toString();
+    return apiRequest<{ jobs: AdminJobRow[] }>(`/api/admin/jobs${q ? `?${q}` : ''}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+  },
+
+  patchJobStatus: (token: string, jobId: string, status: 'active' | 'closed' | 'removed') =>
+    apiRequest<{ message: string; id: string; status: string }>(`/api/admin/jobs/${jobId}/status`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status }),
+    }),
+
+  getPayments: (token: string, params?: { status?: string }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.status) searchParams.append('status', params.status);
+    const q = searchParams.toString();
+    return apiRequest<{ purchases: AdminPaymentRow[]; summary: AdminPaymentsSummary }>(
+      `/api/admin/payments${q ? `?${q}` : ''}`,
+      {
+        headers: { Authorization: `Bearer ${token}` },
+      }
+    );
+  },
+
+  syncData: (token: string, syncType: string = 'all') =>
+    apiRequest<{ status: string; synced_at: string; sync_type?: string }>('/api/admin/sync', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ sync_type: syncType }),
     }),
   
   getAnalytics: (token: string) =>
