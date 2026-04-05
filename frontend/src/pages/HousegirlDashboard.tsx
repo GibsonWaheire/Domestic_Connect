@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Briefcase, Heart, Home, LogOut, MessageCircle, Settings, User } from 'lucide-react';
+import { Briefcase, Camera, Heart, Home, LogOut, MessageCircle, Settings, User, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
@@ -96,6 +96,8 @@ const HousegirlDashboard = () => {
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'jobs' | 'messages' | 'settings'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [showCompletionWall, setShowCompletionWall] = useState(false);
+  const [showPhotoReminder, setShowPhotoReminder] = useState(false);
+  const photoReminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isProfileComplete = (data: Record<string, unknown>): boolean => {
     // Primary: backend sets this flag once all required fields are saved — never re-prompt
@@ -151,7 +153,18 @@ const HousegirlDashboard = () => {
         if (res.ok) {
           const data = await res.json();
           const photoUrl = toAbsolutePhotoUrl(data.profile_photo_url || data.photo_url);
-          if (photoUrl) setProfilePhoto(photoUrl);
+          if (photoUrl) {
+            setProfilePhoto(photoUrl);
+          } else {
+            // No photo — show reminder after 5 seconds (once per session)
+            const reminderKey = `photo_reminder_shown_${resolvedUserId}`;
+            if (!sessionStorage.getItem(reminderKey)) {
+              photoReminderTimerRef.current = setTimeout(() => {
+                setShowPhotoReminder(true);
+                sessionStorage.setItem(reminderKey, '1');
+              }, 5000);
+            }
+          }
           if (!isProfileComplete(data)) {
             setShowCompletionWall(true);
           }
@@ -159,6 +172,9 @@ const HousegirlDashboard = () => {
       } catch {}
     };
     loadProfileData();
+    return () => {
+      if (photoReminderTimerRef.current) clearTimeout(photoReminderTimerRef.current);
+    };
   }, [resolvedUserId, user?.phone_number]);
 
   const handleSignOut = async () => {
@@ -187,6 +203,56 @@ const HousegirlDashboard = () => {
             toast({ title: 'Profile saved!', description: 'You are now visible to employers.' });
           }}
         />
+      )}
+
+      {/* Profile photo reminder popup */}
+      {showPhotoReminder && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 relative animate-in zoom-in-95 duration-300">
+            {/* Close button */}
+            <button
+              onClick={() => setShowPhotoReminder(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            {/* Icon */}
+            <div className="flex justify-center mb-4">
+              <div className="bg-blue-50 rounded-full p-4">
+                <Camera className="h-10 w-10 text-blue-600" />
+              </div>
+            </div>
+
+            {/* Content */}
+            <h3 className="text-lg font-bold text-gray-900 text-center mb-2">
+              Add your profile photo
+            </h3>
+            <p className="text-sm text-gray-500 text-center mb-6 leading-relaxed">
+              Employers are <span className="font-semibold text-gray-700">3× more likely</span> to contact housegirls with a clear profile photo. Upload yours to stand out!
+            </p>
+
+            {/* Buttons */}
+            <div className="flex flex-col gap-3">
+              <Button
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl h-11 font-semibold"
+                onClick={() => {
+                  setShowPhotoReminder(false);
+                  setActiveTab('profile');
+                }}
+              >
+                <Camera className="h-4 w-4 mr-2" />
+                Upload Photo Now
+              </Button>
+              <button
+                onClick={() => setShowPhotoReminder(false)}
+                className="text-sm text-gray-400 hover:text-gray-600 transition-colors text-center py-1"
+              >
+                Remind me later
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 py-3">

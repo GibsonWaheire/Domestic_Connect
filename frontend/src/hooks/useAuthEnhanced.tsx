@@ -66,11 +66,18 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseCurrentUser) {
         const token = await FirebaseAuthService.getIdToken();
         if (token) {
-          const firebaseResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User }>('/api/auth/verify', {
+          const firebaseResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User; status?: string; uid?: string }>('/api/auth/verify', {
             method: 'POST',
             headers: { 'Authorization': `Bearer ${token}` },
             body: JSON.stringify({ mode: 'login' })
           });
+          if (firebaseResponse.status === 'role_required') {
+            // User exists in Firebase Auth but has no role yet (e.g. incomplete signup recovery).
+            // Redirect to role selection so they can complete their account.
+            const pendingUid = firebaseResponse.uid || firebaseCurrentUser.uid;
+            navigate(`/login?mode=select-role&uid=${encodeURIComponent(pendingUid)}`, { replace: true });
+            return;
+          }
           if (firebaseResponse.user) {
             const normalizedUser = normalizeUser(firebaseResponse.user);
             setUser(normalizedUser);
@@ -94,7 +101,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setAuthReady(prev => ({ ...prev, session: true }));
     }
-  }, [normalizeUser]);
+  }, [normalizeUser, navigate]);
 
   useEffect(() => {
     checkSession();

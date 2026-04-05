@@ -46,7 +46,10 @@ export const AuthGuard = ({
         return;
       }
 
-      const userType = user.is_admin ? 'admin' : user.user_type;
+      // Admins can access any protected route — no redirect needed.
+      if (user.is_admin) return;
+
+      const userType = user.user_type;
       const isAllowed = allowedUserTypes.includes(userType);
 
       if (!isAllowed) {
@@ -59,9 +62,6 @@ export const AuthGuard = ({
             break;
           case 'agency':
             navigate('/agency-dashboard');
-            break;
-          case 'admin':
-            navigate('/admin-dashboard');
             break;
           default:
             navigate(safeRedirect(redirectTo));
@@ -82,9 +82,10 @@ export const AuthGuard = ({
 
   if (!user) return null;
 
-  const userType = user.is_admin ? 'admin' : user.user_type;
-  const isAllowed = allowedUserTypes.includes(userType);
+  // Admins pass through every AuthGuard unconditionally.
+  if (user.is_admin) return <>{children}</>;
 
+  const isAllowed = allowedUserTypes.includes(user.user_type);
   if (!isAllowed) return null;
 
   return <>{children}</>;

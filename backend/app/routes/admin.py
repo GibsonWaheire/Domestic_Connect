@@ -290,6 +290,59 @@ def get_user_details(user_id):
             'error': 'Something went wrong. Please try again.'
         }), 500
 
+@admin_bp.route('/users/<user_id>/promote', methods=['PUT'])
+@firebase_auth_required
+@admin_required
+def promote_user(user_id):
+    """Grant or revoke admin privileges for a user"""
+    try:
+        data = request.get_json() or {}
+        make_admin = bool(data.get('is_admin', True))
+
+        user_doc_ref = db.collection('users').document(user_id)
+        user_doc = user_doc_ref.get()
+        if not user_doc.exists:
+            return jsonify({'error': 'User not found'}), 404
+
+        user_data = user_doc.to_dict() or {}
+        firebase_uid = user_data.get('firebase_uid') or user_data.get('uid')
+
+        timestamp = datetime.utcnow().isoformat()
+        user_doc_ref.set({
+            'is_admin': make_admin,
+            'user_type': 'admin' if make_admin else (user_data.get('user_type') or 'employer'),
+            'updated_at': timestamp,
+        }, merge=True)
+
+        # Sync Firebase custom claim
+        if firebase_uid:
+            try:
+                from firebase_admin import auth as firebase_admin_auth
+                new_role = 'admin' if make_admin else (user_data.get('user_type') or 'employer')
+                firebase_admin_auth.set_custom_user_claims(firebase_uid, {'role': new_role})
+            except Exception as claim_err:
+                logger.warning(f'Could not update custom claim for {firebase_uid}: {claim_err}')
+
+        action = 'promoted_to_admin' if make_admin else 'revoked_admin'
+        admin_user = getattr(request, 'current_user', None)
+        write_audit_log(
+            user_id=user_id,
+            action=action,
+            details={'is_admin': make_admin},
+            performed_by=getattr(admin_user, 'id', 'unknown'),
+        )
+
+        return jsonify({
+            'message': f'User {"promoted to admin" if make_admin else "admin access revoked"}',
+            'user_id': user_id,
+            'is_admin': make_admin,
+        }), 200
+
+    except Exception as e:
+        logger.error(f'promote_user error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
 @admin_bp.route('/users/<user_id>/toggle-status', methods=['PUT'])
 @firebase_auth_required
 @admin_required

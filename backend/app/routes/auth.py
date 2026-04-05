@@ -10,6 +10,7 @@ import uuid
 import bcrypt
 from datetime import datetime
 import logging
+from firebase_admin import auth as firebase_admin_auth
 
 
 logger = logging.getLogger(__name__)
@@ -241,6 +242,65 @@ def verify_phone_auth():
                     logger.info(f'Created missing profile doc: {collection}/{user_id}')
         else:
             if mode == 'login':
+                # Firestore doc is missing for a valid Firebase Auth user.
+                # This happens when signup's Firestore write failed (network error,
+                # server timeout, etc.) but the Firebase Auth user was created.
+                # Try to recover the account rather than blocking the user.
+                if email_safe:
+                    # 1. Try lookup by email — doc might exist under a different key.
+                    existing_by_email = User.find_by_email(email_safe)
+                    if existing_by_email:
+                        # Found under a different document ID — link this Firebase UID.
+                        existing_by_email.update_profile(firebase_uid=uid)
+                        user_type_recovered = getattr(existing_by_email, 'user_type', '') or ''
+                        if not user_type_recovered:
+                            session['user_id'] = getattr(existing_by_email, 'id')
+                            return jsonify({
+                                'status': 'role_required',
+                                'message': 'Please select your role',
+                                'uid': uid
+                            }), 200
+                        session['user_id'] = getattr(existing_by_email, 'id')
+                        session['user_type'] = user_type_recovered
+                        recovered_data = existing_by_email.to_dict()
+                        recovered_data.pop('password_hash', None)
+                        recovered_data['uid'] = uid
+                        recovered_data['firebase_uid'] = uid
+                        recovered_data['user_type'] = user_type_recovered
+                        return jsonify({
+                            'message': 'Login successful',
+                            'status': 'ok',
+                            'user_type': user_type_recovered,
+                            'user': recovered_data
+                        }), 200
+
+                    # 2. No doc found anywhere — create a minimal recovery record so
+                    #    the user can complete their account instead of being locked out.
+                    logger.warning(f'Login: Firestore doc missing for Firebase UID {uid} ({email_safe}). Creating recovery record.')
+                    recovery_data = {
+                        'id': user_id,
+                        'uid': uid,
+                        'firebase_uid': uid,
+                        'email': email_safe,
+                        'user_type': '',
+                        'first_name': '',
+                        'last_name': '',
+                        'phone_number': None,
+                        'created_at': timestamp,
+                        'updated_at': timestamp,
+                        'profile_complete': False,
+                        'is_active': True,
+                        'is_admin': False,
+                        'is_firebase_user': True
+                    }
+                    user_doc_ref.set(recovery_data)
+                    session['user_id'] = user_id
+                    return jsonify({
+                        'status': 'role_required',
+                        'message': 'Please select your role to complete your account setup',
+                        'uid': uid
+                    }), 200
+
                 return jsonify({
                     'status': 'not_found',
                     'message': 'No account found. Please create an account first.'
@@ -275,8 +335,25 @@ def verify_phone_auth():
                 'is_admin': False,
                 'is_firebase_user': True
             }
+            # Merge agency-specific fields into the user doc so the dashboard
+            # can read them without a separate profile query.
+            if user_type == 'agency':
+                user_data['agency_name'] = data.get('agency_name', '')
+                user_data['license_number'] = data.get('license_number', '')
+                user_data['location'] = data.get('location', '')
+                user_data['services'] = data.get('services', [])
+                user_data['contact_phone'] = data.get('contact_phone', '')
+                user_data['website'] = data.get('website', '')
             user_doc_ref.set(user_data)
-            
+
+            # Stamp the role onto the Firebase token as a custom claim so that
+            # Firestore Security Rules and the frontend can read it without a
+            # separate Firestore round-trip.
+            try:
+                firebase_admin_auth.set_custom_user_claims(uid, {'role': user_type})
+            except Exception as claim_err:
+                logger.warning(f'Could not set custom claim for {uid}: {claim_err}')
+
             # Create role-specific profile document
             profile_id = f"user_{uid}"
             profile_data = {
@@ -294,6 +371,26 @@ def verify_phone_auth():
                 db.collection('employer_profiles').document(profile_id).set(profile_data)
             elif user_type == 'housegirl':
                 db.collection('housegirl_profiles').document(profile_id).set(profile_data)
+            elif user_type == 'agency':
+                # Save base profile doc so get_full_profile_data can find it
+                db.collection('profiles').document(profile_id).set(profile_data)
+                # Persist agency-specific fields submitted from PlatformAgencyRegistrationModal
+                agency_profile_id = f"ag_{profile_id}"
+                db.collection('agency_profiles').document(agency_profile_id).set({
+                    'id': agency_profile_id,
+                    'profile_id': profile_id,
+                    'user_id': user_id,
+                    'agency_name': data.get('agency_name', ''),
+                    'license_number': data.get('license_number', ''),
+                    'location': data.get('location', ''),
+                    'services': data.get('services', []),
+                    'contact_email': data.get('contact_email', email_safe),
+                    'contact_phone': data.get('contact_phone', ''),
+                    'website': data.get('website', ''),
+                    'verification_status': 'pending',
+                    'created_at': timestamp,
+                    'updated_at': timestamp
+                })
 
             user_type_to_return = user_type
 
@@ -345,6 +442,9 @@ def update_role():
             'updated_at': timestamp
         }, merge=True)
 
+        user_email = getattr(user, 'email', '') or firebase_user.get('email', '')
+        user_phone = getattr(user, 'phone_number', '') or firebase_user.get('phone_number', '')
+
         profile_docs = list(
             db.collection('profiles')
             .where('user_id', '==', getattr(user, 'id'))
@@ -357,19 +457,48 @@ def update_role():
                 'updated_at': timestamp
             }, merge=True)
         else:
-            profile_id = str(uuid.uuid4())
+            profile_id = getattr(user, 'id')  # Use user_id for consistency
             db.collection('profiles').document(profile_id).set({
                 'id': profile_id,
+                'profile_id': profile_id,
                 'user_id': getattr(user, 'id'),
                 'first_name': getattr(user, 'first_name', ''),
                 'last_name': getattr(user, 'last_name', ''),
-                'email': getattr(user, 'email', '') or firebase_user.get('email', ''),
-                'phone_number': getattr(user, 'phone_number', '') or firebase_user.get('phone_number', ''),
+                'email': user_email,
+                'phone_number': user_phone,
                 'created_at': timestamp,
                 'updated_at': timestamp
             })
 
+        # Ensure role-specific profile doc exists
+        role_collection = 'employer_profiles' if user_type == 'employer' else 'housegirl_profiles'
+        role_doc = db.collection(role_collection).document(profile_id).get()
+        if not role_doc.exists:
+            role_profile = {
+                'id': profile_id,
+                'profile_id': profile_id,
+                'user_id': getattr(user, 'id'),
+                'first_name': getattr(user, 'first_name', ''),
+                'last_name': getattr(user, 'last_name', ''),
+                'email': user_email,
+                'phone_number': user_phone,
+                'created_at': timestamp,
+                'updated_at': timestamp,
+            }
+            if user_type == 'housegirl':
+                role_profile.update({'is_available': True, 'unlock_count': 0, 'activation_fee_paid': False})
+            db.collection(role_collection).document(profile_id).set(role_profile)
+            logger.info(f'update_role: created {role_collection}/{profile_id}')
+
         session['user_type'] = user_type
+
+        # Keep the Firebase custom claim in sync with the Firestore role.
+        try:
+            firebase_uid = getattr(user, 'firebase_uid', None) or (request.firebase_user or {}).get('uid')
+            if firebase_uid:
+                firebase_admin_auth.set_custom_user_claims(firebase_uid, {'role': user_type})
+        except Exception as claim_err:
+            logger.warning(f'Could not update custom claim: {claim_err}')
 
         old_user_type = getattr(user, 'user_type', None)
         write_audit_log(

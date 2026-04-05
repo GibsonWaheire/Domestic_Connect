@@ -67,10 +67,16 @@ class User(BaseModel):
         for field, value in kwargs.items():
             if value is not None:
                 setattr(self, field, value)
-        
+
         if hasattr(self, 'id'):
             self.updated_at = datetime.utcnow()
-            db.collection('users').document(self.id).update(kwargs)
+            # Use set+merge so the call succeeds even if the document doesn't
+            # exist yet (e.g. race between Firebase onAuthStateChanged and the
+            # /api/auth/verify write completing on a slow connection).
+            db.collection('users').document(self.id).set(
+                {**kwargs, 'updated_at': self.updated_at.isoformat()},
+                merge=True
+            )
         return True
     
     def get_full_profile_data(self):

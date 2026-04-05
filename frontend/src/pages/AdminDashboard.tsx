@@ -123,18 +123,27 @@ const AdminDashboard: React.FC = () => {
   const handleToggleUserStatus = async (userId: string) => {
     try {
       await adminApi.toggleUserStatus(token!, userId);
-      toast({
-        title: "Success",
-        description: "User status updated successfully",
-      });
+      toast({ title: "Success", description: "User status updated successfully" });
       loadDashboardData();
     } catch (error) {
       console.error('Error updating user status:', error);
+      toast({ title: "Error", description: "Failed to update user status", variant: "destructive" });
+    }
+  };
+
+  const handlePromoteUser = async (userId: string, makeAdmin: boolean) => {
+    try {
+      await adminApi.promoteUser(token!, userId, makeAdmin);
       toast({
-        title: "Error",
-        description: "Failed to update user status",
-        variant: "destructive",
+        title: makeAdmin ? "Admin Granted" : "Admin Revoked",
+        description: makeAdmin
+          ? "User has been promoted to admin."
+          : "Admin access has been removed.",
       });
+      loadDashboardData();
+    } catch (error) {
+      console.error('Error promoting user:', error);
+      toast({ title: "Error", description: "Failed to update admin status", variant: "destructive" });
     }
   };
 
@@ -395,6 +404,14 @@ const AdminDashboard: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handlePromoteUser(user.id, !user.is_admin)}
+                              title={user.is_admin ? 'Revoke admin' : 'Make admin'}
+                            >
+                              <Shield className={`h-4 w-4 ${user.is_admin ? 'text-yellow-500' : 'text-gray-400'}`} />
+                            </Button>
                             <Dialog>
                               <DialogTrigger asChild>
                                 <Button variant="outline" size="sm">
@@ -420,6 +437,9 @@ const AdminDashboard: React.FC = () => {
                                   </div>
                                   <div>
                                     <strong>Profile:</strong> {user.has_profile ? 'Yes' : 'No'}
+                                  </div>
+                                  <div>
+                                    <strong>Admin:</strong> {user.is_admin ? 'Yes' : 'No'}
                                   </div>
                                 </div>
                               </DialogContent>

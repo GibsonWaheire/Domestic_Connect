@@ -469,6 +469,7 @@ export interface AdminUser {
   last_name: string;
   phone_number?: string;
   is_active: boolean;
+  is_admin?: boolean;
   created_at: string;
   updated_at: string;
   has_profile: boolean;
@@ -554,6 +555,13 @@ export const adminApi = {
       body: JSON.stringify({ status }),
     }),
   
+  promoteUser: (token: string, userId: string, makeAdmin: boolean) =>
+    apiRequest<{ message: string; user_id: string; is_admin: boolean }>(`/api/admin/users/${userId}/promote`, {
+      method: 'PUT',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ is_admin: makeAdmin }),
+    }),
+
   syncData: (token: string, syncType: string = 'all') =>
     apiRequest<{ success: boolean; message: string }>('/api/admin/sync', {
       method: 'POST',

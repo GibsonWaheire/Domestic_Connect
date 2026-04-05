@@ -74,7 +74,13 @@ export const useEmailAuth = (
                 return { error: null };
             }
 
+            // Only show the verification screen if the backend confirmed account creation
+            const backendOk = (response as { status?: string; user?: unknown }).status === 'ok' || !!(response as { user?: unknown }).user;
             setLoading(false);
+            if (!backendOk) {
+                // Backend returned an unexpected response — don't silently swallow it
+                return { error: 'Account setup incomplete. Please try registering again.' };
+            }
             // Account created — require email verification before dashboard access
             return { error: null, needsVerification: true };
         } catch (error: unknown) {

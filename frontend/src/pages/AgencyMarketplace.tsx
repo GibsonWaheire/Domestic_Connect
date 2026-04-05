@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Search, Filter, Building2, Star, Shield, Users, MapPin, MessageCircle, CheckCircle2 } from 'lucide-react';
 import AgencyCard, { Agency } from '@/components/AgencyCard';
 import AgencyHiringModal from '@/components/AgencyHiringModal';
+import PlatformAgencyRegistrationModal from '@/components/PlatformAgencyRegistrationModal';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { Link, useNavigate } from 'react-router-dom';
@@ -24,6 +25,7 @@ const AgencyMarketplace = () => {
   const [serviceFilter, setServiceFilter] = useState('all');
   const [tierFilter, setTierFilter] = useState('all');
   const [showAgencyModal, setShowAgencyModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [selectedAgency, setSelectedAgency] = useState<Agency | null>(null);
   const [selectedHousegirl, setSelectedHousegirl] = useState('');
 
@@ -38,7 +40,7 @@ const AgencyMarketplace = () => {
 
   const fetchAgencies = async () => {
     try {
-      const response = await fetch(`${API_BASE_URL}/agencies`);
+      const response = await fetch(`${API_BASE_URL}/api/agencies`);
       if (response.ok) {
         const data = await response.json();
         setAgencies(data);
@@ -326,7 +328,7 @@ const AgencyMarketplace = () => {
           <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">Are you a domestic worker agency?</h2>
           <p className="text-white/70 mb-6 text-sm">List your agency on Domestic Connect and reach thousands of verified Kenyan families. Plans start from KSh 1,200/month.</p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-10 text-base font-semibold">
+            <Button onClick={() => setShowRegisterModal(true)} className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-10 text-base font-semibold">
               List Your Agency →
             </Button>
             <Button onClick={() => navigate('/agency-packages')} variant="outline" className="rounded-full border-white/40 text-white hover:bg-white/10 h-12 px-8 text-base">
@@ -347,6 +349,12 @@ const AgencyMarketplace = () => {
           <MessageCircle size={24} />
         </a>
       </div>
+
+      {/* Platform Agency Registration Modal */}
+      <PlatformAgencyRegistrationModal
+        isOpen={showRegisterModal}
+        onClose={() => setShowRegisterModal(false)}
+      />
 
       {/* Agency Hiring Modal */}
       {showAgencyModal && selectedAgency && (

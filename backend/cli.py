@@ -60,31 +60,66 @@ def stats():
 
 @cli.command()
 @click.option('--email', prompt='Email', help='Admin email')
-@click.option('--password', prompt='Password', hide_input=True, help='Admin password')
-def create_admin(email, password):
-    """Create an admin user"""
+@click.option('--password', prompt='Password', hide_input=True, confirmation_prompt=True, help='Admin password')
+@click.option('--first-name', default='Admin', prompt='First name', help='First name')
+@click.option('--last-name', default='User', prompt='Last name', help='Last name')
+def create_admin(email, password, first_name, last_name):
+    """Create an admin user in Firebase Auth + Firestore"""
     app = create_app()
     with app.app_context():
-        # Check if admin already exists
-        existing_admin = User.query.filter_by(email=email).first()
-        if existing_admin:
-            click.echo(f"User with email {email} already exists!")
+        from app.firebase_init import db as firestore_db
+        from firebase_admin import auth as firebase_admin_auth
+        from datetime import datetime
+
+        # Check Firestore for existing user
+        existing = list(firestore_db.collection('users').where('email', '==', email).limit(1).stream())
+        if existing:
+            click.echo(f"A user with email {email} already exists in Firestore.")
             return
-        
-        # Create admin user
-        admin = User(
-            id=f"admin_{uuid.uuid4()}",
-            firebase_uid=f"admin_{email}",
-            email=email,
-            user_type='employer',
-            first_name='Admin',
-            last_name='User'
-        )
-        
-        db.session.add(admin)
-        db.session.commit()
-        
-        click.echo(f"Admin user created: {email}")
+
+        # Create Firebase Auth account (pre-verified so admin can log in immediately)
+        try:
+            fb_user = firebase_admin_auth.create_user(
+                email=email,
+                password=password,
+                display_name=f"{first_name} {last_name}",
+                email_verified=True,
+            )
+        except Exception as e:
+            click.echo(f"Failed to create Firebase Auth account: {e}")
+            return
+
+        uid = fb_user.uid
+        user_id = f"user_{uid}"
+        timestamp = datetime.utcnow().isoformat()
+
+        # Stamp role as custom claim so token carries it
+        try:
+            firebase_admin_auth.set_custom_user_claims(uid, {'role': 'admin'})
+        except Exception as e:
+            click.echo(f"Warning: could not set custom claim: {e}")
+
+        # Write Firestore user doc
+        firestore_db.collection('users').document(user_id).set({
+            'id': user_id,
+            'uid': uid,
+            'firebase_uid': uid,
+            'email': email,
+            'user_type': 'admin',
+            'first_name': first_name,
+            'last_name': last_name,
+            'is_active': True,
+            'is_admin': True,
+            'is_firebase_user': True,
+            'profile_complete': True,
+            'created_at': timestamp,
+            'updated_at': timestamp,
+        })
+
+        click.echo(f"✓ Admin created: {email}")
+        click.echo(f"  Firebase UID : {uid}")
+        click.echo(f"  Firestore ID : {user_id}")
+        click.echo("  The account is email-verified and can log in immediately.")
 
 @cli.command()
 def test_admin_api():
