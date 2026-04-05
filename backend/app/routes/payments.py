@@ -25,7 +25,7 @@ BUNDLE_UNLOCK_CONTACTS = 3
 JOB_ACCESS_PACKAGE_ID = 'job_access'
 JOB_ACCESS_PACKAGE_PRICE = 100
 APPLY_CONTACT_UNLOCK_PACKAGE_ID = 'apply_contact_unlock'
-APPLY_CONTACT_UNLOCK_PRICE = 100
+APPLY_CONTACT_UNLOCK_PRICE = 200
 
 PESAPAL_BASE_URL = os.getenv('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3')
 PESAPAL_CONSUMER_KEY = os.getenv('PESAPAL_CONSUMER_KEY', '')
@@ -352,7 +352,7 @@ def create_purchase():
             elif package_id == APPLY_CONTACT_UNLOCK_PACKAGE_ID:
                 package_data = {
                     'id': APPLY_CONTACT_UNLOCK_PACKAGE_ID,
-                    'name': 'Applied Housegirl Contact Unlock',
+                    'name': 'Contact Unlock',
                     'description': 'Unlock contact details for a housegirl who applied to your job',
                     'price': APPLY_CONTACT_UNLOCK_PRICE,
                     'contacts_included': 1,

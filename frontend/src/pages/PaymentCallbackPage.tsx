@@ -62,7 +62,9 @@ const PaymentCallbackPage = () => {
 
         if (data.status === 'completed') {
           await handlePostPayment(pendingData, headers);
-          localStorage.removeItem(PESAPAL_PENDING_KEY);
+          // Keep PESAPAL_PENDING_KEY in localStorage — the destination page
+          // (AppliedHousegirlsList.checkPendingUnlock) reads it on mount to
+          // show the "Payment received!" toast, then removes it.
           setStatus('completed');
           setMessage('Payment confirmed! Redirecting you...');
 

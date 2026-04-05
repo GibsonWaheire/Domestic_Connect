@@ -116,7 +116,7 @@ const AppliedHousegirlsList = ({ jobId, employerId }: AppliedHousegirlsListProps
           )}
         </h2>
         {!loading && appliedHousegirls.length > 0 && (
-          <p className="text-xs text-gray-400">Pay KSh 100 per applicant to reveal contact details</p>
+          <p className="text-xs text-gray-400">Pay KSh 200 per applicant to reveal contact details</p>
         )}
       </div>
 
@@ -259,7 +259,7 @@ const AppliedHousegirlsList = ({ jobId, employerId }: AppliedHousegirlsListProps
                           className="rounded-lg text-xs px-3 bg-[#111] hover:bg-[#333] text-white flex items-center gap-1.5 flex-shrink-0"
                         >
                           <Lock className="h-3 w-3" />
-                          Unlock — KSh 100
+                          Unlock — KSh 200
                         </Button>
                       </div>
                     )}

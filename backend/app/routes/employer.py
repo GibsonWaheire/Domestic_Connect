@@ -133,15 +133,14 @@ def unlock_housegirl_contact(job_id, housegirl_id):
         if job_doc.to_dict().get('employer_id') != employer_id:
             return jsonify({'error': 'You do not own this job posting'}), 403
 
-        # Validate application exists and is 'applied'
+        # Validate application exists for this job
         application_exists = list(db.collection('job_applications')
             .where('job_id', '==', job_id)
             .where('housegirl_id', '==', housegirl_id)
-            .where('status', '==', 'applied')
             .limit(1).stream())
 
         if not application_exists:
-            return jsonify({'error': 'Housegirl has not applied to this job or application is not active'}), 400
+            return jsonify({'error': 'No application found for this housegirl on this job'}), 404
 
         # Check for existing unlock
         existing_unlock = list(db.collection('contact_access')

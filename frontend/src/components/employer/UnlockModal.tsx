@@ -173,7 +173,7 @@ export const UnlockModal = ({
           {/* Price */}
           <div className="flex items-center justify-between p-3 bg-white border border-gray-200 rounded-lg">
             <span className="text-sm text-gray-700">One-time unlock fee</span>
-            <span className="text-base font-bold text-gray-900">KSh 100</span>
+            <span className="text-base font-bold text-gray-900">KSh 200</span>
           </div>
 
           {/* Payment security note */}
@@ -200,7 +200,7 @@ export const UnlockModal = ({
             ) : (
               <span className="flex items-center gap-2">
                 <CreditCard className="h-4 w-4" />
-                Pay KSh 100
+                Pay KSh 200
                 <ExternalLink className="h-3 w-3" />
               </span>
             )}
