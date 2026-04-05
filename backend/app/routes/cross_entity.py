@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import firebase_auth_required
+from app.services.auth_service import firebase_auth_required, agency_marketplace_login_allowed
 from app.firebase_init import db
 import logging
 
@@ -19,6 +19,11 @@ def get_dashboard_data():
         user_type = getattr(current_user, 'user_type', '')
         is_admin = getattr(current_user, 'is_admin', False)
         user_id = getattr(current_user, 'id', '')
+
+        if user_type == 'agency' and not is_admin:
+            allowed, err = agency_marketplace_login_allowed(current_user.to_dict())
+            if not allowed:
+                return jsonify({'error': err, 'status': 'agency_access_denied'}), 403
         
         # Base data structure
         dashboard_data = {

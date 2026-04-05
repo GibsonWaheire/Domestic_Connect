@@ -80,7 +80,7 @@ def create_app(config_name=None):
     from app.routes.profiles import profiles_bp
     from app.routes.employers import employers_bp
     from app.routes.housegirls import housegirls_bp
-    from app.routes.agencies import agencies_bp
+    from app.routes.agencies import agencies_bp, agency_portal_bp
     from app.routes.payments import payments_bp
     from app.routes.photos import photos_bp
     from app.routes.admin import admin_bp
@@ -95,6 +95,7 @@ def create_app(config_name=None):
     app.register_blueprint(employers_bp, url_prefix='/api/employers')
     app.register_blueprint(housegirls_bp, url_prefix='/api/housegirls')
     app.register_blueprint(agencies_bp, url_prefix='/api/agencies')
+    app.register_blueprint(agency_portal_bp, url_prefix='/api/agency')
     app.register_blueprint(payments_bp, url_prefix='/api/payments')
     app.register_blueprint(photos_bp, url_prefix='/api/photos')
     app.register_blueprint(admin_bp, url_prefix='/api/admin')

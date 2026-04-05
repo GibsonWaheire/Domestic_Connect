@@ -19,10 +19,14 @@ const AdminLoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  // If already logged in as admin, go straight to dashboard
   useEffect(() => {
-    if (!loading && user?.is_admin) {
+    if (loading || !user) return;
+    if (user.is_admin) {
       navigate('/admin-dashboard', { replace: true });
+      return;
+    }
+    if (user.user_type === 'agency') {
+      navigate('/agency-dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
 
@@ -39,10 +43,11 @@ const AdminLoginPage = () => {
         return;
       }
 
-      // signIn navigates automatically via useEmailAuth switch statement.
-      // But we double-check: if the resolved user is not admin, block access.
-      if (result.user && !result.user.is_admin) {
-        setError('This login is for administrators only.');
+      if (result.user) {
+        if (result.user.is_admin || result.user.user_type === 'agency') {
+          return;
+        }
+        setError('This portal is for administrators and verified agencies only. Use the main sign-in for your account type.');
         await authContext?.signOut?.();
       }
     } finally {
@@ -58,8 +63,8 @@ const AdminLoginPage = () => {
           <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center mb-4">
             <Shield className="h-7 w-7 text-white" />
           </div>
-          <h1 className="text-white text-2xl font-bold tracking-tight">Admin Portal</h1>
-          <p className="text-white/40 text-sm mt-1">Domestic Connect — Internal Access</p>
+          <h1 className="text-white text-2xl font-bold tracking-tight">Staff portal</h1>
+          <p className="text-white/40 text-sm mt-1">Admins and verified agencies — Domestic Connect</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">

@@ -1,9 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -100,6 +101,7 @@ const AdminDashboard: React.FC = () => {
   const [agencies, setAgencies] = useState<AdminAgency[]>([]);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [usersPageLoading, setUsersPageLoading] = useState(false);
+  const agencyUsers = useMemo(() => users.filter((u) => u.user_type === 'agency'), [users]);
   const [syncing, setSyncing] = useState(false);
   const [mainTab, setMainTab] = useState('users');
 
@@ -110,6 +112,8 @@ const AdminDashboard: React.FC = () => {
 
   const [agencySearch, setAgencySearch] = useState('');
   const [agencyStatusFilter, setAgencyStatusFilter] = useState('all');
+  const [verifyAgencyTarget, setVerifyAgencyTarget] = useState<AdminAgency | null>(null);
+  const [verifyOperatorId, setVerifyOperatorId] = useState('');
 
   const [usersWithoutRoles, setUsersWithoutRoles] = useState<UserWithoutRole[]>([]);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -419,15 +423,18 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleVerifyAgency = async (agencyId: string, status: string) => {
-    if (!token) return;
+  const handleVerifyAgency = async (agencyId: string, status: string, dashboardUserId?: string) => {
+    if (!token) return false;
     try {
-      await adminApi.verifyAgency(token, agencyId, status);
+      await adminApi.verifyAgency(token, agencyId, status, dashboardUserId);
       toast({ title: 'Success', description: `Agency ${status}` });
       await refreshOverview();
+      await loadUsers();
+      return true;
     } catch (error) {
       console.error(error);
       toast({ title: 'Error', description: 'Failed to verify agency', variant: 'destructive' });
+      return false;
     }
   };
 
@@ -893,7 +900,14 @@ const AdminDashboard: React.FC = () => {
                             <div className="flex gap-2">
                               {agency.verification_status === 'pending' && (
                                 <>
-                                  <Button variant="outline" size="sm" onClick={() => handleVerifyAgency(agency.id, 'verified')}>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => {
+                                      setVerifyAgencyTarget(agency);
+                                      setVerifyOperatorId(agency.dashboard_user_id || '');
+                                    }}
+                                  >
                                     Verify
                                   </Button>
                                   <Button variant="outline" size="sm" onClick={() => handleVerifyAgency(agency.id, 'rejected')}>
@@ -1583,6 +1597,50 @@ const AdminDashboard: React.FC = () => {
                 </Button>
               </div>
             ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!verifyAgencyTarget} onOpenChange={(open) => !open && setVerifyAgencyTarget(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Verify agency</DialogTitle>
+            <DialogDescription>Choose the agency operator user to link to this marketplace listing.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Operator account</Label>
+              <Select value={verifyOperatorId} onValueChange={setVerifyOperatorId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select agency user" />
+                </SelectTrigger>
+                <SelectContent>
+                  {agencyUsers.map((u) => (
+                    <SelectItem key={u.id} value={u.id}>
+                      {u.email} — {u.first_name} {u.last_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="outline" onClick={() => setVerifyAgencyTarget(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                onClick={async () => {
+                  if (!verifyAgencyTarget || !verifyOperatorId) {
+                    toast({ title: 'Select an operator', description: 'Choose a user with role agency.', variant: 'destructive' });
+                    return;
+                  }
+                  const ok = await handleVerifyAgency(verifyAgencyTarget.id, 'verified', verifyOperatorId);
+                  if (ok) setVerifyAgencyTarget(null);
+                }}
+              >
+                Verify and link
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

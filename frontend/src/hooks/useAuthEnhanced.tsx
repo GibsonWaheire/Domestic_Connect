@@ -16,7 +16,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<{ error: string | null; user?: User }>;
   handleGoogleSignIn: (userType?: 'employer' | 'housegirl' | 'agency' | 'admin', mode?: 'login' | 'signup') => Promise<{ error: string | null; user?: User }>;
   handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => Promise<{ error: string | null; user?: User }>;
-  signOut: () => Promise<void>;
+  signOut: (redirectTo?: string) => Promise<void>;
   checkSession: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   isFirebaseUser: boolean;

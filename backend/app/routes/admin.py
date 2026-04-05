@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from app.services.auth_service import firebase_auth_required, admin_required
 from app.firebase_init import db
+from google.cloud.firestore import DELETE_FIELD
 from app.utils.audit_log import write_audit_log, ACTION_USER_DEACTIVATED, ACTION_USER_ACTIVATED, ACTION_AGENCY_VERIFIED, ACTION_DATA_EXPORT, ACTION_ROLE_CHANGED
 from firebase_admin import auth as firebase_admin_auth
 from datetime import datetime, timedelta
@@ -973,6 +974,7 @@ def get_all_agencies():
                 'contact_email': agency.get('contact_email'),
                 'contact_phone': agency.get('contact_phone'),
                 'website': agency.get('website'),
+                'dashboard_user_id': agency.get('dashboard_user_id'),
                 'created_at': agency.get('created_at'),
                 'updated_at': agency.get('updated_at')
             } for agency in paginated],
@@ -1003,28 +1005,80 @@ def verify_agency(agency_id):
         if not agency_doc.exists:
             return jsonify({'error': 'Agency not found'}), 404
             
-        data = request.get_json()
+        data = request.get_json() or {}
         verification_status = data.get('status', 'verified')
         if verification_status not in ['verified', 'rejected', 'pending']:
             return jsonify({'error': 'Invalid verification status'}), 400
-        
-        agency_doc_ref.update({'verification_status': verification_status})
+
+        prev = agency_doc.to_dict() or {}
+        prev_dash = prev.get('dashboard_user_id')
+        ts = datetime.utcnow().isoformat()
+
+        if verification_status == 'verified':
+            dashboard_user_id = data.get('dashboard_user_id')
+            if not dashboard_user_id:
+                return jsonify({'error': 'dashboard_user_id is required when verifying an agency'}), 400
+            uref = db.collection('users').document(dashboard_user_id)
+            udoc = uref.get()
+            if not udoc.exists:
+                return jsonify({'error': 'Operator user not found'}), 404
+            ud = udoc.to_dict() or {}
+            if ud.get('user_type') != 'agency':
+                return jsonify({'error': 'Selected user must have user_type agency'}), 400
+            if prev_dash and prev_dash != dashboard_user_id:
+                pdoc = db.collection('users').document(prev_dash).get()
+                if pdoc.exists:
+                    pd = pdoc.to_dict() or {}
+                    if pd.get('marketplace_agency_id') == agency_id:
+                        db.collection('users').document(prev_dash).update({
+                            'marketplace_agency_id': DELETE_FIELD,
+                            'updated_at': ts,
+                        })
+            agency_doc_ref.update({
+                'verification_status': 'verified',
+                'dashboard_user_id': dashboard_user_id,
+                'updated_at': ts,
+            })
+            uref.set({'marketplace_agency_id': agency_id, 'updated_at': ts}, merge=True)
+            firebase_uid = ud.get('firebase_uid')
+            if firebase_uid:
+                try:
+                    firebase_admin_auth.set_custom_user_claims(firebase_uid, {'role': 'agency'})
+                except Exception as claim_err:
+                    logger.warning('set_custom_user_claims agency verify: %s', claim_err)
+        else:
+            if prev_dash:
+                pdoc = db.collection('users').document(prev_dash).get()
+                if pdoc.exists:
+                    pd = pdoc.to_dict() or {}
+                    if pd.get('marketplace_agency_id') == agency_id:
+                        db.collection('users').document(prev_dash).update({
+                            'marketplace_agency_id': DELETE_FIELD,
+                            'updated_at': ts,
+                        })
+            agency_doc_ref.update({
+                'verification_status': verification_status,
+                'dashboard_user_id': DELETE_FIELD,
+                'updated_at': ts,
+            })
 
         admin_user = getattr(request, 'current_user', None)
         admin_id = getattr(admin_user, 'id', 'unknown_admin')
         write_audit_log(
             user_id=agency_id,
             action=ACTION_AGENCY_VERIFIED,
-            details={'verification_status': verification_status, 'agency_name': agency_doc.to_dict().get('name')},
+            details={'verification_status': verification_status, 'agency_name': prev.get('name')},
             performed_by=admin_id,
         )
 
+        refreshed = agency_doc_ref.get().to_dict() or {}
         return jsonify({
             'message': f'Agency {verification_status} successfully',
             'agency': {
-                'id': agency_doc.to_dict().get('id'),
-                'name': agency_doc.to_dict().get('name'),
-                'verification_status': verification_status
+                'id': refreshed.get('id'),
+                'name': refreshed.get('name'),
+                'verification_status': verification_status,
+                'dashboard_user_id': refreshed.get('dashboard_user_id'),
             }
         }), 200
 

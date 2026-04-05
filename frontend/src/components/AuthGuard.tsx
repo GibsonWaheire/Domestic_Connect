@@ -7,6 +7,7 @@ import { useAuth } from '@/hooks/useAuthEnhanced';
 const REDIRECT_ALLOWLIST = new Set([
   '/',
   '/login',
+  '/admin/login',
   '/home',
   '/employer-dashboard',
   '/housegirl-dashboard',
@@ -22,6 +23,7 @@ interface AuthGuardProps {
   children: React.ReactNode;
   allowedUserTypes: ('employer' | 'housegirl' | 'agency' | 'admin')[];
   redirectTo?: string;
+  unauthenticatedRedirect?: string;
 }
 
 /**
@@ -32,7 +34,8 @@ interface AuthGuardProps {
 export const AuthGuard = ({
   children,
   allowedUserTypes,
-  redirectTo = '/'
+  redirectTo = '/',
+  unauthenticatedRedirect = '/login',
 }: AuthGuardProps) => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +45,7 @@ export const AuthGuard = ({
 
     const timer = setTimeout(() => {
       if (!user) {
-        navigate('/login');
+        navigate(safeRedirect(unauthenticatedRedirect));
         return;
       }
 
@@ -70,7 +73,7 @@ export const AuthGuard = ({
     }, 100);
 
     return () => clearTimeout(timer);
-  }, [user, loading, allowedUserTypes, navigate, redirectTo]);
+  }, [user, loading, allowedUserTypes, navigate, redirectTo, unauthenticatedRedirect]);
 
   if (loading) {
     return (

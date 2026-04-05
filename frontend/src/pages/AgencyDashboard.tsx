@@ -1,1205 +1,515 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { toast } from '@/hooks/use-toast';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { agenciesApi, housegirlProfilesApi, employerProfilesApi, crossEntityApi, DashboardData } from '@/lib/api';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { crossEntityApi, agenciesApi, agencyPortalApi, DashboardData } from '@/lib/api';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
-import { API_BASE_URL } from '@/lib/apiConfig';
-import { useRealTimeData } from '@/hooks/useRealTimeData';
-import { 
-  Users, 
-  MessageCircle, 
-  BarChart3, 
-  Settings, 
-  Search, 
-  Plus, 
-  Eye, 
-  EyeOff,
-  Edit, 
-  Trash2, 
-  Phone, 
-  Mail, 
-  MapPin, 
-  Clock, 
-  Star, 
-  LogOut, 
-  Filter, 
-  Bell, 
-  Calendar, 
-  Heart, 
-  Share2, 
-  MoreHorizontal, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  Target, 
-  Award, 
-  Zap, 
-  Info, 
-  FileText, 
-  Shield, 
-  Home, 
-  X,
-  User,
-  Briefcase,
-  DollarSign,
-  TrendingUp,
-  CheckCircle,
-  AlertCircle,
-  ChevronDown,
-  ChevronRight,
-  Download,
-  Upload,
-  RefreshCw,
-  Activity,
-  PieChart,
-  CreditCard,
-  Headphones,
-  MessageSquare,
-  HelpCircle,
-  Globe,
-  Smartphone,
-  Wifi,
-  WifiOff,
-  Battery,
-  BatteryCharging,
-  Loader2
-} from 'lucide-react';
-import UserAvatar from '@/components/ui/UserAvatar';
+import { LogOut, Shield, Users, Briefcase, Building2, Settings, Loader2, Eye, EyeOff } from 'lucide-react';
 
-interface Housegirl {
-  id: string;
-  name: string;
-  age: number;
-  location: string;
-  experience: string;
-  education: string;
-  expectedSalary: string;
-  rating: number;
-  status: 'available' | 'placed' | 'unavailable' | 'interviewing';
-  skills: string[];
-  languages: string[];
-  photo: string;
-  matchScore: number;
-  placementDate?: string;
-  clientName?: string;
-  earnings: number;
-}
-
-interface LocalJobPosting {
-  id: string;
-  title: string;
-  client: string;
-  location: string;
-  salary: string;
-  postedDate: string;
-  status: 'active' | 'filled' | 'expired' | 'pending';
-  applications: number;
-  requirements: string[];
-  commission: number;
-  placementFee: number;
-}
-
-interface LocalClient {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  location: string;
-  status: string;
-  totalSpent: number;
-  lastContact: string;
-  photo: string;
-  placements: number;
-  satisfaction: number;
-}
-
-interface Placement {
-  id: string;
-  housegirlName: string;
-  clientName: string;
-  placementDate: string;
-  salary: string;
-  commission: number;
-  status: 'active' | 'completed' | 'terminated';
-  duration: string;
-}
+type MarketplaceRow = {
+  id?: string;
+  name?: string;
+  verification_status?: string;
+  description?: string;
+  contact_email?: string;
+  contact_phone?: string;
+  website?: string;
+  location?: string;
+  services?: string[];
+  license_number?: string;
+};
 
 const AgencyDashboard = () => {
   const { user, signOut, loading } = useAuth();
   const navigate = useNavigate();
-  
-  // Additional auth check - ensure only agencies can access this dashboard
-  useEffect(() => {
-    if (!loading && user) {
-      if (user.user_type !== 'agency' && !user.is_admin) {
-        toast({
-          title: "Access Denied",
-          description: "This dashboard is only accessible to agencies.",
-          variant: "destructive"
-        });
-        
-        // Redirect based on user type
-        if (user.user_type === 'housegirl') {
-          navigate('/housegirl-dashboard');
-        } else if (user.user_type === 'employer') {
-          navigate('/employer-dashboard');
-        } else {
-          navigate('/');
-        }
-        return;
-      }
-    }
-  }, [user, loading, navigate]);
-  
-  const [activeTab, setActiveTab] = useState<'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings'>('overview');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [agencyData, setAgencyData] = useState<{
-    name: string;
-    email: string;
-    stats: Record<string, number>;
-  } | null>(null);
-  const [agencyWorkers, setAgencyWorkers] = useState<Array<{
-    id: string;
-    name: string;
-    verification_status: string;
-    training_certificates: string[];
-    hire_date: string;
-  }>>([]);
-  const [agencyClients, setAgencyClients] = useState<Array<{
-    id: string;
-    name: string;
-    email: string;
-    phone_number: string;
-    company_name: string;
-    location: string;
-    placement_status: string;
-    hire_date: string;
-  }>>([]);
-  const [agencyPayments, setAgencyPayments] = useState<Array<{
-    id: string;
-    amount: number;
-    agency_fee: number;
-    created_at: string;
-  }>>([]);
-  // Agency profile form state
-  const [agencyName, setAgencyName] = useState('');
-  const [agencyLocation, setAgencyLocation] = useState('');
-  const [agencyPhone, setAgencyPhone] = useState('');
-  const [agencyDescription, setAgencyDescription] = useState('');
-  const [isSavingAgency, setIsSavingAgency] = useState(false);
-  const [hasProfile, setHasProfile] = useState<boolean | null>(null);
-  const agencyFormInitialized = useRef(false);
-
+  const [tab, setTab] = useState('overview');
+  const [dashLoading, setDashLoading] = useState(true);
+  const [dashboard, setDashboard] = useState<DashboardData | null>(null);
+  const [contextLoading, setContextLoading] = useState(true);
+  const [marketplace, setMarketplace] = useState<MarketplaceRow | null>(null);
+  const [profileDesc, setProfileDesc] = useState('');
+  const [profileWebsite, setProfileWebsite] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [savingProfile, setSavingProfile] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [passwordBusy, setPasswordBusy] = useState(false);
 
-  // Use real-time data hook
-  const { 
-    dashboardData, 
-    loading: dataLoading, 
-    error: dataError, 
-    refreshing,
-    lastUpdated, 
-    refreshData 
-  } = useRealTimeData({ 
-    refreshInterval: 30000, // 30 seconds
-    enabled: !!user 
-  });
-
-  // Transform dashboard data when it changes
   useEffect(() => {
-    if (dashboardData) {
-      // Set agency-specific data
-      if (dashboardData.available_data.clients) {
-        setAgencyClients(dashboardData.available_data.clients);
+    if (!loading && user) {
+      if (user.user_type !== 'agency' && !user.is_admin) {
+        toast({ title: 'Access denied', description: 'This area is for agencies only.', variant: 'destructive' });
+        if (user.user_type === 'housegirl') navigate('/housegirl-dashboard');
+        else if (user.user_type === 'employer') navigate('/employer-dashboard');
+        else navigate('/');
       }
-      if (dashboardData.available_data.workers) {
-        setAgencyWorkers(dashboardData.available_data.workers);
-      }
-      
-      // Set agency data from user profile
-      setAgencyData({
-        name: `${dashboardData.user.first_name} ${dashboardData.user.last_name}`,
-        email: dashboardData.user.email,
-        stats: dashboardData.stats
-      });
-
-      // Initialize agency profile form once
-        if (!agencyFormInitialized.current) {
-          setAgencyName(`${dashboardData.user.first_name} ${dashboardData.user.last_name}`.trim());
-          agencyFormInitialized.current = true;
-        }
-
-        // Check if agency profile exists
-        if (dashboardData.user.user_type === 'agency') {
-          setHasProfile(!!dashboardData.stats && Object.keys(dashboardData.stats).length > 0);
-        }
-      }
-  }, [dashboardData]);
-
-  // Show error if data fetching fails
-  useEffect(() => {
-    if (dataError) {
-      toast({
-        title: "Data Sync Error",
-        description: "Failed to sync latest data. Some information may be outdated.",
-        variant: "destructive",
-      });
     }
-  }, [dataError]);
-  const [showWhatsApp, setShowWhatsApp] = useState(false);
-
-  useEffect(() => {
-    if (!loading && (!user || user.user_type !== 'agency')) {
-      navigate('/agencies');
+    if (!loading && !user) {
+      navigate('/admin/login', { replace: true });
     }
-  }, [user, loading, navigate]);
+  }, [loading, user, navigate]);
 
-  const handleSaveAgencyProfile = async () => {
-    if (!user) return;
-    setIsSavingAgency(true);
+  const loadData = useCallback(async () => {
+    if (!user || (user.user_type !== 'agency' && !user.is_admin)) return;
+    setDashLoading(true);
+    setContextLoading(true);
     try {
-      const token = await FirebaseAuthService.getIdToken();
-      const response = await fetch(`${API_BASE_URL}/api/agencies/${user.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({
-          name: agencyName.trim(),
-          location: agencyLocation.trim(),
-          phone: agencyPhone.trim(),
-          description: agencyDescription.trim(),
-        }),
-      });
-      if (response.ok) {
-        toast({ title: 'Profile saved', description: 'Agency profile updated successfully.' });
+      const [dash, ctx] = await Promise.all([
+        crossEntityApi.getDashboardData(),
+        user.user_type === 'agency' ? agencyPortalApi.getContext() : Promise.resolve(null),
+      ]);
+      setDashboard(dash);
+      if (ctx?.marketplace_agency) {
+        const m = ctx.marketplace_agency as MarketplaceRow;
+        setMarketplace(m);
+        setProfileDesc(String(m.description ?? ''));
+        setProfileWebsite(String(m.website ?? ''));
+        setProfilePhone(String(m.contact_phone ?? ''));
+        setProfileEmail(String(m.contact_email ?? ''));
       } else {
-        toast({ title: 'Failed to save', description: 'Please try again.', variant: 'destructive' });
+        setMarketplace(null);
       }
-    } catch {
-      toast({ title: 'Failed to save', description: 'Please try again.', variant: 'destructive' });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Could not load dashboard';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+      if (msg.toLowerCase().includes('agency access') || msg.includes('403')) {
+        navigate('/admin/login', { replace: true });
+      }
     } finally {
-      setIsSavingAgency(false);
+      setDashLoading(false);
+      setContextLoading(false);
+    }
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (!loading && user && (user.user_type === 'agency' || user.is_admin)) {
+      void loadData();
+    }
+  }, [loading, user, loadData]);
+
+  const handleSaveProfile = async () => {
+    const mid = marketplace?.id;
+    if (!mid) {
+      toast({ title: 'Nothing to save', description: 'No marketplace profile linked.', variant: 'destructive' });
+      return;
+    }
+    setSavingProfile(true);
+    try {
+      await agenciesApi.update(mid, {
+        description: profileDesc,
+        website: profileWebsite,
+        contact_phone: profilePhone,
+        contact_email: profileEmail,
+      });
+      toast({ title: 'Saved', description: 'Marketplace profile updated.' });
+      await loadData();
+    } catch (e) {
+      toast({
+        title: 'Save failed',
+        description: e instanceof Error ? e.message : 'Try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingProfile(false);
     }
   };
 
   const handlePasswordChange = async () => {
     if (!newPassword || !confirmPassword) {
-      toast({
-        title: "Missing Fields",
-        description: "Enter and confirm your new password.",
-        variant: "destructive",
-      });
+      toast({ title: 'Missing fields', description: 'Enter and confirm your new password.', variant: 'destructive' });
       return;
     }
-
     if (newPassword.length < 8) {
-      toast({
-        title: "Weak Password",
-        description: "New password must be at least 8 characters long.",
-        variant: "destructive",
-      });
+      toast({ title: 'Weak password', description: 'At least 8 characters.', variant: 'destructive' });
       return;
     }
-
     if (newPassword !== confirmPassword) {
-      toast({
-        title: "Password Mismatch",
-        description: "New password and confirmation do not match.",
-        variant: "destructive",
-      });
+      toast({ title: 'Mismatch', description: 'Passwords do not match.', variant: 'destructive' });
       return;
     }
-
-    setIsUpdatingPassword(true);
+    setPasswordBusy(true);
     try {
       await FirebaseAuthService.updatePassword(newPassword);
       setNewPassword('');
       setConfirmPassword('');
-      toast({
-        title: "Password Updated",
-        description: "Your password has been changed successfully.",
-      });
-    } catch (error: any) {
-      toast({
-        title: "Update Failed",
-        description: error.message || "Failed to update password.",
-        variant: "destructive",
-      });
+      toast({ title: 'Password updated', description: 'Your password was changed.' });
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Failed to update password.';
+      toast({ title: 'Update failed', description: msg, variant: 'destructive' });
     } finally {
-      setIsUpdatingPassword(false);
+      setPasswordBusy(false);
     }
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate('/agencies');
-  };
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50">
+        <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+      </div>
+    );
+  }
 
-  if (loading || !user || user.user_type !== 'agency') {
+  if (user.user_type !== 'agency' && !user.is_admin) {
     return null;
   }
 
-  // Calculate real agency stats from fetched data
-  const agencyStats = {
-    totalHousegirls: agencyWorkers.length || 0,
-    activeJobs: 0, // Will be calculated from job postings
-    totalClients: agencyClients.length || 0,
-    monthlyRevenue: agencyPayments.reduce((sum, payment) => {
-      const paymentDate = new Date(payment.created_at);
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      if (paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
-        return sum + (payment.agency_fee || 0);
-      }
-      return sum;
-    }, 0),
-    placementRate: agencyWorkers.length > 0 ? Math.round((agencyClients.filter(client => client.placement_status === 'active').length / agencyWorkers.length) * 100) : 0,
-    averageRating: 4.5, // Default rating
-    activePlacements: agencyClients.filter(client => client.placement_status === 'active').length || 0,
-    pendingInterviews: agencyWorkers.filter(worker => worker.verification_status === 'pending').length || 0,
-    thisMonthPlacements: agencyClients.filter(client => {
-      const clientDate = new Date(client.hire_date);
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      return clientDate.getMonth() === currentMonth && clientDate.getFullYear() === currentYear;
-    }).length || 0,
-    thisMonthRevenue: agencyPayments.reduce((sum, payment) => {
-      const paymentDate = new Date(payment.created_at);
-      const currentMonth = new Date().getMonth();
-      const currentYear = new Date().getFullYear();
-      if (paymentDate.getMonth() === currentMonth && paymentDate.getFullYear() === currentYear) {
-        return sum + (payment.amount || 0);
-      }
-      return sum;
-    }, 0)
-  };
-
-  // Convert agency workers to housegirl format for display
-  const recentHousegirls: Housegirl[] = agencyWorkers.slice(0, 3).map((worker, index) => ({
-    id: worker.id,
-    name: `Worker ${worker.id}`,
-    age: 25 + index,
-    location: 'Nairobi',
-    experience: '3 years',
-    education: 'Form 4 and Above',
-    expectedSalary: 'KES 18,000',
-    rating: 4.5 + (index * 0.1),
-    status: worker.verification_status === 'verified' ? 'available' : 'interviewing',
-    skills: worker.training_certificates || ['Cooking', 'Cleaning'],
-    languages: ['English', 'Swahili'],
-    photo: '/placeholder.svg',
-    matchScore: 85 + (index * 5),
-    earnings: 35000 + (index * 5000)
-  }));
-
-  // Real job opportunities from dashboard data
-  const activeJobs: LocalJobPosting[] = (dashboardData?.available_data.job_postings || []).slice(0, 3).map(job => ({
-    id: job.id,
-    title: job.title,
-    client: job.employer?.name || 'N/A',
-    location: job.location,
-    salary: `KES ${job.salary_min.toLocaleString()} - ${job.salary_max.toLocaleString()}`,
-    postedDate: new Date(job.created_at).toLocaleDateString(),
-    status: job.status === 'closed' ? 'expired' : (job.status as any),
-    applications: job.applications_count || 0,
-    requirements: job.skills_required || [],
-    commission: 5000,
-    placementFee: 10000
-  }));
-
-  // Real clients from dashboard data
-  const topClients: LocalClient[] = agencyClients.slice(0, 3).map(client => ({
-    id: client.id,
-    name: client.name,
-    email: client.email,
-    phone: client.phone_number,
-    location: client.location,
-    status: client.placement_status,
-    totalSpent: 0, // Will be calculated from payments
-    lastContact: client.hire_date,
-    photo: '/placeholder.svg',
-    placements: 1,
-    satisfaction: 4
-  }));
-
+  const stats = dashboard?.stats ?? {};
+  const clients = dashboard?.available_data?.clients ?? [];
+  const workers = dashboard?.available_data?.workers ?? [];
+  const employers = dashboard?.available_data?.all_employers ?? [];
+  const displayName = marketplace?.name || `${user.first_name} ${user.last_name}`.trim() || 'Agency';
+  const verified = marketplace?.verification_status === 'verified';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => navigate('/')}
-              className="text-slate-700"
-            >
-              <Home className="h-4 w-4 mr-2" />
-              Back to Home
-            </Button>
-
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  type="text"
-                  placeholder="Search..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-56"
-                />
+    <div className="min-h-screen bg-slate-50">
+      <header className="border-b bg-white">
+        <div className="max-w-6xl mx-auto px-4 py-4 flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="h-10 w-10 rounded-lg bg-slate-900 flex items-center justify-center shrink-0">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg font-semibold text-slate-900 truncate">{displayName}</h1>
+                {verified ? (
+                  <Badge className="bg-emerald-600 hover:bg-emerald-600">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Verified
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary">Pending</Badge>
+                )}
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="relative"
-              >
-                <Bell className="h-5 w-5" />
-              </Button>
-
+              <p className="text-sm text-slate-500 truncate">{user.email}</p>
             </div>
           </div>
+          <Button variant="outline" size="sm" onClick={() => signOut('/admin/login')}>
+            <LogOut className="h-4 w-4 mr-2" />
+            Sign out
+          </Button>
         </div>
       </header>
 
-      <div className="p-6">
-        <div className="mb-4 flex flex-wrap gap-2 border border-slate-200 bg-white rounded-lg p-2">
-          {[
-            { id: 'overview', label: 'Overview', icon: Home },
-            { id: 'housegirls', label: 'Housegirls', icon: Users },
-            { id: 'jobs', label: 'Job Postings', icon: Briefcase },
-            { id: 'clients', label: 'Clients', icon: User },
-            { id: 'placements', label: 'Placements', icon: CheckCircle },
-            { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-            { id: 'settings', label: 'Settings', icon: Settings }
-          ].map((tab) => (
-            <Button
-              key={tab.id}
-              variant="outline"
-              onClick={() => setActiveTab(tab.id as 'overview' | 'housegirls' | 'jobs' | 'clients' | 'placements' | 'analytics' | 'settings')}
-              className={activeTab === tab.id ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-slate-700'}
-            >
-              <tab.icon className="h-4 w-4 mr-2" />
-              {tab.label}
-            </Button>
-          ))}
-          <Button variant="outline" onClick={() => refreshData(false)} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button variant="outline" className="ml-auto" onClick={handleSignOut}>
-            <LogOut className="h-4 w-4 mr-2" />
-            Logout
-          </Button>
-        </div>
-        {lastUpdated && (
-          <p className="mb-3 text-xs text-slate-500">Last updated: {lastUpdated.toLocaleTimeString()}</p>
-        )}
-
-        {/* Main Content */}
-        <main>
-          <Card className="mb-6 border border-blue-100 bg-blue-50">
-            <CardContent className="p-4">
-              <p className="text-sm text-blue-900">
-                Agency features are coming soon. For now, ensure your profile is complete so you are ready when we launch agency tools.
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Overview Tab Content */}
-        {activeTab === 'overview' && (
-          <div className="space-y-6">
-            {hasProfile === false && (
-              <Card className="bg-blue-50 border-blue-200">
-                <CardHeader>
-                  <CardTitle className="text-blue-800 flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5" />
-                    Complete Agency Profile
+      <main className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+        {dashLoading || contextLoading ? (
+          <div className="flex justify-center py-16">
+            <Loader2 className="h-8 w-8 animate-spin text-slate-400" />
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Clients</CardDescription>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Briefcase className="h-5 w-5 text-slate-400" />
+                    {stats.total_clients ?? clients.length}
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-blue-800 mb-4 text-sm">
-                    Complete your agency profile to start listing housegirls and receiving job requests.
-                  </p>
-                  <Button
-                    className="bg-blue-600 hover:bg-blue-700"
-                    onClick={() => setActiveTab('settings')}
-                  >
-                    Set Up Profile
-                  </Button>
-                </CardContent>
               </Card>
-            )}
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Workers</CardDescription>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Users className="h-5 w-5 text-slate-400" />
+                    {stats.total_workers ?? workers.length}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardDescription>Employers (browse pool)</CardDescription>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Users className="h-5 w-5 text-slate-400" />
+                    {stats.available_employers ?? employers.length}
+                  </CardTitle>
+                </CardHeader>
+              </Card>
+            </div>
 
-            {/* Quick Stats */}
-            {dataLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
-                  <span className="ml-2 text-gray-600">Loading agency data...</span>
-                </div>
-              ) : (
-                <>
-                  {/* Hero Stats */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <Card className="bg-white border border-slate-200 shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-slate-600 text-sm font-medium">Total Housegirls</p>
-                        <p className="text-3xl font-bold">{agencyStats.totalHousegirls}</p>
-                        <p className="text-slate-500 text-xs">+{agencyStats.thisMonthPlacements} this month</p>
-                      </div>
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Users className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+            <Tabs value={tab} onValueChange={setTab}>
+              <TabsList className="flex flex-wrap h-auto gap-1">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="workers">Workers</TabsTrigger>
+                <TabsTrigger value="clients">Clients</TabsTrigger>
+                <TabsTrigger value="profile">Marketplace profile</TabsTrigger>
+                <TabsTrigger value="settings">Settings</TabsTrigger>
+              </TabsList>
 
-                <Card className="bg-white border border-slate-200 shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-slate-600 text-sm font-medium">Active Placements</p>
-                        <p className="text-3xl font-bold">{agencyStats.activePlacements}</p>
-                        <p className="text-slate-500 text-xs">+{agencyStats.thisMonthPlacements} this month</p>
-                      </div>
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <CheckCircle className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white border border-slate-200 shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-slate-600 text-sm font-medium">Monthly Revenue</p>
-                        <p className="text-3xl font-bold">KES {agencyStats.monthlyRevenue.toLocaleString()}</p>
-                        <p className="text-slate-500 text-xs">+{agencyStats.thisMonthRevenue.toLocaleString()} this month</p>
-                      </div>
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <DollarSign className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-
-                <Card className="bg-white border border-slate-200 shadow-sm">
-                  <CardContent className="p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-slate-600 text-sm font-medium">Placement Rate</p>
-                        <p className="text-3xl font-bold">{agencyStats.placementRate}%</p>
-                        <p className="text-slate-500 text-xs">{agencyStats.pendingInterviews} pending</p>
-                      </div>
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
-                        <Target className="h-6 w-6" />
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Quick Actions */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <Card className="border border-slate-200 shadow-sm">
+              <TabsContent value="overview" className="space-y-4 mt-6">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Zap className="h-5 w-5 text-blue-600" />
-                      <span>Quick Actions</span>
-                    </CardTitle>
+                    <CardTitle>Summary</CardTitle>
+                    <CardDescription>Recent lists (first rows)</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setActiveTab('housegirls')}
-                    >
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add New Housegirl
-                    </Button>
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setActiveTab('jobs')}
-                    >
-                      <Briefcase className="h-4 w-4 mr-2" />
-                      Create Job Posting
-                    </Button>
-                    <Button 
-                      className="w-full justify-start" 
-                      variant="outline"
-                      onClick={() => setActiveTab('clients')}
-                    >
-                      <User className="h-4 w-4 mr-2" />
-                      Add New Client
-                    </Button>
+                  <CardContent className="space-y-6">
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-2">Workers</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Hire date</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {workers.slice(0, 5).map((w) => (
+                            <TableRow key={w.id}>
+                              <TableCell>{w.name}</TableCell>
+                              <TableCell>{w.verification_status}</TableCell>
+                              <TableCell>{w.hire_date}</TableCell>
+                            </TableRow>
+                          ))}
+                          {!workers.length && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-slate-500">
+                                No workers yet.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-medium text-slate-700 mb-2">Clients</h3>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Name</TableHead>
+                            <TableHead>Company</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {clients.slice(0, 5).map((c) => (
+                            <TableRow key={c.id}>
+                              <TableCell>{c.name}</TableCell>
+                              <TableCell>{c.company_name}</TableCell>
+                              <TableCell>{c.placement_status}</TableCell>
+                            </TableRow>
+                          ))}
+                          {!clients.length && (
+                            <TableRow>
+                              <TableCell colSpan={3} className="text-slate-500">
+                                No clients yet.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
+              </TabsContent>
 
-                <Card className="border border-slate-200 shadow-sm">
+              <TabsContent value="workers" className="mt-6">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <Activity className="h-5 w-5 text-green-600" />
-                      <span>Recent Activity</span>
-                    </CardTitle>
+                    <CardTitle>Workers</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-3">
-                    {agencyWorkers.length > 0 ? (
-                      <>
-                        <div className="flex items-center space-x-3">
-                          <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                          <span className="text-sm text-slate-600">New housegirl registered - {agencyWorkers[0]?.id}</span>
-                        </div>
-                        {agencyClients.length > 0 && (
-                          <div className="flex items-center space-x-3">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            <span className="text-sm text-slate-600">Placement completed - {agencyClients[0]?.id}</span>
-                          </div>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Hire date</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {workers.map((w) => (
+                          <TableRow key={w.id}>
+                            <TableCell>{w.name}</TableCell>
+                            <TableCell>{w.verification_status}</TableCell>
+                            <TableCell>{w.hire_date}</TableCell>
+                          </TableRow>
+                        ))}
+                        {!workers.length && (
+                          <TableRow>
+                            <TableCell colSpan={3} className="text-slate-500">
+                              No workers.
+                            </TableCell>
+                          </TableRow>
                         )}
-                        {agencyPayments.length > 0 && (
-                          <div className="flex items-center space-x-3">
-                            <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                            <span className="text-sm text-slate-600">New payment received - KES {agencyPayments[0]?.amount?.toLocaleString()}</span>
-                          </div>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="clients" className="mt-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Clients</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Company</TableHead>
+                          <TableHead>Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {clients.map((c) => (
+                          <TableRow key={c.id}>
+                            <TableCell>{c.name}</TableCell>
+                            <TableCell>{c.email}</TableCell>
+                            <TableCell>{c.company_name}</TableCell>
+                            <TableCell>{c.placement_status}</TableCell>
+                          </TableRow>
+                        ))}
+                        {!clients.length && (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-slate-500">
+                              No clients.
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </>
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="profile" className="mt-6 space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Marketplace profile</CardTitle>
+                    <CardDescription>
+                      Summary of your verified listing.{' '}
+                      <Link to="/agency-marketplace" className="text-primary underline">
+                        View public marketplace
+                      </Link>
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {!marketplace ? (
+                      <p className="text-slate-500">No marketplace row linked to this operator account.</p>
                     ) : (
-                      <div className="text-center py-4">
-                        <p className="text-sm text-gray-500">No recent activity</p>
-                        <p className="text-xs text-gray-400 mt-1">Start by adding housegirls and clients</p>
-                      </div>
+                      <>
+                        <div className="grid gap-2 text-sm">
+                          <div>
+                            <span className="text-slate-500">Name: </span>
+                            {marketplace.name}
+                          </div>
+                          <div>
+                            <span className="text-slate-500">License: </span>
+                            {marketplace.license_number ?? '—'}
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Location: </span>
+                            {marketplace.location ?? '—'}
+                          </div>
+                          <div>
+                            <span className="text-slate-500">Status: </span>
+                            {marketplace.verification_status}
+                          </div>
+                        </div>
+                        <div className="space-y-3 pt-4 border-t">
+                          <Label htmlFor="ag-desc">Description</Label>
+                          <Textarea
+                            id="ag-desc"
+                            value={profileDesc}
+                            onChange={(e) => setProfileDesc(e.target.value)}
+                            rows={4}
+                          />
+                          <div className="grid sm:grid-cols-2 gap-3">
+                            <div>
+                              <Label htmlFor="ag-email">Contact email</Label>
+                              <Input id="ag-email" value={profileEmail} onChange={(e) => setProfileEmail(e.target.value)} />
+                            </div>
+                            <div>
+                              <Label htmlFor="ag-phone">Contact phone</Label>
+                              <Input id="ag-phone" value={profilePhone} onChange={(e) => setProfilePhone(e.target.value)} />
+                            </div>
+                          </div>
+                          <div>
+                            <Label htmlFor="ag-web">Website</Label>
+                            <Input id="ag-web" value={profileWebsite} onChange={(e) => setProfileWebsite(e.target.value)} />
+                          </div>
+                          <Button onClick={() => void handleSaveProfile()} disabled={savingProfile}>
+                            {savingProfile ? 'Saving…' : 'Save changes'}
+                          </Button>
+                        </div>
+                      </>
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
 
-                <Card className="border border-slate-200 shadow-sm">
+              <TabsContent value="settings" className="mt-6">
+                <Card>
                   <CardHeader>
-                    <CardTitle className="flex items-center space-x-2">
-                      <TrendingUp className="h-5 w-5 text-purple-600" />
-                      <span>Performance</span>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="h-5 w-5" />
+                      Password
                     </CardTitle>
+                    <CardDescription>Update your sign-in password (Firebase account).</CardDescription>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 max-w-md">
                     <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-slate-600">Placement Rate</span>
-                        <span className="text-sm font-medium">{agencyStats.placementRate}%</span>
-                      </div>
-                      <div className="w-full bg-slate-200 rounded-full h-2">
-                        <div className="bg-slate-900 h-2 rounded-full" style={{ width: `${agencyStats.placementRate}%` }}></div>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm text-slate-600">Client Satisfaction</span>
-                        <div className="flex items-center">
-                          <Star className="h-4 w-4 text-yellow-400 fill-current" />
-                          <span className="text-sm font-medium ml-1">{agencyStats.averageRating}</span>
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Recent Housegirls */}
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Recent Housegirls</CardTitle>
-                      <CardDescription>Latest registered housegirls and their status</CardDescription>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setActiveTab('housegirls')}
-                    >
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {recentHousegirls.length > 0 ? (
-                    <div className="space-y-4">
-                      {recentHousegirls.map((housegirl) => (
-                        <div key={housegirl.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                          <div className="flex items-center space-x-4">
-                            <UserAvatar
-                              src={housegirl.photo}
-                              name={housegirl.name}
-                              size="md"
-                            />
-                            <div>
-                              <h3 className="font-semibold text-slate-900">{housegirl.name}</h3>
-                              <p className="text-sm text-slate-600">{housegirl.location} • {housegirl.experience}</p>
-                              <div className="flex items-center space-x-2 mt-1">
-                                <Star className="h-3 w-3 text-yellow-400 fill-current" />
-                                <span className="text-xs text-slate-500">{housegirl.rating}</span>
-                                <span className="text-xs text-slate-500">•</span>
-                                <span className="text-xs text-slate-500">KES {housegirl.earnings.toLocaleString()}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <Badge 
-                              variant={housegirl.status === 'available' ? 'default' : 
-                                     housegirl.status === 'placed' ? 'secondary' : 
-                                     housegirl.status === 'interviewing' ? 'outline' : 'destructive'}
-                              className="capitalize"
-                            >
-                              {housegirl.status}
-                            </Badge>
-                            <Button variant="outline" size="sm">
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                                     ) : (
-                     <div className="text-center py-8">
-                       <Users className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-                       <p className="text-gray-500">No housegirls registered with your agency yet</p>
-                       <p className="text-xs text-gray-400 mt-1 mb-3">Housegirls need to sign up through your agency to appear here</p>
-                       <Button 
-                         variant="outline" 
-                         className="mt-3"
-                         onClick={() => setActiveTab('housegirls')}
-                       >
-                         Add Your First Housegirl
-                       </Button>
-                     </div>
-                   )}
-                </CardContent>
-              </Card>
-
-              {/* Active Jobs */}
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Active Job Postings</CardTitle>
-                      <CardDescription>Current job opportunities and applications</CardDescription>
-                    </div>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => setActiveTab('jobs')}
-                    >
-                      View All
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4">
-                    {activeJobs.map((job) => (
-                      <div key={job.id} className="flex items-center justify-between p-4 border border-slate-200 rounded-lg hover:bg-slate-50 transition-colors">
-                        <div>
-                          <h3 className="font-semibold text-slate-900">{job.title}</h3>
-                          <p className="text-sm text-slate-600">{job.client} • {job.location}</p>
-                          <div className="flex items-center space-x-4 mt-2">
-                            <span className="text-sm text-slate-500">{job.salary}</span>
-                            <span className="text-sm text-slate-500">•</span>
-                            <span className="text-sm text-slate-500">{job.applications} applications</span>
-                            <span className="text-sm text-slate-500">•</span>
-                            <span className="text-sm text-green-600 font-medium">KES {job.commission.toLocaleString()} commission</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center space-x-2">
-                          <Badge 
-                            variant={job.status === 'active' ? 'default' : 
-                                   job.status === 'pending' ? 'outline' : 
-                                   job.status === 'filled' ? 'secondary' : 'destructive'}
-                            className="capitalize"
-                          >
-                            {job.status}
-                          </Badge>
-                          <Button variant="outline" size="sm">
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* Housegirls Tab */}
-          {activeTab === 'housegirls' && (
-            <div className="space-y-6">
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Housegirls Management</CardTitle>
-                      <CardDescription>Manage your registered housegirls, track their placements, and monitor performance</CardDescription>
-                    </div>
-                    <Button className="bg-slate-900 hover:bg-slate-800 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Housegirl
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <Users className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Housegirls Management</h3>
-                    <p className="text-slate-600 mb-4">
-                      Register new housegirls, manage their profiles, track placements, and monitor their performance metrics.
-                    </p>
-                    <Button>View All Housegirls</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Jobs Tab */}
-          {activeTab === 'jobs' && (
-            <div className="space-y-6">
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Job Postings</CardTitle>
-                      <CardDescription>Create and manage job postings, track applications, and match housegirls to clients</CardDescription>
-                    </div>
-                    <Button className="bg-slate-900 hover:bg-slate-800 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Create Job Posting
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <Briefcase className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Job Postings</h3>
-                    <p className="text-slate-600 mb-4">
-                      Create compelling job postings, track applications, and efficiently match qualified housegirls to client requirements.
-                    </p>
-                    <Button>Create New Job</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Clients Tab */}
-          {activeTab === 'clients' && (
-            <div className="space-y-6">
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Client Management</CardTitle>
-                      <CardDescription>Manage your client relationships, track their requirements, and maintain communication</CardDescription>
-                    </div>
-                    <Button className="bg-slate-900 hover:bg-slate-800 text-white">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Add Client
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <User className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Client Management</h3>
-                    <p className="text-slate-600 mb-4">
-                      Build and maintain strong client relationships, track their satisfaction, and ensure repeat business.
-                    </p>
-                    <Button>View All Clients</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Placements Tab */}
-          {activeTab === 'placements' && (
-            <div className="space-y-6">
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Placements</CardTitle>
-                      <CardDescription>Track successful placements, monitor performance, and manage ongoing relationships</CardDescription>
-                    </div>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Report
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <CheckCircle className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Placements</h3>
-                    <p className="text-slate-600 mb-4">
-                      Monitor successful placements, track performance metrics, and ensure client satisfaction.
-                    </p>
-                    <Button>View All Placements</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Analytics Tab */}
-          {activeTab === 'analytics' && (
-            <div className="space-y-6">
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle>Analytics & Reports</CardTitle>
-                      <CardDescription>Comprehensive analytics, performance metrics, and business insights</CardDescription>
-                    </div>
-                    <Button variant="outline">
-                      <Download className="h-4 w-4 mr-2" />
-                      Export Data
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center py-12">
-                    <BarChart3 className="h-16 w-16 text-slate-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium text-slate-900 mb-2">Analytics Dashboard</h3>
-                    <p className="text-slate-600 mb-4">
-                      Get detailed insights into your business performance, placement rates, and revenue trends.
-                    </p>
-                    <Button>View Analytics</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-
-          {/* Settings Tab */}
-          {activeTab === 'settings' && (
-            <div className="space-y-6">
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle>Agency Profile</CardTitle>
-                  <CardDescription>Update your agency information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-4 max-w-md">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">Agency Name</label>
-                      <Input
-                        value={agencyName}
-                        onChange={(e) => setAgencyName(e.target.value)}
-                        placeholder="Agency name"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">Location</label>
-                      <Input
-                        value={agencyLocation}
-                        onChange={(e) => setAgencyLocation(e.target.value)}
-                        placeholder="Nairobi, Kenya"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">Phone</label>
-                      <Input
-                        value={agencyPhone}
-                        onChange={(e) => setAgencyPhone(e.target.value)}
-                        placeholder="07xx xxx xxx"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">Description</label>
-                      <textarea
-                        className="w-full p-2 border border-gray-300 rounded-md text-sm"
-                        rows={3}
-                        value={agencyDescription}
-                        onChange={(e) => setAgencyDescription(e.target.value)}
-                        placeholder="Brief description of your agency"
-                      />
-                    </div>
-                    <Button
-                      className="bg-slate-900 hover:bg-slate-800 text-white"
-                      onClick={handleSaveAgencyProfile}
-                      disabled={isSavingAgency}
-                    >
-                      {isSavingAgency ? 'Saving...' : 'Save Profile'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-slate-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Shield className="h-5 w-5 text-blue-600" />
-                    Account Security
-                  </CardTitle>
-                  <CardDescription>Update your password and manage account security</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 max-w-md">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">New Password</label>
-                      <div className="relative">
+                      <Label htmlFor="npw">New password</Label>
+                      <div className="relative mt-1">
                         <Input
-                          type={showNewPassword ? "text" : "password"}
-                          className="pr-10"
-                          placeholder="Min 8 characters"
+                          id="npw"
+                          type={showNewPassword ? 'text' : 'password'}
                           value={newPassword}
                           onChange={(e) => setNewPassword(e.target.value)}
+                          autoComplete="new-password"
                         />
                         <button
                           type="button"
-                          className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                          onClick={() => setShowNewPassword(!showNewPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                          onClick={() => setShowNewPassword((v) => !v)}
                         >
                           {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-gray-700 mb-1 block">Confirm Password</label>
-                      <div className="relative">
+                      <Label htmlFor="cpw">Confirm password</Label>
+                      <div className="relative mt-1">
                         <Input
-                          type={showConfirmPassword ? "text" : "password"}
-                          className="pr-10"
-                          placeholder="Re-enter password"
+                          id="cpw"
+                          type={showConfirmPassword ? 'text' : 'password'}
                           value={confirmPassword}
                           onChange={(e) => setConfirmPassword(e.target.value)}
+                          autoComplete="new-password"
                         />
                         <button
                           type="button"
-                          className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600"
-                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400"
+                          onClick={() => setShowConfirmPassword((v) => !v)}
                         >
                           {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                         </button>
                       </div>
                     </div>
-                    <Button 
-                      className="w-full bg-slate-900 hover:bg-slate-800 text-white"
-                      onClick={handlePasswordChange}
-                      disabled={isUpdatingPassword}
-                    >
-                      {isUpdatingPassword ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Updating...
-                        </>
-                      ) : 'Update Password'}
+                    <Button onClick={() => void handlePasswordChange()} disabled={passwordBusy}>
+                      {passwordBusy ? 'Updating…' : 'Update password'}
                     </Button>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border border-red-200 shadow-sm">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-red-600">
-                    <AlertCircle className="h-5 w-5" />
-                    Danger Zone
-                  </CardTitle>
-                  <CardDescription>Irreversible account actions</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-gray-600 mb-4">Deleting your agency account will remove all registered housegirls and client records linked to your agency.</p>
-                  <Button variant="destructive" size="sm">
-                    Delete Account
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </main>
-      </div>
-
-      {/* WhatsApp Floating Button */}
-      <div className="fixed bottom-6 right-6 z-50">
-        <Button
-          onClick={() => setShowWhatsApp(!showWhatsApp)}
-          className="w-14 h-14 rounded-full bg-green-500 hover:bg-green-600 shadow-sm"
-        >
-          <MessageSquare className="h-6 w-6" />
-        </Button>
-      </div>
-
-      {/* WhatsApp Chat Modal */}
-      {showWhatsApp && (
-        <div className="fixed bottom-20 right-6 z-50">
-          <Card className="w-80 border border-slate-200 shadow-sm">
-            <CardHeader className="bg-green-500 text-white">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <CardTitle className="text-white">Contact Support</CardTitle>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowWhatsApp(false)}
-                  className="text-white hover:bg-green-600"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4">
-              <div className="space-y-4">
-                <p className="text-sm text-slate-600">
-                  Need help? Contact us via WhatsApp for immediate assistance.
-                </p>
-                <Button className="w-full bg-green-500 hover:bg-green-600">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Open WhatsApp
-                </Button>
-                <div className="text-center">
-                  <p className="text-xs text-slate-500">Available 24/7</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      )}
-
-      {/* System Status Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 text-white text-xs px-4 py-2 z-40">
-        <div className="flex items-center justify-between max-w-7xl mx-auto">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-1">
-              <Wifi className="h-3 w-3 text-green-400" />
-              <span>Online</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <Battery className="h-3 w-3 text-green-400" />
-              <span>System Healthy</span>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <span>Domestic Connect Agency v1.0</span>
-            <span>•</span>
-            <span>Last updated: {new Date().toLocaleTimeString()}</span>
-          </div>
-        </div>
-      </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </main>
     </div>
   );
 };

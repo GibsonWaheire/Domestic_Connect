@@ -3,6 +3,7 @@ from flask import request, jsonify, current_app, session
 import bcrypt
 import os
 from app.models import User
+from app.firebase_init import db
 from firebase_admin import auth
 
 def hash_password(password):
@@ -113,6 +114,45 @@ def verify_firebase_token(token):
     except Exception as e:
         print(f"Firebase token verification error: {e}")
         return None
+
+
+def agency_marketplace_login_allowed(user_dict):
+    """Returns (allowed, error_message). Used for agency operator login and protected routes."""
+    if user_dict.get('user_type') != 'agency':
+        return True, None
+    uid = user_dict.get('id')
+    mid = user_dict.get('marketplace_agency_id')
+    if not mid:
+        return False, (
+            'Your agency account is not linked to an approved marketplace listing. '
+            'Use the staff portal after an administrator links your account.'
+        )
+    doc = db.collection('agencies').document(mid).get()
+    if not doc.exists:
+        return False, 'Marketplace listing not found. Contact support.'
+    ad = doc.to_dict() or {}
+    if ad.get('verification_status') != 'verified':
+        return False, 'Your agency is not approved yet.'
+    dash = ad.get('dashboard_user_id')
+    if dash is not None and dash != '':
+        if dash != uid:
+            return False, 'This marketplace listing is assigned to another operator account. Contact support.'
+    return True, None
+
+
+def agency_operator_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not getattr(request, 'current_user', None):
+            return jsonify({'error': 'Authentication required'}), 401
+        user = request.current_user
+        if getattr(user, 'user_type', None) != 'agency':
+            return jsonify({'error': 'Agency operator access required'}), 403
+        allowed, err = agency_marketplace_login_allowed(user.to_dict())
+        if not allowed:
+            return jsonify({'error': err or 'Agency access denied', 'status': 'agency_access_denied'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 def email_verified_required(f):
     """Decorator to require a verified email before accessing a route.

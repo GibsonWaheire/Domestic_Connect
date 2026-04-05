@@ -52,6 +52,25 @@ Key frontend layers:
 
 Auth state is centralized in `useAuthEnhanced` and consumed by dashboards/pages for role-based routing and protected calls.
 
+## Local development (staff + agency)
+
+With the default Vite dev server and API proxied to `/api`:
+
+| UI | URL |
+|----|-----|
+| Staff sign-in (admins + agencies) | `http://localhost:5173/admin/login` |
+| Agency dashboard (after admin verify + link) | `http://localhost:5173/agency-dashboard` |
+| Public employer/housegirl sign-in | `http://localhost:5173/login` |
+
+| Action | Method | Path |
+|--------|--------|------|
+| Login / session bootstrap (Bearer Firebase ID token) | POST | `/api/auth/verify` body `{"mode":"login"}` |
+| Agency dashboard data | GET | `/api/cross-entity/dashboard-data` |
+| Agency marketplace + operator context | GET | `/api/agency/context` |
+| Admin verify / link operator to marketplace row | PUT | `/api/admin/agencies/<agency_id>/verify` body `{"status":"verified","dashboard_user_id":"<users.doc.id>"}` |
+
+Agency operators must be **verified** on the marketplace `agencies` document and linked via `dashboard_user_id` / `users.marketplace_agency_id` before `/api/auth/verify` allows `user_type: agency` login.
+
 ## Integration Boundaries
 
 - All write operations for role profiles flow through backend `PUT` endpoints.

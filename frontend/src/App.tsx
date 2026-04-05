@@ -131,7 +131,7 @@ const App = () => (
                 <Route
                   path="/agency-dashboard"
                   element={
-                    <AuthGuard allowedUserTypes={['agency']}>
+                    <AuthGuard allowedUserTypes={['agency']} unauthenticatedRedirect="/admin/login">
                       <AgencyDashboard />
                     </AuthGuard>
                   }

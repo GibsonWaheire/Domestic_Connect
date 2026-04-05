@@ -14,8 +14,13 @@ const LoginPage = () => {
   const loading = authContext?.loading || false;
 
   useEffect(() => {
-    if (!loading && user?.is_admin) {
+    if (loading || !user) return;
+    if (user.is_admin) {
       navigate('/admin-dashboard', { replace: true });
+      return;
+    }
+    if (user.user_type === 'agency') {
+      navigate('/agency-dashboard', { replace: true });
     }
   }, [loading, user, navigate]);
   const handleGoogleSignIn = authContext?.handleGoogleSignIn || (async () => ({ error: 'Authentication is unavailable.' }));

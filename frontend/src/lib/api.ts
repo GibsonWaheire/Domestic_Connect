@@ -84,6 +84,9 @@ export interface AgencyProfile {
   location: string;
   description: string | null;
   license_number: string | null;
+  contact_email?: string | null;
+  contact_phone?: string | null;
+  website?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -575,6 +578,7 @@ export interface AdminAgency {
   contact_email: string;
   contact_phone: string;
   website?: string;
+  dashboard_user_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -680,11 +684,14 @@ export const adminApi = {
     });
   },
   
-  verifyAgency: (token: string, agencyId: string, status: string) =>
-    apiRequest<{ success: boolean; message: string }>(`/api/admin/agencies/${agencyId}/verify`, {
+  verifyAgency: (token: string, agencyId: string, status: string, dashboardUserId?: string) =>
+    apiRequest<{ success?: boolean; message: string }>(`/api/admin/agencies/${agencyId}/verify`, {
       method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({
+        status,
+        ...(status === 'verified' && dashboardUserId ? { dashboard_user_id: dashboardUserId } : {}),
+      }),
     }),
   
   promoteUser: (token: string, userId: string, makeAdmin: boolean) =>
@@ -820,6 +827,15 @@ export const jobsApi = {
   
   getApplications: (jobId: string) =>
     apiRequest<{ applications: JobApplication[] }>(`/api/jobs/${jobId}/applications`),
+};
+
+export interface AgencyPortalContext {
+  marketplace_agency: Record<string, unknown> | null;
+  operator_user: Record<string, unknown>;
+}
+
+export const agencyPortalApi = {
+  getContext: () => apiRequest<AgencyPortalContext>('/api/agency/context'),
 };
 
 // Cross-entity dashboard data interface

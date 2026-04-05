@@ -1,5 +1,9 @@
 from flask import Blueprint, request, jsonify
-from app.services.auth_service import firebase_auth_required
+from app.services.auth_service import (
+    firebase_auth_required,
+    agency_marketplace_login_allowed,
+    agency_operator_required,
+)
 from app.firebase_init import db
 from datetime import datetime
 import uuid
@@ -8,6 +12,11 @@ import logging
 
 logger = logging.getLogger(__name__)
 agencies_bp = Blueprint('agencies', __name__)
+agency_portal_bp = Blueprint('agency_portal', __name__)
+
+AGENCY_OPERATOR_WRITABLE_FIELDS = frozenset({
+    'description', 'contact_email', 'contact_phone', 'website', 'services', 'location', 'name',
+})
 
 @agencies_bp.route('/health', methods=['GET'])
 def agencies_health():
@@ -185,25 +194,35 @@ def update_agency(agency_id):
     """Update agency"""
     try:
         user = request.current_user
-        if not getattr(user, 'is_admin', False):
-            return jsonify({'error': 'Unauthorized, admin only'}), 403
-            
+        is_admin = getattr(user, 'is_admin', False)
         agency_doc_ref = db.collection('agencies').document(agency_id)
         agency_doc = agency_doc_ref.get()
         if not agency_doc.exists:
             return jsonify({'error': 'Agency not found'}), 404
-            
-        data = request.get_json()
+
+        data = request.get_json() or {}
         updates = {}
-        
-        fields = ['name', 'license_number', 'verification_status', 'subscription_tier', 
-                  'rating', 'services', 'location', 'monthly_fee', 'commission_rate', 
-                  'verified_workers', 'successful_placements', 'description', 
-                  'contact_email', 'contact_phone', 'website']
-                  
-        for field in fields:
-            if field in data:
-                updates[field] = data[field]
+
+        if is_admin:
+            fields = ['name', 'license_number', 'verification_status', 'subscription_tier',
+                      'rating', 'services', 'location', 'monthly_fee', 'commission_rate',
+                      'verified_workers', 'successful_placements', 'description',
+                      'contact_email', 'contact_phone', 'website']
+            for field in fields:
+                if field in data:
+                    updates[field] = data[field]
+        elif getattr(user, 'user_type', None) == 'agency':
+            allowed, err = agency_marketplace_login_allowed(user.to_dict())
+            if not allowed:
+                return jsonify({'error': err or 'Agency access denied', 'status': 'agency_access_denied'}), 403
+            mid = getattr(user, 'marketplace_agency_id', None)
+            if mid != agency_id:
+                return jsonify({'error': 'You can only update your linked marketplace agency'}), 403
+            for field in AGENCY_OPERATOR_WRITABLE_FIELDS:
+                if field in data:
+                    updates[field] = data[field]
+        else:
+            return jsonify({'error': 'Unauthorized'}), 403
         
         if updates:
             updates['updated_at'] = datetime.utcnow().isoformat()
@@ -240,3 +259,27 @@ def delete_agency(agency_id):
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
+
+
+@agency_portal_bp.route('/context', methods=['GET'])
+@firebase_auth_required
+@agency_operator_required
+def agency_portal_context():
+    try:
+        user = request.current_user
+        mid = getattr(user, 'marketplace_agency_id', None)
+        if not mid:
+            return jsonify({'error': 'No marketplace agency linked'}), 404
+        snap = db.collection('agencies').document(mid).get()
+        marketplace = snap.to_dict() if snap.exists else None
+        if marketplace is not None:
+            marketplace = {**marketplace, 'id': mid}
+        op = user.to_dict()
+        op.pop('password_hash', None)
+        return jsonify({
+            'marketplace_agency': marketplace,
+            'operator_user': op,
+        }), 200
+    except Exception as e:
+        logger.error(f'agency_portal_context: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500

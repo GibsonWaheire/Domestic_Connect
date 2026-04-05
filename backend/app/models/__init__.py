@@ -57,6 +57,7 @@ class User(BaseModel):
             'is_firebase_user': getattr(self, 'is_firebase_user', False),
             'profile_photo_url': getattr(self, 'profile_photo_url', None),
             'photo_url': getattr(self, 'profile_photo_url', None),
+            'marketplace_agency_id': getattr(self, 'marketplace_agency_id', None),
             'created_at': getattr(self, 'created_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'created_at', None), datetime) else getattr(self, 'created_at', datetime.utcnow().isoformat()),
             'updated_at': getattr(self, 'updated_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'updated_at', None), datetime) else getattr(self, 'updated_at', datetime.utcnow().isoformat()),
             'password_hash': getattr(self, 'password_hash', None)
@@ -192,8 +193,9 @@ class User(BaseModel):
         doc_ref = db.collection('users').document(user_id).get()
         if not doc_ref.exists:
             return None
-            
-        user = cls(**doc_ref.to_dict())
+        user_data = doc_ref.to_dict() or {}
+        user_data['id'] = doc_ref.id
+        user = cls(**user_data)
         
         profile_ref = db.collection('profiles').where('user_id', '==', user_id).limit(1).stream()
         user.profile = None
