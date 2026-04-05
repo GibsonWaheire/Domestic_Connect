@@ -1,6 +1,7 @@
 import { Search, Shield, CheckCircle, PhoneCall, Star, Clock, MapPin, Users } from 'lucide-react';
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
+import Navbar from '@/components/Navbar';
 
 const faqSchema = {
   "@context": "https://schema.org",
@@ -68,6 +69,7 @@ const HowItWorksPage = () => {
       </Helmet>
 
       {/* Hero */}
+      <Navbar />
       <div className="bg-gradient-to-br from-pink-50 to-orange-50 py-16">
         <div className="max-w-4xl mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">How Domestic Connect Kenya Works</h1>
