@@ -280,6 +280,20 @@ def admin_create_user():
             performed_by=getattr(admin_user, 'id', 'unknown_admin'),
         )
 
+        if user_type == 'agency':
+            try:
+                from app.utils.agency_admin_notify import notify_new_agency_operator_signup
+                notify_new_agency_operator_signup(
+                    user_id,
+                    email,
+                    '',
+                    first_name,
+                    last_name,
+                    source='admin_provisioned',
+                )
+            except Exception as notify_err:
+                logger.warning('admin create agency notify: %s', notify_err)
+
         return jsonify({
             'message': 'User created successfully.',
             'user': {
@@ -333,6 +347,53 @@ def get_users_without_roles():
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
+
+
+@admin_bp.route('/notifications', methods=['GET'])
+@firebase_auth_required
+@admin_required
+def list_admin_notifications():
+    try:
+        unread_only = request.args.get('unread_only', 'false').lower() in ('1', 'true', 'yes')
+        limit = min(max(int(request.args.get('limit', 50)), 1), 100)
+        raw = []
+        for doc in db.collection('admin_notifications').stream():
+            row = doc.to_dict() or {}
+            row['id'] = doc.id
+            raw.append(row)
+        raw.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+        items = []
+        for row in raw:
+            if unread_only and row.get('read'):
+                continue
+            items.append(row)
+            if len(items) >= limit:
+                break
+        unread_count = sum(1 for r in raw if not r.get('read'))
+        return jsonify({'notifications': items, 'unread_count': unread_count}), 200
+    except Exception as e:
+        logger.error(f'list_admin_notifications: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/notifications/<notif_id>/read', methods=['PUT'])
+@firebase_auth_required
+@admin_required
+def mark_admin_notification_read(notif_id):
+    try:
+        ref = db.collection('admin_notifications').document(notif_id)
+        snap = ref.get()
+        if not snap.exists:
+            return jsonify({'error': 'Not found'}), 404
+        ref.update({
+            'read': True,
+            'read_at': datetime.utcnow().isoformat(),
+        })
+        return jsonify({'ok': True}), 200
+    except Exception as e:
+        logger.error(f'mark_admin_notification_read: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
 
 @admin_bp.route('/users/<user_id>', methods=['GET'])
 @firebase_auth_required

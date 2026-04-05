@@ -595,6 +595,19 @@ export interface AdminAnalytics {
   }>;
 }
 
+export interface AdminNotification {
+  id: string;
+  type: string;
+  title: string;
+  message: string;
+  user_id?: string;
+  email?: string;
+  agency_name?: string;
+  read?: boolean;
+  created_at: string;
+  source?: string;
+}
+
 export interface AdminCreateUserResponse {
   message: string;
   user: {
@@ -658,6 +671,23 @@ export const adminApi = {
 
   getUsersWithoutRoles: (token: string) =>
     apiRequest<{ users: UserWithoutRole[] }>('/api/admin/users-without-roles', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getNotifications: (token: string, params?: { unread_only?: boolean; limit?: number }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.unread_only) searchParams.append('unread_only', 'true');
+    if (params?.limit != null) searchParams.append('limit', String(params.limit));
+    const q = searchParams.toString();
+    return apiRequest<{ notifications: AdminNotification[]; unread_count: number }>(
+      `/api/admin/notifications${q ? `?${q}` : ''}`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  },
+
+  markNotificationRead: (token: string, notifId: string) =>
+    apiRequest<{ ok: boolean }>(`/api/admin/notifications/${notifId}/read`, {
+      method: 'PUT',
       headers: { Authorization: `Bearer ${token}` },
     }),
 

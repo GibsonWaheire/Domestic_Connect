@@ -3,7 +3,7 @@ from app.services.auth_service import (
     login_required,
     get_current_user,
     firebase_auth_required,
-    agency_marketplace_login_allowed,
+    agency_staff_session_allowed,
 )
 from app.models import User, Profile
 from app.firebase_init import db
@@ -150,12 +150,13 @@ def firebase_user():
             user.update_profile(**updates)
 
         profile_payload = user.get_full_profile_data()
+        firebase_decoded = getattr(request, 'firebase_user', None) or {}
         if profile_payload.get('user_type') == 'agency':
-            allowed, agency_err = agency_marketplace_login_allowed(profile_payload)
+            allowed, agency_err = agency_staff_session_allowed(profile_payload, firebase_decoded)
             if not allowed:
                 session.pop('user_id', None)
                 session.pop('user_type', None)
-                return jsonify({'error': agency_err, 'status': 'agency_access_denied'}), 403
+                return jsonify({'error': agency_err, 'status': 'agency_email_unverified'}), 403
 
         session['user_id'] = user.id
         session['user_type'] = getattr(user, 'user_type', None)
@@ -280,11 +281,11 @@ def verify_phone_auth():
                         recovered_data['user_type'] = user_type_recovered
                         recovered_data['id'] = getattr(existing_by_email, 'id')
                         if mode == 'login' and user_type_recovered == 'agency':
-                            allowed, agency_err = agency_marketplace_login_allowed(recovered_data)
+                            allowed, agency_err = agency_staff_session_allowed(recovered_data, decoded_token)
                             if not allowed:
                                 return jsonify({
                                     'error': agency_err,
-                                    'status': 'agency_access_denied',
+                                    'status': 'agency_email_unverified',
                                 }), 403
                         session['user_id'] = getattr(existing_by_email, 'id')
                         session['user_type'] = user_type_recovered
@@ -412,6 +413,18 @@ def verify_phone_auth():
                     'created_at': timestamp,
                     'updated_at': timestamp
                 })
+                try:
+                    from app.utils.agency_admin_notify import notify_new_agency_operator_signup
+                    notify_new_agency_operator_signup(
+                        user_id,
+                        email_safe,
+                        data.get('agency_name') or '',
+                        first_name,
+                        last_name,
+                        source='self_signup',
+                    )
+                except Exception as notify_err:
+                    logger.warning('agency signup admin notify: %s', notify_err)
 
             user_type_to_return = user_type
 
@@ -427,11 +440,11 @@ def verify_phone_auth():
         final_user_data.pop('password_hash', None)
 
         if mode == 'login' and user_type_to_return == 'agency':
-            allowed, agency_err = agency_marketplace_login_allowed(final_user_data)
+            allowed, agency_err = agency_staff_session_allowed(final_user_data, decoded_token)
             if not allowed:
                 return jsonify({
                     'error': agency_err,
-                    'status': 'agency_access_denied',
+                    'status': 'agency_email_unverified',
                 }), 403
 
         session['user_id'] = user_id
@@ -681,12 +694,6 @@ def check_session():
             return jsonify({'user': None}), 200
 
         profile_payload = user.get_full_profile_data()
-        if profile_payload.get('user_type') == 'agency':
-            allowed, _ = agency_marketplace_login_allowed(profile_payload)
-            if not allowed:
-                session.clear()
-                return jsonify({'user': None}), 200
-
         return jsonify({'user': profile_payload}), 200
 
     except Exception as e:

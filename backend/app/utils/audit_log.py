@@ -17,6 +17,7 @@ ACTION_DATA_EXPORT = 'data_exported'
 ACTION_USER_DEACTIVATED = 'user_deactivated'
 ACTION_USER_ACTIVATED = 'user_activated'
 ACTION_AGENCY_VERIFIED = 'agency_verified'
+ACTION_AGENCY_SIGNUP_PENDING = 'agency_signup_pending'
 ACTION_CONTACT_UNLOCKED = 'contact_unlocked'
 
 

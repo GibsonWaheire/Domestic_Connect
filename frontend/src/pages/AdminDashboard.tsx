@@ -34,6 +34,7 @@ import {
   AdminPaymentRow,
   AdminPaymentsSummary,
   UserWithoutRole,
+  AdminNotification,
 } from '@/lib/api';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { useAuth } from '@/hooks/useAuthEnhanced';
@@ -104,6 +105,12 @@ const AdminDashboard: React.FC = () => {
   const agencyUsers = useMemo(() => users.filter((u) => u.user_type === 'agency'), [users]);
   const [syncing, setSyncing] = useState(false);
   const [mainTab, setMainTab] = useState('users');
+  const [adminNotifications, setAdminNotifications] = useState<AdminNotification[]>([]);
+  const [notifUnreadCount, setNotifUnreadCount] = useState(0);
+  const pendingAgencySignupAlerts = useMemo(
+    () => adminNotifications.filter((n) => !n.read && n.type === 'agency_signup_pending'),
+    [adminNotifications],
+  );
 
   const [userSearchInput, setUserSearchInput] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
@@ -197,6 +204,17 @@ const AdminDashboard: React.FC = () => {
     setUsersWithoutRoles(noRolesData.users);
   }, [token]);
 
+  const loadAdminNotifications = useCallback(async () => {
+    if (!token) return;
+    try {
+      const res = await adminApi.getNotifications(token, { limit: 40 });
+      setAdminNotifications(res.notifications);
+      setNotifUnreadCount(res.unread_count);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [token]);
+
   const loadUsers = useCallback(async () => {
     if (!token) return;
     setUsersPageLoading(true);
@@ -231,6 +249,7 @@ const AdminDashboard: React.FC = () => {
       setBootstrapping(true);
       try {
         await refreshOverview();
+        await loadAdminNotifications();
       } catch (error) {
         console.error(error);
         toast({ title: 'Error', description: 'Failed to load dashboard data', variant: 'destructive' });
@@ -241,7 +260,7 @@ const AdminDashboard: React.FC = () => {
     return () => {
       cancelled = true;
     };
-  }, [token, refreshOverview]);
+  }, [token, refreshOverview, loadAdminNotifications]);
 
   useEffect(() => {
     if (!token || bootstrapping) return;
@@ -329,6 +348,36 @@ const AdminDashboard: React.FC = () => {
     }
   }, [sheetOpen, detailUserId, token, fetchUserDetail]);
 
+  const dismissAdminNotification = async (id: string) => {
+    if (!token) return;
+    try {
+      await adminApi.markNotificationRead(token, id);
+      await loadAdminNotifications();
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Could not dismiss alert', variant: 'destructive' });
+    }
+  };
+
+  const reviewAgencySignupNotification = async (id: string) => {
+    if (!token) return;
+    try {
+      await adminApi.markNotificationRead(token, id);
+      setUserTypeFilter('agency');
+      setMainTab('users');
+      setUsersPage(1);
+      await loadAdminNotifications();
+      await loadUsers();
+      toast({
+        title: 'Review agency signup',
+        description: 'Users is filtered to agency accounts. Use the Agencies tab to verify marketplace listings.',
+      });
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Something went wrong', variant: 'destructive' });
+    }
+  };
+
   const handleSync = async (syncType: string = 'all') => {
     if (!token) return;
     try {
@@ -337,6 +386,7 @@ const AdminDashboard: React.FC = () => {
       toast({ title: 'Success', description: 'Sync completed' });
       await refreshOverview();
       await loadUsers();
+      await loadAdminNotifications();
     } catch (error) {
       console.error(error);
       toast({ title: 'Error', description: 'Failed to sync', variant: 'destructive' });
@@ -430,6 +480,7 @@ const AdminDashboard: React.FC = () => {
       toast({ title: 'Success', description: `Agency ${status}` });
       await refreshOverview();
       await loadUsers();
+      await loadAdminNotifications();
       return true;
     } catch (error) {
       console.error(error);
@@ -533,6 +584,7 @@ const AdminDashboard: React.FC = () => {
       resetAddUserForm();
       await refreshOverview();
       await loadUsers();
+      await loadAdminNotifications();
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to create user';
       toast({ title: 'Could not create user', description: msg, variant: 'destructive' });
@@ -596,7 +648,12 @@ const AdminDashboard: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 py-6">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">
+                Admin Dashboard
+                {notifUnreadCount > 0 ? (
+                  <span className="ml-2 text-base font-semibold text-amber-700">({notifUnreadCount} unread)</span>
+                ) : null}
+              </h1>
               <p className="text-gray-600">Manage your Domestic Connect platform</p>
               {user?.email && <p className="text-sm text-gray-500 mt-1">{user.email}</p>}
             </div>
@@ -679,6 +736,41 @@ const AdminDashboard: React.FC = () => {
             </>
           )}
         </div>
+
+        {!bootstrapping && pendingAgencySignupAlerts.length > 0 && (
+          <div className="space-y-3 mb-6">
+            {pendingAgencySignupAlerts.map((n) => (
+              <div
+                key={n.id}
+                className="rounded-lg border border-blue-200 bg-blue-50/90 px-4 py-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="flex gap-3 min-w-0">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-blue-700 mt-0.5" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-blue-950">{n.title}</p>
+                    <p className="text-sm text-blue-900/90 mt-1">{n.message}</p>
+                    {n.created_at && (
+                      <p className="text-xs text-blue-800/70 mt-1">{formatDate(n.created_at)}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void dismissAdminNotification(n.id)}
+                  >
+                    Dismiss
+                  </Button>
+                  <Button type="button" size="sm" onClick={() => void reviewAgencySignupNotification(n.id)}>
+                    Review
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
 
         <Tabs value={mainTab} onValueChange={setMainTab} className="space-y-6">
           <TabsList className="flex flex-wrap h-auto gap-1">

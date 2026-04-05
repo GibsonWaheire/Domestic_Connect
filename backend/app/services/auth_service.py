@@ -116,8 +116,21 @@ def verify_firebase_token(token):
         return None
 
 
+def agency_staff_session_allowed(user_dict, firebase_decoded):
+    """Agency operators may use the staff portal after Firebase email is verified (if they have an email)."""
+    if user_dict.get('user_type') != 'agency':
+        return True, None
+    email = (firebase_decoded or {}).get('email')
+    if email and not (firebase_decoded or {}).get('email_verified', False):
+        return False, (
+            'Please verify your email address before accessing the agency dashboard. '
+            'Check your inbox for the verification link.'
+        )
+    return True, None
+
+
 def agency_marketplace_login_allowed(user_dict):
-    """Returns (allowed, error_message). Used for agency operator login and protected routes."""
+    """Returns (allowed, error_message). Used for marketplace writes (verified + linked operator only)."""
     if user_dict.get('user_type') != 'agency':
         return True, None
     uid = user_dict.get('id')
@@ -138,6 +151,17 @@ def agency_marketplace_login_allowed(user_dict):
         if dash != uid:
             return False, 'This marketplace listing is assigned to another operator account. Contact support.'
     return True, None
+
+
+def agency_user_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not getattr(request, 'current_user', None):
+            return jsonify({'error': 'Authentication required'}), 401
+        if getattr(request.current_user, 'user_type', None) != 'agency':
+            return jsonify({'error': 'Agency access required'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def agency_operator_required(f):
