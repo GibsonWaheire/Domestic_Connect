@@ -413,6 +413,39 @@ def verify_phone_auth():
                     'created_at': timestamp,
                     'updated_at': timestamp
                 })
+                marketplace_agency_id = str(uuid.uuid4())
+                agency_display_name = (
+                    (data.get('agency_name') or '').strip()
+                    or f'{first_name} {last_name}'.strip()
+                    or 'Agency'
+                )
+                marketplace_row = {
+                    'id': marketplace_agency_id,
+                    'name': agency_display_name,
+                    'license_number': data.get('license_number', ''),
+                    'verification_status': 'pending',
+                    'subscription_tier': 'basic',
+                    'rating': 0.0,
+                    'services': data.get('services', []),
+                    'location': data.get('location', ''),
+                    'monthly_fee': 0,
+                    'commission_rate': 0.0,
+                    'verified_workers': 0,
+                    'successful_placements': 0,
+                    'description': '',
+                    'contact_email': data.get('contact_email', email_safe),
+                    'contact_phone': data.get('contact_phone', ''),
+                    'website': data.get('website', ''),
+                    'dashboard_user_id': user_id,
+                    'signup_source': 'operator_self_registration',
+                    'created_at': timestamp,
+                    'updated_at': timestamp,
+                }
+                db.collection('agencies').document(marketplace_agency_id).set(marketplace_row)
+                user_doc_ref.update({
+                    'marketplace_agency_id': marketplace_agency_id,
+                    'updated_at': timestamp,
+                })
                 try:
                     from app.utils.agency_admin_notify import notify_new_agency_operator_signup
                     notify_new_agency_operator_signup(

@@ -35,6 +35,7 @@ import {
   AdminPaymentsSummary,
   UserWithoutRole,
   AdminNotification,
+  PendingAgencyOperator,
 } from '@/lib/api';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { useAuth } from '@/hooks/useAuthEnhanced';
@@ -100,6 +101,7 @@ const AdminDashboard: React.FC = () => {
     has_prev: false,
   });
   const [agencies, setAgencies] = useState<AdminAgency[]>([]);
+  const [pendingMarketplaceOperators, setPendingMarketplaceOperators] = useState<PendingAgencyOperator[]>([]);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [usersPageLoading, setUsersPageLoading] = useState(false);
   const agencyUsers = useMemo(() => users.filter((u) => u.user_type === 'agency'), [users]);
@@ -121,6 +123,27 @@ const AdminDashboard: React.FC = () => {
   const [agencyStatusFilter, setAgencyStatusFilter] = useState('all');
   const [verifyAgencyTarget, setVerifyAgencyTarget] = useState<AdminAgency | null>(null);
   const [verifyOperatorId, setVerifyOperatorId] = useState('');
+
+  const verifyOperatorSelectOptions = useMemo(() => {
+    const dash = verifyAgencyTarget?.dashboard_user_id;
+    if (dash && !agencyUsers.some((u) => u.id === dash)) {
+      return [
+        {
+          id: dash,
+          email: '(Pre-linked operator)',
+          first_name: '',
+          last_name: '',
+          user_type: 'agency',
+          has_profile: true,
+          is_active: true,
+          created_at: '',
+          updated_at: '',
+        } as AdminUser,
+        ...agencyUsers,
+      ];
+    }
+    return agencyUsers;
+  }, [agencyUsers, verifyAgencyTarget?.dashboard_user_id]);
 
   const [usersWithoutRoles, setUsersWithoutRoles] = useState<UserWithoutRole[]>([]);
   const [roleModalOpen, setRoleModalOpen] = useState(false);
@@ -194,14 +217,16 @@ const AdminDashboard: React.FC = () => {
 
   const refreshOverview = useCallback(async () => {
     if (!token) return;
-    const [statsData, agenciesData, noRolesData] = await Promise.all([
+    const [statsData, agenciesData, noRolesData, pendingOps] = await Promise.all([
       adminApi.getDashboardStats(token),
       adminApi.getAgencies(token),
       adminApi.getUsersWithoutRoles(token),
+      adminApi.getPendingAgencyOperators(token),
     ]);
     setStats(statsData);
     setAgencies(agenciesData.agencies);
     setUsersWithoutRoles(noRolesData.users);
+    setPendingMarketplaceOperators(pendingOps.operators);
   }, [token]);
 
   const loadAdminNotifications = useCallback(async () => {
@@ -486,6 +511,22 @@ const AdminDashboard: React.FC = () => {
       console.error(error);
       toast({ title: 'Error', description: 'Failed to verify agency', variant: 'destructive' });
       return false;
+    }
+  };
+
+  const handleCreateOperatorMarketplaceListing = async (operatorUserId: string) => {
+    if (!token) return;
+    try {
+      await adminApi.createMarketplaceListingForOperator(token, operatorUserId);
+      toast({
+        title: 'Marketplace listing created',
+        description: 'The agency appears below as pending. You can verify it there.',
+      });
+      await refreshOverview();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create listing';
+      toast({ title: 'Error', description: msg, variant: 'destructive' });
+      await refreshOverview();
     }
   };
 
@@ -925,6 +966,50 @@ const AdminDashboard: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="agencies" className="space-y-6">
+            {!bootstrapping && pendingMarketplaceOperators.length > 0 && (
+              <Card className="border-amber-200 bg-amber-50/50">
+                <CardHeader>
+                  <CardTitle className="text-amber-950">Operators without marketplace row</CardTitle>
+                  <CardDescription>
+                    These accounts signed up as agencies before a marketplace listing existed. Create a pending listing so
+                    they appear in the table and you can verify them.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Agency / name</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>User ID</TableHead>
+                        <TableHead />
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {pendingMarketplaceOperators.map((op) => (
+                        <TableRow key={op.id}>
+                          <TableCell className="font-medium">
+                            {op.agency_name || `${op.first_name || ''} ${op.last_name || ''}`.trim() || '—'}
+                          </TableCell>
+                          <TableCell>{op.email || '—'}</TableCell>
+                          <TableCell className="font-mono text-xs">{op.id}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={() => void handleCreateOperatorMarketplaceListing(op.id)}
+                            >
+                              Create listing
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Agency Management</CardTitle>
@@ -1707,7 +1792,7 @@ const AdminDashboard: React.FC = () => {
                   <SelectValue placeholder="Select agency user" />
                 </SelectTrigger>
                 <SelectContent>
-                  {agencyUsers.map((u) => (
+                  {verifyOperatorSelectOptions.map((u) => (
                     <SelectItem key={u.id} value={u.id}>
                       {u.email} — {u.first_name} {u.last_name}
                     </SelectItem>
@@ -1722,11 +1807,12 @@ const AdminDashboard: React.FC = () => {
               <Button
                 type="button"
                 onClick={async () => {
-                  if (!verifyAgencyTarget || !verifyOperatorId) {
+                  const operatorId = verifyOperatorId || verifyAgencyTarget?.dashboard_user_id || '';
+                  if (!verifyAgencyTarget || !operatorId) {
                     toast({ title: 'Select an operator', description: 'Choose a user with role agency.', variant: 'destructive' });
                     return;
                   }
-                  const ok = await handleVerifyAgency(verifyAgencyTarget.id, 'verified', verifyOperatorId);
+                  const ok = await handleVerifyAgency(verifyAgencyTarget.id, 'verified', operatorId);
                   if (ok) setVerifyAgencyTarget(null);
                 }}
               >

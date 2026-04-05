@@ -7,6 +7,7 @@ from firebase_admin import auth as firebase_admin_auth
 from datetime import datetime, timedelta
 import json
 import logging
+import uuid
 
 
 logger = logging.getLogger(__name__)
@@ -986,6 +987,102 @@ def get_admin_payments():
         return jsonify({'error': 'Something went wrong. Please try again.'}), 500
 
 
+def _agency_profile_dict_for_user(user_id):
+    for doc in db.collection('agency_profiles').where('user_id', '==', user_id).limit(1).stream():
+        return doc.to_dict() or {}
+    return {}
+
+
+@admin_bp.route('/agency-operators/pending-listing', methods=['GET'])
+@firebase_auth_required
+@admin_required
+def list_agency_operators_pending_marketplace():
+    """Agency operators with no `agencies` marketplace row (legacy signups before auto-listing)."""
+    try:
+        out = []
+        for doc in db.collection('users').stream():
+            d = doc.to_dict() or {}
+            if d.get('user_type') != 'agency':
+                continue
+            uid = doc.id
+            mid = (d.get('marketplace_agency_id') or '').strip()
+            if mid and db.collection('agencies').document(mid).get().exists:
+                continue
+            ap = _agency_profile_dict_for_user(uid)
+            out.append({
+                'id': uid,
+                'email': d.get('email'),
+                'first_name': d.get('first_name'),
+                'last_name': d.get('last_name'),
+                'agency_name': d.get('agency_name') or ap.get('agency_name'),
+                'license_number': d.get('license_number') or ap.get('license_number'),
+                'created_at': d.get('created_at'),
+            })
+        out.sort(key=lambda x: x.get('created_at') or '', reverse=True)
+        return jsonify({'operators': out}), 200
+    except Exception as e:
+        logger.error(f'list_agency_operators_pending_marketplace: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/agency-operators/<operator_user_id>/create-marketplace-listing', methods=['POST'])
+@firebase_auth_required
+@admin_required
+def create_marketplace_listing_for_operator(operator_user_id):
+    """Create pending `agencies` doc and link operator (for users who signed up before auto-listing)."""
+    try:
+        uref = db.collection('users').document(operator_user_id)
+        udoc = uref.get()
+        if not udoc.exists:
+            return jsonify({'error': 'User not found'}), 404
+        ud = udoc.to_dict() or {}
+        if ud.get('user_type') != 'agency':
+            return jsonify({'error': 'User is not an agency operator'}), 400
+        mid = (ud.get('marketplace_agency_id') or '').strip()
+        if mid and db.collection('agencies').document(mid).get().exists:
+            return jsonify({
+                'error': 'User already has a marketplace listing',
+                'agency_id': mid,
+            }), 409
+
+        ap = _agency_profile_dict_for_user(operator_user_id)
+        ts = datetime.utcnow().isoformat()
+        agency_id = str(uuid.uuid4())
+        name = (
+            (ap.get('agency_name') or ud.get('agency_name') or '').strip()
+            or f"{ud.get('first_name', '')} {ud.get('last_name', '')}".strip()
+            or 'Agency'
+        )
+        row = {
+            'id': agency_id,
+            'name': name,
+            'license_number': ap.get('license_number') or ud.get('license_number', ''),
+            'verification_status': 'pending',
+            'subscription_tier': 'basic',
+            'rating': 0.0,
+            'services': ap.get('services') or [],
+            'location': ap.get('location') or ud.get('location', ''),
+            'monthly_fee': 0,
+            'commission_rate': 0.0,
+            'verified_workers': 0,
+            'successful_placements': 0,
+            'description': '',
+            'contact_email': ap.get('contact_email') or ud.get('email', ''),
+            'contact_phone': ap.get('contact_phone') or ud.get('contact_phone', ''),
+            'website': ap.get('website') or ud.get('website', ''),
+            'dashboard_user_id': operator_user_id,
+            'signup_source': 'admin_backfill',
+            'created_at': ts,
+            'updated_at': ts,
+        }
+        db.collection('agencies').document(agency_id).set(row)
+        uref.update({'marketplace_agency_id': agency_id, 'updated_at': ts})
+        return jsonify({'agency_id': agency_id, 'agency': row}), 201
+    except Exception as e:
+        logger.error(f'create_marketplace_listing_for_operator: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
 @admin_bp.route('/agencies', methods=['GET'])
 @firebase_auth_required
 @admin_required
@@ -1077,6 +1174,12 @@ def verify_agency(agency_id):
 
         if verification_status == 'verified':
             dashboard_user_id = data.get('dashboard_user_id')
+            if not dashboard_user_id:
+                cand = prev.get('dashboard_user_id')
+                if cand:
+                    chk = db.collection('users').document(cand).get()
+                    if chk.exists and (chk.to_dict() or {}).get('user_type') == 'agency':
+                        dashboard_user_id = cand
             if not dashboard_user_id:
                 return jsonify({'error': 'dashboard_user_id is required when verifying an agency'}), 400
             uref = db.collection('users').document(dashboard_user_id)

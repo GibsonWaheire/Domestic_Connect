@@ -608,6 +608,16 @@ export interface AdminNotification {
   source?: string;
 }
 
+export interface PendingAgencyOperator {
+  id: string;
+  email?: string;
+  first_name?: string;
+  last_name?: string;
+  agency_name?: string;
+  license_number?: string;
+  created_at?: string;
+}
+
 export interface AdminCreateUserResponse {
   message: string;
   user: {
@@ -713,6 +723,20 @@ export const adminApi = {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+
+  getPendingAgencyOperators: (token: string) =>
+    apiRequest<{ operators: PendingAgencyOperator[] }>('/api/admin/agency-operators/pending-listing', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  createMarketplaceListingForOperator: (token: string, operatorUserId: string) =>
+    apiRequest<{ agency_id: string; agency: Record<string, unknown> }>(
+      `/api/admin/agency-operators/${encodeURIComponent(operatorUserId)}/create-marketplace-listing`,
+      {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      },
+    ),
   
   verifyAgency: (token: string, agencyId: string, status: string, dashboardUserId?: string) =>
     apiRequest<{ success?: boolean; message: string }>(`/api/admin/agencies/${agencyId}/verify`, {
