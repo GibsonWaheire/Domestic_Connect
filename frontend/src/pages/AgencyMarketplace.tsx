@@ -1,19 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Search, Filter, Building2, Star, Shield, Users, MapPin } from 'lucide-react';
+import { Search, Filter, Building2, Star, Shield, Users, MapPin, Menu, MessageCircle, CheckCircle2 } from 'lucide-react';
 import AgencyCard, { Agency } from '@/components/AgencyCard';
 import AgencyHiringModal from '@/components/AgencyHiringModal';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { API_BASE_URL } from '@/lib/apiConfig';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 
 const AgencyMarketplace = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const drawerRef = useRef<HTMLDivElement | null>(null);
+
+  const getDashboardRoute = () => {
+    if (!user) return '/';
+    if (user.user_type === 'agency') return '/agency-dashboard';
+    if (user.user_type === 'housegirl') return '/housegirl-dashboard';
+    return '/employer-dashboard';
+  };
+
+  useEffect(() => {
+    if (!isMenuOpen) return;
+    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsMenuOpen(false); };
+    const handleOutside = (e: MouseEvent) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) setIsMenuOpen(false);
+    };
+    window.addEventListener('keydown', handleEscape);
+    window.addEventListener('mousedown', handleOutside);
+    return () => { window.removeEventListener('keydown', handleEscape); window.removeEventListener('mousedown', handleOutside); };
+  }, [isMenuOpen]);
   const [agencies, setAgencies] = useState<Agency[]>([]);
   const [filteredAgencies, setFilteredAgencies] = useState<Agency[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -184,220 +205,235 @@ const AgencyMarketplace = () => {
   const tiers = ['basic', 'premium', 'international'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Header */}
-      <header className="bg-white/80 backdrop-blur-md border-b border-slate-200 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center cursor-pointer" onClick={() => {
-                if (user) {
-                  if (user.user_type === 'agency') {
-                    navigate('/agency-dashboard');
-                  } else if (user.user_type === 'housegirl') {
-                    navigate('/housegirl-dashboard');
-                  } else { // Assuming other user types (e.g., 'employer') go to employer-dashboard
-                    navigate('/employer-dashboard');
-                  }
-                } else {
-                  navigate('/home');
-                }
-              }}>
-                <Building2 className="h-8 w-8 text-blue-600" />
-                <span className="text-xl font-bold text-gray-900 ml-2">Domestic Connect</span>
-              </div>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              {user && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    if (user.user_type === 'agency') {
-                      navigate('/agency-dashboard');
-                    } else if (user.user_type === 'housegirl') {
-                      navigate('/housegirl-dashboard');
-                    } else { // Assuming other user types (e.g., 'employer') go to employer-dashboard
-                      navigate('/employer-dashboard');
-                    }
-                  }}
-                  className="text-gray-600 hover:text-blue-600 hover:bg-blue-50"
-                >
-                  Go to Dashboard
-                </Button>
-              )}
-            </div>
+    <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
+      <Helmet>
+        <title>Agency Marketplace | Domestic Connect Kenya</title>
+        <meta name="description" content="Find verified domestic worker agencies in Kenya. Browse NITA-licensed agencies in Nairobi, Mombasa, Kisumu and across Kenya. Guaranteed placements with replacement warranties." />
+        <meta name="keywords" content="domestic worker agency kenya, housegirl agency nairobi, maid agency mombasa, nanny agency kenya, domestic connect agency marketplace" />
+        <link rel="canonical" href="https://domestic-connect.co.ke/agency-marketplace" />
+        <meta property="og:title" content="Agency Marketplace | Domestic Connect Kenya" />
+        <meta property="og:description" content="Find NITA-licensed domestic worker agencies across Kenya. Verified agencies with replacement guarantees." />
+        <meta property="og:url" content="https://domestic-connect.co.ke/agency-marketplace" />
+        <meta property="og:type" content="website" />
+      </Helmet>
+
+      {/* NAVBAR */}
+      <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+          <Link to="/" className="text-xl font-bold tracking-tight text-[#111]">Domestic Connect</Link>
+          <nav className="hidden md:flex items-center gap-3">
+            <Link to="/housegirls" className="text-sm font-medium text-gray-600 hover:text-black transition-colors px-3 py-1.5">Browse Workers</Link>
+            <Link to="/how-it-works" className="text-sm font-medium text-gray-600 hover:text-black transition-colors px-3 py-1.5">How It Works</Link>
+            <Link to="/agency-packages" className="text-sm font-medium text-gray-600 hover:text-black transition-colors px-3 py-1.5">Agency Pricing</Link>
+          </nav>
+          <div className="hidden md:flex items-center gap-3">
+            {user ? (
+              <Button onClick={() => navigate(getDashboardRoute())} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">Dashboard →</Button>
+            ) : (
+              <>
+                <Button onClick={() => navigate('/login')} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">Login</Button>
+                <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">Join Today</Button>
+              </>
+            )}
           </div>
+          <button type="button" aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} onClick={() => setIsMenuOpen(p => !p)}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors">
+            <Menu className="h-5 w-5" />
+          </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
-            Verified Agency Marketplace
-          </h1>
-          <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-            Hire trusted domestic workers through verified agencies with guaranteed satisfaction, 
-            dispute resolution, and professional support.
-          </p>
-        </div>
+      {/* MOBILE DRAWER */}
+      <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+        <aside ref={drawerRef} className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="h-full overflow-y-auto p-6">
+            <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
+              <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
+              <button type="button" onClick={() => setIsMenuOpen(false)} className="h-10 w-10 inline-flex items-center justify-center text-gray-500 text-xl">×</button>
+            </div>
+            <div className="flex flex-col gap-2">
+              {[
+                { label: 'Find a Housegirl', to: '/housegirls' },
+                { label: 'How It Works', to: '/how-it-works' },
+                { label: 'Pricing & Packages', to: '/agency-packages' },
+                { label: 'For Housegirls', to: '/for-housegirls' },
+                { label: 'Help Center', to: '/stats' },
+                { label: 'Contact Us', to: '/contact-us' },
+              ].map(item => (
+                <button key={item.to} type="button" onClick={() => { setIsMenuOpen(false); navigate(item.to); }}
+                  className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium hover:bg-gray-50 flex items-center justify-between min-h-[48px]">
+                  <span>{item.label}</span><span className="text-gray-300 text-sm">›</span>
+                </button>
+              ))}
+              <div className="pt-2 flex flex-col gap-2 mt-2 border-t border-gray-100">
+                {user ? (
+                  <Button onClick={() => { setIsMenuOpen(false); navigate(getDashboardRoute()); }} className="w-full rounded-xl bg-black text-white">Dashboard →</Button>
+                ) : (
+                  <>
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl border-black text-black">Login</Button>
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="w-full rounded-xl bg-black text-white">Join Today</Button>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
 
-        {/* Demo Notice */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-8">
-          <div className="flex items-center justify-center space-x-2">
-            <Shield className="h-5 w-5 text-blue-600" />
-            <p className="text-blue-800 font-medium">
-              🎯 <strong>Demo Mode:</strong> These are demo agencies for testing our payment system. Real agencies will be available soon!
-            </p>
+      {/* HERO */}
+      <section className="bg-[#111] text-white py-16 md:py-24">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 text-center">
+          <span className="inline-block bg-white/10 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5 tracking-wide uppercase">
+            Verified Agency Marketplace
+          </span>
+          <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight leading-[1.1] mb-5 max-w-3xl mx-auto">
+            Find a trusted domestic worker agency in Kenya
+          </h1>
+          <p className="text-white/70 text-[16px] mb-8 max-w-xl mx-auto leading-relaxed">
+            Browse NITA-licensed agencies across Nairobi, Mombasa, Kisumu and beyond. Verified workers, replacement guarantees, and professional support.
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-5 text-[13px] text-white/60 font-medium">
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-green-400" /> NITA-licensed agencies</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-green-400" /> Background-checked workers</span>
+            <span className="flex items-center gap-1.5"><CheckCircle2 size={14} className="text-green-400" /> Replacement guarantees</span>
           </div>
         </div>
+      </section>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3">
-                <Building2 className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">{agencies.length}</p>
-                  <p className="text-sm text-gray-600">Verified Agencies</p>
-                </div>
+      {/* QUICK STATS */}
+      <section className="bg-white border-b border-gray-100 py-8">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+            {[
+              { icon: <Building2 className="h-6 w-6 text-blue-600" />, value: agencies.length, label: 'Verified Agencies', bg: 'bg-blue-50' },
+              { icon: <Users className="h-6 w-6 text-green-600" />, value: agencies.reduce((s, a) => s + a.verified_workers, 0), label: 'Verified Workers', bg: 'bg-green-50' },
+              { icon: <Star className="h-6 w-6 text-yellow-600" />, value: agencies.reduce((s, a) => s + a.successful_placements, 0), label: 'Placements Made', bg: 'bg-yellow-50' },
+              { icon: <Shield className="h-6 w-6 text-purple-600" />, value: '30–90 days', label: 'Replacement Window', bg: 'bg-purple-50' },
+            ].map((stat, i) => (
+              <div key={i} className="text-center">
+                <div className={`inline-flex items-center justify-center w-12 h-12 rounded-xl ${stat.bg} mb-2`}>{stat.icon}</div>
+                <div className="text-2xl font-extrabold text-[#111]">{stat.value}</div>
+                <div className="text-xs text-gray-500 font-medium">{stat.label}</div>
               </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3">
-                <Users className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {agencies.reduce((sum, agency) => sum + agency.verified_workers, 0)}
-                  </p>
-                  <p className="text-sm text-gray-600">Verified Workers</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3">
-                <Star className="h-8 w-8 text-yellow-600" />
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {agencies.reduce((sum, agency) => sum + agency.successful_placements, 0)}
-                  </p>
-                  <p className="text-sm text-gray-600">Successful Placements</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          <Card className="bg-white/80 backdrop-blur-sm">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-3">
-                <Shield className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-2xl font-bold text-gray-900">KES 1,500</p>
-                  <p className="text-sm text-gray-600">Agency Hiring Fee</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* Filters */}
-        <Card className="bg-white/80 backdrop-blur-sm mb-8">
-          <CardContent className="p-6">
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search agencies..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10"
-                />
+      {/* SEARCH + LISTINGS */}
+      <section className="bg-[#fafafa] py-12">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
+          <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+            <div>
+              <h2 className="text-xl font-bold text-[#111]">All agencies</h2>
+              <p className="text-sm text-gray-500 mt-0.5">{filteredAgencies.length} agenc{filteredAgencies.length !== 1 ? 'ies' : 'y'} found</p>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="bg-white border border-gray-100 rounded-xl p-4 mb-8 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+              <div className="relative md:col-span-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input placeholder="Search agencies..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
               </div>
-              
               <Select value={locationFilter} onValueChange={setLocationFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Location" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Location" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Locations</SelectItem>
-                  {locations.map(location => (
-                    <SelectItem key={location} value={location}>{location}</SelectItem>
-                  ))}
+                  {locations.map(l => <SelectItem key={l} value={l}>{l}</SelectItem>)}
                 </SelectContent>
               </Select>
-              
               <Select value={serviceFilter} onValueChange={setServiceFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Service" />
-                </SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="Service" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Services</SelectItem>
-                  {services.map(service => (
-                    <SelectItem key={service} value={service}>
-                      {service.replace('_', ' ').charAt(0).toUpperCase() + service.replace('_', ' ').slice(1)}
-                    </SelectItem>
-                  ))}
+                  {services.map(s => <SelectItem key={s} value={s}>{s.replace('_', ' ').charAt(0).toUpperCase() + s.replace('_', ' ').slice(1)}</SelectItem>)}
                 </SelectContent>
               </Select>
-              
-              <Select value={tierFilter} onValueChange={setTierFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Tier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Tiers</SelectItem>
-                  {tiers.map(tier => (
-                    <SelectItem key={tier} value={tier}>
-                      {tier.charAt(0).toUpperCase() + tier.slice(1)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchTerm('');
-                  setLocationFilter('all');
-                  setServiceFilter('all');
-                  setTierFilter('all');
-                }}
-                className="flex items-center space-x-2"
-              >
-                <Filter className="h-4 w-4" />
-                <span>Clear</span>
+              <Button variant="outline" onClick={() => { setSearchTerm(''); setLocationFilter('all'); setServiceFilter('all'); setTierFilter('all'); }}
+                className="flex items-center gap-2">
+                <Filter className="h-4 w-4" /><span>Clear</span>
               </Button>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Agencies Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAgencies.map(agency => (
-            <AgencyCard
-              key={agency.id}
-              agency={agency}
-              onSelect={handleAgencySelect}
-            />
-          ))}
-        </div>
-
-        {filteredAgencies.length === 0 && (
-          <div className="text-center py-12">
-            <Building2 className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No agencies found</h3>
-            <p className="text-gray-600">Try adjusting your search criteria or filters.</p>
           </div>
-        )}
+
+          {/* Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAgencies.map(agency => (
+              <AgencyCard key={agency.id} agency={agency} onSelect={handleAgencySelect} />
+            ))}
+          </div>
+
+          {filteredAgencies.length === 0 && (
+            <div className="text-center py-16 bg-white rounded-xl border border-gray-100 shadow-sm">
+              <Building2 className="h-14 w-14 text-gray-200 mx-auto mb-3" />
+              <h3 className="text-base font-semibold text-gray-700 mb-1">No agencies found</h3>
+              <p className="text-gray-400 text-sm">Try adjusting your search filters.</p>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* WHY USE AN AGENCY */}
+      <section className="bg-white py-16 md:py-20 border-t border-gray-100">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
+          <h2 className="text-2xl md:text-3xl font-bold text-center mb-3 tracking-tight">Why hire through an agency?</h2>
+          <p className="text-gray-500 text-sm text-center mb-10 max-w-md mx-auto">Agencies offer additional peace of mind beyond direct hiring.</p>
+          <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+            {[
+              { icon: '🔍', title: 'Pre-screened Workers', desc: 'All workers listed by agencies have been vetted, interviewed, and cleared before being placed with your family.' },
+              { icon: '🔄', title: 'Replacement Guarantee', desc: 'If a worker leaves or doesn\'t fit within the guarantee window, the agency provides a free replacement.' },
+              { icon: '📋', title: 'Background Checks', desc: 'Premium and International agencies conduct comprehensive police and reference background checks on all workers.' },
+              { icon: '📞', title: 'After-Placement Support', desc: 'Agencies remain available to help mediate any issues that arise after placement — protecting both parties.' },
+              { icon: '🏆', title: 'Trained Professionals', desc: 'Many agencies provide professional training in housekeeping, childcare, cooking, and elderly care before placement.' },
+              { icon: '📄', title: 'Formal Contract', desc: 'Agencies provide formal employment agreements, clearly outlining duties, pay, and conditions for both employer and worker.' },
+            ].map(item => (
+              <div key={item.title} className="bg-gray-50 rounded-xl p-5 border border-gray-100">
+                <div className="text-2xl mb-3">{item.icon}</div>
+                <h3 className="font-bold text-[#111] mb-1.5">{item.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* CTA — list your agency */}
+      <section className="bg-[#111] text-white py-14">
+        <div className="max-w-[700px] mx-auto px-4 text-center">
+          <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">Are you a domestic worker agency?</h2>
+          <p className="text-white/70 mb-6 text-sm">List your agency on Domestic Connect and reach thousands of verified Kenyan families. Plans start from KSh 1,200/month.</p>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-10 text-base font-semibold">
+              List Your Agency →
+            </Button>
+            <Button onClick={() => navigate('/agency-packages')} variant="outline" className="rounded-full border-white/40 text-white hover:bg-white/10 h-12 px-8 text-base">
+              View Packages
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer className="bg-[#111] text-white border-t border-white/10 py-8">
+        <div className="max-w-[1100px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
+          <p>© {new Date().getFullYear()} Domestic Connect Kenya</p>
+          <div className="flex gap-4">
+            <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
+            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
+            <Link to="/contact-us" className="hover:text-white transition-colors">Contact Us</Link>
+          </div>
+        </div>
+      </footer>
+
+      {/* WhatsApp */}
+      <div className="fixed bottom-5 left-5 z-50 group flex items-center">
+        <span className="mr-2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-medium text-[#111] shadow-md opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none">Chat with us</span>
+        <a href="https://wa.me/254726899113" target="_blank" rel="noopener noreferrer"
+          className="h-14 w-14 rounded-full bg-green-500 text-white shadow-xl inline-flex items-center justify-center hover:bg-green-600 transition-colors" aria-label="Chat on WhatsApp">
+          <MessageCircle size={24} />
+        </a>
       </div>
 
       {/* Agency Hiring Modal */}
@@ -405,10 +441,7 @@ const AgencyMarketplace = () => {
         <AgencyHiringModal
           agency={selectedAgency}
           housegirlName="Selected Worker"
-          onClose={() => {
-            setShowAgencyModal(false);
-            setSelectedAgency(null);
-          }}
+          onClose={() => { setShowAgencyModal(false); setSelectedAgency(null); }}
           onHire={handleAgencyHire}
         />
       )}
