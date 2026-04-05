@@ -171,9 +171,7 @@ const Navbar = () => {
                         )}
 
                         <div className="bg-gray-50 rounded-xl p-2 mb-3 flex flex-col">
-                            <button type="button" onClick={() => { close(); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Browse Workers</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find an Agency</span><span className="text-gray-300 text-sm">›</span></button>
-                            <button type="button" onClick={() => { close(); navigate('/for-housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>For Housegirls</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Pricing &amp; Packages</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
@@ -191,6 +189,20 @@ const Navbar = () => {
                                     <Button onClick={() => { close(); navigate('/login?mode=signup'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Join Today</Button>
                                 </>
                             )}
+                        </div>
+
+                        {/* Drawer footer */}
+                        <div className="mt-6 pt-4 border-t border-gray-100 text-center">
+                            <p className="text-[13px] font-semibold text-[#111]">Domestic Connect</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">Kenya's trusted domestic staffing platform</p>
+                            <div className="flex items-center justify-center gap-3 mt-3">
+                                <button type="button" onClick={() => { close(); navigate('/why-choose-us'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">About</button>
+                                <span className="text-gray-200">·</span>
+                                <button type="button" onClick={() => { close(); navigate('/contact-us'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">Contact</button>
+                                <span className="text-gray-200">·</span>
+                                <button type="button" onClick={() => { close(); navigate('/agency-packages'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">Pricing</button>
+                            </div>
+                            <p className="text-[10px] text-gray-300 mt-3">© {new Date().getFullYear()} Domestic Connect</p>
                         </div>
                     </div>
                 </aside>
