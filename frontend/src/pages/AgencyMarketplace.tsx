@@ -251,27 +251,46 @@ const AgencyMarketplace = () => {
               <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
               <button type="button" onClick={() => setIsMenuOpen(false)} className="h-10 w-10 inline-flex items-center justify-center text-gray-500 text-xl">×</button>
             </div>
-            <div className="flex flex-col gap-2">
-              {[
-                { label: 'Find a Housegirl', to: '/housegirls' },
-                { label: 'How It Works', to: '/how-it-works' },
-                { label: 'Pricing & Packages', to: '/agency-packages' },
-                { label: 'For Housegirls', to: '/for-housegirls' },
-                { label: 'Help Center', to: '/stats' },
-                { label: 'Contact Us', to: '/contact-us' },
-              ].map(item => (
-                <button key={item.to} type="button" onClick={() => { setIsMenuOpen(false); navigate(item.to); }}
-                  className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium hover:bg-gray-50 flex items-center justify-between min-h-[48px]">
-                  <span>{item.label}</span><span className="text-gray-300 text-sm">›</span>
-                </button>
-              ))}
-              <div className="pt-2 flex flex-col gap-2 mt-2 border-t border-gray-100">
+            <div>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Employers</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find a Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find an Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Pricing & Packages</span><span className="text-gray-300 text-sm">›</span></button>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup&userType=housegirl'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/for-housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
+                </div>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-4 mb-3">
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">General</p>
+                <div className="flex flex-col">
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Help Center</span><span className="text-gray-300 text-sm">›</span></button>
+                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Contact Us</span><span className="text-gray-300 text-sm">›</span></button>
+                </div>
+              </div>
+              <div className="pt-2 flex flex-col gap-2">
                 {user ? (
-                  <Button onClick={() => { setIsMenuOpen(false); navigate(getDashboardRoute()); }} className="w-full rounded-xl bg-black text-white">Dashboard →</Button>
+                  <Button onClick={() => { setIsMenuOpen(false); navigate(getDashboardRoute()); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Dashboard →</Button>
                 ) : (
                   <>
-                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl border-black text-black">Login</Button>
-                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="w-full rounded-xl bg-black text-white">Join Today</Button>
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">Login</Button>
+                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Join Today</Button>
                   </>
                 )}
               </div>
