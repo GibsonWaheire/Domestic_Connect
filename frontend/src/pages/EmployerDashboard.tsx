@@ -8,6 +8,7 @@ import { Housegirls } from '@/components/employer/Housegirls';
 import { Settings } from '@/components/employer/Settings';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import AppliedHousegirlsList from '@/components/employer/AppliedHousegirlsList';
+import { MessageThread } from '@/components/employer/MessageThread';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
 import { Housegirl } from '@/types/employer';
@@ -15,9 +16,8 @@ import { useRealTimeData } from '@/hooks/useRealTimeData';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import {
-  Building2, Briefcase, LogOut, MapPin, MessageCircle, Phone,
+  Building2, Briefcase, LogOut, MessageCircle, Phone,
   Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X
 } from 'lucide-react';
 import {
@@ -26,19 +26,11 @@ import {
 } from '@/constants/employer';
 import { API_BASE_URL } from '@/lib/apiConfig';
 
-// ─── Application status styles ────────────────────────────────────────────────
-const appStatusStyles: Record<string, string> = {
-  pending:  'bg-yellow-50 text-yellow-700 border-yellow-200',
-  reviewed: 'bg-blue-50 text-blue-700 border-blue-200',
-  accepted: 'bg-green-50 text-green-700 border-green-200',
-  rejected: 'bg-red-50 text-red-600 border-red-200',
-};
-
 // ─── Employer Messages sub-component ─────────────────────────────────────────
 const EmployerMessages = () => {
-  const [applications, setApplications] = useState<any[]>([]);
+  const [threads, setThreads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [openThread, setOpenThread] = useState<string | null>(null);
 
   const authHeaders = async () => {
     const token = await FirebaseAuthService.getIdToken().catch(() => null);
@@ -48,95 +40,85 @@ const EmployerMessages = () => {
     };
   };
 
-  useEffect(() => { loadApplications(); }, []);
+  useEffect(() => { loadThreads(); }, []);
 
-  const loadApplications = async () => {
+  const loadThreads = async () => {
     setLoading(true);
     try {
       const headers = await authHeaders();
-      const res = await fetch(`${API_BASE_URL}/api/jobs/employer-applications`, { headers });
+      const res = await fetch(`${API_BASE_URL}/api/messages/threads`, { headers });
       if (res.ok) {
         const data = await res.json();
-        setApplications(data.applications || []);
+        setThreads(data.threads || []);
       }
     } catch { /* silent */ } finally { setLoading(false); }
   };
 
-  const updateStatus = async (appId: string, status: string) => {
-    setUpdatingId(appId);
-    try {
-      const headers = await authHeaders();
-      const res = await fetch(`${API_BASE_URL}/api/jobs/applications/${appId}/status`, {
-        method: 'PUT', headers, body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        setApplications(prev => prev.map(a => a.id === appId ? { ...a, status } : a));
-        toast({ title: 'Status updated', description: `Marked as ${status}.` });
-      }
-    } finally { setUpdatingId(null); }
-  };
-
-  if (loading) return <div className="py-10 text-center text-sm text-gray-400">Loading applications…</div>;
+  if (loading) return <div className="py-10 text-center text-sm text-gray-400">Loading messages…</div>;
 
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between">
         <div>
-          <h2 className="text-lg font-semibold text-gray-900">All Job Applications</h2>
-          <p className="mt-1 text-sm text-gray-600">Housegirls who have applied to your job postings.</p>
+          <h2 className="text-lg font-semibold text-gray-900">Messages</h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Your conversations with housegirls. Unlock a contact in "Post a Job" to start messaging.
+          </p>
         </div>
-        <Button onClick={loadApplications} variant="outline" size="sm">
+        <Button onClick={loadThreads} variant="outline" size="sm">
           <RefreshCw className="h-4 w-4 mr-1" /> Refresh
         </Button>
       </div>
 
-      {applications.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-6 text-center text-sm text-gray-500">
-          No applications yet. Post a job to start receiving applications from housegirls.
+      {threads.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+          <MessageCircle className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+          <p className="text-sm text-gray-500 font-medium">No conversations yet</p>
+          <p className="text-xs text-gray-400 mt-1">
+            Go to <strong>Post a Job</strong> → View Applicants → Unlock a contact (KSh 100) to start messaging.
+          </p>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
-          {applications.map((app) => (
-            <Card key={app.id} className="border-gray-200">
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
+        <div className="space-y-3">
+          {threads.map((thread: any) => (
+            <div key={`${thread.housegirl_id}-${thread.job_id}`} className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+              <button
+                type="button"
+                className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors text-left"
+                onClick={() => setOpenThread(
+                  openThread === `${thread.housegirl_id}-${thread.job_id}`
+                    ? null
+                    : `${thread.housegirl_id}-${thread.job_id}`
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-9 h-9 rounded-full bg-[#111] text-white flex items-center justify-center text-sm font-semibold flex-shrink-0">
+                    {(thread.housegirl_name || 'H').split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                  </div>
                   <div>
-                    <p className="font-semibold text-gray-900 text-sm">{app.job_title}</p>
-                    <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1">
-                      <Users size={11} /> {app.housegirl_name}
-                      {app.job_location && <><MapPin size={11} />{app.job_location}</>}
-                    </p>
+                    <p className="text-sm font-semibold text-gray-900">{thread.housegirl_name || 'Housegirl'}</p>
+                    <p className="text-xs text-gray-400">{thread.job_title || 'Job Application'}</p>
                   </div>
-                  <span className={`shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border capitalize ${appStatusStyles[app.status] || 'bg-gray-100 text-gray-600 border-gray-200'}`}>
-                    {app.status || 'pending'}
-                  </span>
                 </div>
-                {app.cover_letter && (
-                  <p className="text-xs text-gray-500 italic mb-2 line-clamp-2">"{app.cover_letter}"</p>
-                )}
-                <p className="text-xs text-gray-400">
-                  Applied {app.applied_at ? new Date(app.applied_at).toLocaleDateString() : '—'}
-                </p>
-                {app.status !== 'accepted' && app.status !== 'rejected' && (
-                  <div className="flex gap-2 mt-3">
-                    <Button size="sm" variant="outline" className="text-xs rounded-full"
-                      disabled={updatingId === app.id} onClick={() => updateStatus(app.id, 'accepted')}>
-                      Accept
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs rounded-full text-red-600 hover:bg-red-50"
-                      disabled={updatingId === app.id} onClick={() => updateStatus(app.id, 'rejected')}>
-                      Reject
-                    </Button>
-                    {app.status === 'pending' && (
-                      <Button size="sm" variant="outline" className="text-xs rounded-full"
-                        disabled={updatingId === app.id} onClick={() => updateStatus(app.id, 'reviewed')}>
-                        Mark Reviewed
-                      </Button>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                <div className="flex items-center gap-2">
+                  {thread.unread_count > 0 && (
+                    <span className="bg-[#111] text-white text-xs rounded-full px-2 py-0.5">{thread.unread_count}</span>
+                  )}
+                  <p className="text-xs text-gray-400">{thread.last_message_at ? new Date(thread.last_message_at).toLocaleDateString() : ''}</p>
+                </div>
+              </button>
+
+              {openThread === `${thread.housegirl_id}-${thread.job_id}` && (
+                <div className="border-t px-4 pb-4 pt-3">
+                  <MessageThread
+                    jobId={thread.job_id}
+                    housegirlId={thread.housegirl_id}
+                    housegirlName={thread.housegirl_name || 'Housegirl'}
+                    myId={thread.employer_id}
+                  />
+                </div>
+              )}
+            </div>
           ))}
         </div>
       )}
