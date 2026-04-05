@@ -17,7 +17,10 @@
     "inlineCss": false,
     "saveAs": "html",
     "skipThirdPartyRequests": true,
-    "puppeteerArgs": ["--no-sandbox", "--disable-setuid-sandbox"],
+    "puppeteerArgs": [
+      "--no-sandbox",
+      "--disable-setuid-sandbox"
+    ],
     "renderAfterTime": 1500,
     "include": [
       "/how-it-works",
@@ -70,6 +73,7 @@
     "multer": "^2.0.2",
     "next-themes": "^0.3.0",
     "react": "^18.3.1",
+    "react-cookie-consent": "^10.0.1",
     "react-day-picker": "^8.10.1",
     "react-dom": "^18.3.1",
     "react-helmet-async": "^2.0.5",

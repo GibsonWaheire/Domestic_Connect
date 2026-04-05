@@ -30,6 +30,7 @@ import {
   AdminAgency,
   AdminUserDetail,
   AdminJobRow,
+  AdminPaymentRow,
   AdminPaymentsSummary,
   UserWithoutRole,
 } from '@/lib/api';
@@ -46,6 +47,7 @@ import {
   AlertCircle,
   LogOut,
   Trash2,
+  UserPlus,
 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
@@ -113,6 +115,15 @@ const AdminDashboard: React.FC = () => {
   const [roleModalOpen, setRoleModalOpen] = useState(false);
   const [roleSelections, setRoleSelections] = useState<Record<string, 'employer' | 'housegirl' | 'agency'>>({});
   const [savingRoleId, setSavingRoleId] = useState<string | null>(null);
+
+  const [addUserOpen, setAddUserOpen] = useState(false);
+  const [newUserEmail, setNewUserEmail] = useState('');
+  const [newUserPassword, setNewUserPassword] = useState('');
+  const [newUserFirst, setNewUserFirst] = useState('');
+  const [newUserLast, setNewUserLast] = useState('');
+  const [newUserPhone, setNewUserPhone] = useState('');
+  const [newUserType, setNewUserType] = useState<'employer' | 'housegirl' | 'agency'>('employer');
+  const [creatingUser, setCreatingUser] = useState(false);
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [detailUserId, setDetailUserId] = useState<string | null>(null);
@@ -470,6 +481,59 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
+  const resetAddUserForm = () => {
+    setNewUserEmail('');
+    setNewUserPassword('');
+    setNewUserFirst('');
+    setNewUserLast('');
+    setNewUserPhone('');
+    setNewUserType('employer');
+  };
+
+  const handleCreateUser = async () => {
+    if (!token) return;
+    if (!newUserEmail.trim() || !newUserPassword || !newUserFirst.trim() || !newUserLast.trim()) {
+      toast({
+        title: 'Missing fields',
+        description: 'Email, password, first and last name are required.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (newUserPassword.length < 8) {
+      toast({
+        title: 'Weak password',
+        description: 'Password must be at least 8 characters.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setCreatingUser(true);
+    try {
+      const res = await adminApi.createUser(token, {
+        email: newUserEmail.trim(),
+        password: newUserPassword,
+        first_name: newUserFirst.trim(),
+        last_name: newUserLast.trim(),
+        user_type: newUserType,
+        phone_number: newUserPhone.trim() || undefined,
+      });
+      toast({
+        title: 'User created',
+        description: `${res.user.email} — ${res.sign_in.instructions}`,
+      });
+      setAddUserOpen(false);
+      resetAddUserForm();
+      await refreshOverview();
+      await loadUsers();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to create user';
+      toast({ title: 'Could not create user', description: msg, variant: 'destructive' });
+    } finally {
+      setCreatingUser(false);
+    }
+  };
+
   const handleJobStatus = async (jobId: string, status: 'active' | 'closed' | 'removed') => {
     if (!token) return;
     try {
@@ -642,8 +706,16 @@ const AdminDashboard: React.FC = () => {
 
             <Card>
               <CardHeader>
-                <CardTitle>User Management</CardTitle>
-                <CardDescription>Manage users and their account status</CardDescription>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between w-full">
+                  <div>
+                    <CardTitle>User Management</CardTitle>
+                    <CardDescription>Manage users and their account status</CardDescription>
+                  </div>
+                  <Button type="button" onClick={() => setAddUserOpen(true)} className="gap-2 shrink-0 w-full sm:w-auto">
+                    <UserPlus className="h-4 w-4" />
+                    Add user
+                  </Button>
+                </div>
                 <div className="flex flex-wrap gap-4 mt-4">
                   <Input
                     placeholder="Search users..."
@@ -1413,6 +1485,68 @@ const AdminDashboard: React.FC = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <Dialog
+        open={addUserOpen}
+        onOpenChange={(open) => {
+          setAddUserOpen(open);
+          if (!open) resetAddUserForm();
+        }}
+      >
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add user</DialogTitle>
+            <DialogDescription>
+              Creates Firebase Auth and Firestore records. Share the password securely (phone or in person). For SMS to Firebase Auth, use E.164 (e.g. +254…); otherwise phone is stored only in Firestore.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 mt-2">
+            <div>
+              <label className="text-sm font-medium block mb-1">Email</label>
+              <Input type="email" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} autoComplete="off" />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Initial password</label>
+              <Input type="password" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} autoComplete="new-password" />
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium block mb-1">First name</label>
+                <Input value={newUserFirst} onChange={(e) => setNewUserFirst(e.target.value)} />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Last name</label>
+                <Input value={newUserLast} onChange={(e) => setNewUserLast(e.target.value)} />
+              </div>
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Phone (optional)</label>
+              <Input value={newUserPhone} onChange={(e) => setNewUserPhone(e.target.value)} placeholder="+254…" />
+            </div>
+            <div>
+              <label className="text-sm font-medium block mb-1">Role</label>
+              <Select value={newUserType} onValueChange={(v) => setNewUserType(v as 'employer' | 'housegirl' | 'agency')}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="employer">Employer</SelectItem>
+                  <SelectItem value="housegirl">Housegirl</SelectItem>
+                  <SelectItem value="agency">Agency</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button type="button" variant="outline" onClick={() => setAddUserOpen(false)} disabled={creatingUser}>
+                Cancel
+              </Button>
+              <Button type="button" onClick={handleCreateUser} disabled={creatingUser}>
+                {creatingUser ? 'Creating…' : 'Create user'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={roleModalOpen} onOpenChange={setRoleModalOpen}>
         <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">

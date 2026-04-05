@@ -31,6 +31,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PaymentCallbackPage from "./pages/PaymentCallbackPage";
 import ForHousegirlsPage from "./pages/ForHousegirlsPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
+import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -94,6 +95,7 @@ const App = () => (
         <AuthProvider>
           <HelmetProvider>
             <TooltipProvider>
+              <CookieConsentBanner />
               <Toaster />
               <Sonner />
               <Routes>

@@ -38,11 +38,16 @@ class Config:
 class DevelopmentConfig(Config):
     """Development configuration"""
     DEBUG = True
+    # Local dev is usually http:// — Secure cookies are not sent over HTTP
+    SESSION_COOKIE_SECURE = False
 
 class ProductionConfig(Config):
     """Production configuration"""
     DEBUG = False
-    
+    SESSION_COOKIE_SECURE = True
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+
     @classmethod
     def init_app(cls, app):
         if not os.environ.get('CORS_ORIGINS'):

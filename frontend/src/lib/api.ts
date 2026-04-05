@@ -591,6 +591,21 @@ export interface AdminAnalytics {
   }>;
 }
 
+export interface AdminCreateUserResponse {
+  message: string;
+  user: {
+    id: string;
+    email: string;
+    user_type: string;
+    first_name: string;
+    last_name: string;
+  };
+  sign_in: {
+    path: string;
+    instructions: string;
+  };
+}
+
 // Admin API functions
 export const adminApi = {
   getDashboardStats: (token: string) =>
@@ -619,6 +634,23 @@ export const adminApi = {
       headers: { Authorization: `Bearer ${token}` },
     });
   },
+
+  createUser: (
+    token: string,
+    body: {
+      email: string;
+      password: string;
+      first_name: string;
+      last_name: string;
+      user_type: 'employer' | 'housegirl' | 'agency';
+      phone_number?: string;
+    }
+  ) =>
+    apiRequest<AdminCreateUserResponse>('/api/admin/users', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify(body),
+    }),
 
   getUsersWithoutRoles: (token: string) =>
     apiRequest<{ users: UserWithoutRole[] }>('/api/admin/users-without-roles', {

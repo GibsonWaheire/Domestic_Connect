@@ -169,6 +169,140 @@ def get_all_users():
             'error': 'Something went wrong. Please try again.'
         }), 500
 
+
+@admin_bp.route('/users', methods=['POST'])
+@firebase_auth_required
+@admin_required
+def admin_create_user():
+    """Provision Firebase Auth + Firestore user (employer / housegirl / agency)."""
+    try:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip()
+        password = data.get('password') or ''
+        first_name = (data.get('first_name') or '').strip()
+        last_name = (data.get('last_name') or '').strip()
+        phone_raw = (data.get('phone_number') or '').strip()
+        phone_number = phone_raw or None
+        user_type = data.get('user_type')
+
+        if not email or '@' not in email:
+            return jsonify({'error': 'A valid email is required.'}), 400
+        if len(password) < 8:
+            return jsonify({'error': 'Password must be at least 8 characters.'}), 400
+        if user_type not in ('employer', 'housegirl', 'agency'):
+            return jsonify({'error': 'user_type must be employer, housegirl, or agency.'}), 400
+        if not first_name or not last_name:
+            return jsonify({'error': 'First and last name are required.'}), 400
+
+        email_lower = email.lower()
+        for u in db.collection('users').stream():
+            ud = u.to_dict() or {}
+            if (ud.get('email') or '').lower() == email_lower:
+                return jsonify({'error': 'A user with this email already exists.'}), 409
+
+        try:
+            firebase_admin_auth.get_user_by_email(email)
+            return jsonify({'error': 'This email is already registered in Firebase Auth.'}), 409
+        except firebase_admin_auth.UserNotFoundError:
+            pass
+
+        display_name = f'{first_name} {last_name}'.strip()
+        create_kwargs = {
+            'email': email,
+            'password': password,
+            'email_verified': True,
+        }
+        if display_name:
+            create_kwargs['display_name'] = display_name
+        if phone_number and phone_number.startswith('+'):
+            create_kwargs['phone_number'] = phone_number
+
+        try:
+            fb_user = firebase_admin_auth.create_user(**create_kwargs)
+        except firebase_admin_auth.EmailAlreadyExistsError:
+            return jsonify({'error': 'This email is already registered.'}), 409
+        except Exception as fe:
+            logger.error(f'admin_create_user Firebase create: {fe}')
+            return jsonify({'error': 'Could not create authentication account. Try a different email or password.'}), 400
+
+        uid = fb_user.uid
+        user_id = f'user_{uid}'
+        timestamp = datetime.utcnow().isoformat()
+
+        try:
+            firebase_admin_auth.set_custom_user_claims(uid, {'role': user_type})
+        except Exception as ce:
+            logger.warning(f'admin_create_user claims: {ce}')
+
+        user_payload = {
+            'id': user_id,
+            'uid': uid,
+            'firebase_uid': uid,
+            'email': email,
+            'user_type': user_type,
+            'first_name': first_name,
+            'last_name': last_name,
+            'phone_number': phone_number,
+            'is_active': True,
+            'is_admin': False,
+            'is_firebase_user': True,
+            'profile_complete': False,
+            'created_at': timestamp,
+            'updated_at': timestamp,
+            'created_by_admin': True,
+        }
+
+        try:
+            db.collection('users').document(user_id).set(user_payload)
+            _ensure_role_profile_documents(
+                user_id,
+                user_type,
+                email,
+                phone_number or '',
+                first_name,
+                last_name,
+                timestamp,
+            )
+        except Exception as db_err:
+            logger.error(f'admin_create_user Firestore rollback: {db_err}')
+            try:
+                firebase_admin_auth.delete_user(uid)
+            except Exception:
+                pass
+            return jsonify({'error': 'Failed to save user profile. Authentication account was rolled back.'}), 500
+
+        admin_user = getattr(request, 'current_user', None)
+        write_audit_log(
+            user_id=user_id,
+            action='user_created_by_admin',
+            details={'email': email, 'user_type': user_type},
+            performed_by=getattr(admin_user, 'id', 'unknown_admin'),
+        )
+
+        return jsonify({
+            'message': 'User created successfully.',
+            'user': {
+                'id': user_id,
+                'email': email,
+                'user_type': user_type,
+                'first_name': first_name,
+                'last_name': last_name,
+            },
+            'sign_in': {
+                'path': '/login',
+                'instructions': (
+                    'User signs in at the main login page with this email and the password you set. '
+                    'Email is pre-verified. Share the password securely (e.g. phone or in person); '
+                    'ask them to change it after first login in account settings.'
+                ),
+            },
+        }), 201
+
+    except Exception as e:
+        logger.error(f'admin_create_user error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
 @admin_bp.route('/users-without-roles', methods=['GET'])
 @firebase_auth_required
 @admin_required
@@ -433,6 +567,61 @@ def _delete_subdocs_by_user_id(collection_name, user_id):
         ref.delete()
 
 
+def _ensure_role_profile_documents(user_id, user_type, user_email, user_phone, first_name, last_name, timestamp):
+    """Create profiles + role-specific profile doc when missing (employer / housegirl / agency)."""
+    profile_docs = list(db.collection('profiles').where('user_id', '==', user_id).limit(1).stream())
+    if profile_docs:
+        profile_id = profile_docs[0].to_dict().get('id') or profile_docs[0].id
+        db.collection('profiles').document(profile_docs[0].id).set({'updated_at': timestamp}, merge=True)
+    else:
+        profile_id = user_id
+        db.collection('profiles').document(profile_id).set({
+            'id': profile_id,
+            'profile_id': profile_id,
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': user_email,
+            'phone_number': user_phone,
+            'created_at': timestamp,
+            'updated_at': timestamp,
+        })
+
+    role_collection = {
+        'employer': 'employer_profiles',
+        'housegirl': 'housegirl_profiles',
+        'agency': 'agency_profiles',
+    }[user_type]
+    role_doc = db.collection(role_collection).document(profile_id).get()
+    if not role_doc.exists:
+        role_profile = {
+            'id': profile_id,
+            'profile_id': profile_id,
+            'user_id': user_id,
+            'first_name': first_name,
+            'last_name': last_name,
+            'email': user_email,
+            'phone_number': user_phone,
+            'created_at': timestamp,
+            'updated_at': timestamp,
+        }
+        if user_type == 'housegirl':
+            role_profile.update({
+                'is_available': True,
+                'unlock_count': 0,
+                'activation_fee_paid': False,
+                'in_demand_alert': False,
+            })
+        elif user_type == 'agency':
+            role_profile.update({
+                'agency_name': '',
+                'location': '',
+                'description': None,
+                'license_number': None,
+            })
+        db.collection(role_collection).document(profile_id).set(role_profile)
+
+
 @admin_bp.route('/users/<user_id>', methods=['DELETE'])
 @firebase_auth_required
 @admin_required
@@ -514,57 +703,9 @@ def admin_assign_user_role(user_id):
         first_name = user_data.get('first_name', '') or ''
         last_name = user_data.get('last_name', '') or ''
 
-        profile_docs = list(db.collection('profiles').where('user_id', '==', user_id).limit(1).stream())
-        if profile_docs:
-            profile_id = profile_docs[0].to_dict().get('id') or profile_docs[0].id
-            db.collection('profiles').document(profile_docs[0].id).set({'updated_at': timestamp}, merge=True)
-        else:
-            profile_id = user_id
-            db.collection('profiles').document(profile_id).set({
-                'id': profile_id,
-                'profile_id': profile_id,
-                'user_id': user_id,
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': user_email,
-                'phone_number': user_phone,
-                'created_at': timestamp,
-                'updated_at': timestamp,
-            })
-
-        role_collection = {
-            'employer': 'employer_profiles',
-            'housegirl': 'housegirl_profiles',
-            'agency': 'agency_profiles',
-        }[user_type]
-        role_doc = db.collection(role_collection).document(profile_id).get()
-        if not role_doc.exists:
-            role_profile = {
-                'id': profile_id,
-                'profile_id': profile_id,
-                'user_id': user_id,
-                'first_name': first_name,
-                'last_name': last_name,
-                'email': user_email,
-                'phone_number': user_phone,
-                'created_at': timestamp,
-                'updated_at': timestamp,
-            }
-            if user_type == 'housegirl':
-                role_profile.update({
-                    'is_available': True,
-                    'unlock_count': 0,
-                    'activation_fee_paid': False,
-                    'in_demand_alert': False,
-                })
-            elif user_type == 'agency':
-                role_profile.update({
-                    'agency_name': '',
-                    'location': '',
-                    'description': None,
-                    'license_number': None,
-                })
-            db.collection(role_collection).document(profile_id).set(role_profile)
+        _ensure_role_profile_documents(
+            user_id, user_type, user_email, user_phone, first_name, last_name, timestamp
+        )
 
         firebase_uid = user_data.get('firebase_uid') or user_data.get('uid')
         if firebase_uid:
