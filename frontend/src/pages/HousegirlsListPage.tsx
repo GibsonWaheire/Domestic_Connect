@@ -11,6 +11,8 @@ import { MapPin, Menu, Phone, Search, X } from 'lucide-react';
 import UserAvatar from '@/components/ui/UserAvatar';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { toAbsolutePhotoUrl } from '@/lib/photoUtils';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 const bgImage = '/housegirls.webp';
 const API_BASE_URL =
@@ -118,7 +120,7 @@ const HousegirlsListPage = () => {
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPaymentPackage, setSelectedPaymentPackage] = useState<PackageDetails>(CONTACT_UNLOCK_PACKAGE);
   const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null);
-  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, boolean>>({});
+  const [unlockedProfiles, setUnlockedProfiles] = useState<Record<string, { phone?: string; email?: string }>>({});
   const [selectedLocation, setSelectedLocation] = useState('All locations');
   const [kenyaCities, setKenyaCities] = useState<string[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
@@ -487,70 +489,7 @@ const HousegirlsListPage = () => {
         />
       </div>
 
-      <header className="bg-white border-b border-[#eee] relative md:sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <div className="grid grid-cols-[1fr_auto] md:grid-cols-[auto_1fr_auto] items-center gap-3 md:gap-6">
-            <div
-              className="flex items-center cursor-pointer"
-              onClick={() => {
-                navigate(getDashboardRoute());
-              }}
-            >
-              <h1 className="text-2xl font-bold text-black tracking-tight">Domestic Connect</h1>
-            </div>
-
-            <nav className="hidden md:flex items-center justify-center gap-6">
-              <button
-                type="button"
-                onClick={handleFindHelp}
-                className="text-sm font-medium text-[#333] hover:text-black transition-opacity"
-              >
-                Find Help
-              </button>
-              <button
-                type="button"
-                onClick={handlePricingScroll}
-                className="text-sm font-medium text-[#333] hover:text-black transition-opacity"
-              >
-                Pricing
-              </button>
-            </nav>
-
-            <div className="flex items-center justify-end gap-3">
-              {user ? (
-                <>
-                  <Button
-                    onClick={() => navigate(getDashboardRoute())}
-                    className="hidden md:inline-flex bg-black hover:bg-[#333] text-white rounded-full transition-opacity duration-150"
-                  >
-                    Dashboard →
-                  </Button>
-                  <Button variant="outline" onClick={signOut} className="hidden md:inline-flex border-gray-300 text-black bg-transparent hover:bg-gray-100 rounded-full">
-                    Logout
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button
-                    onClick={() => navigate('/login?mode=signup&userType=housegirl')}
-                    variant="outline"
-                    className="text-sm font-medium text-black border border-black hover:bg-gray-50 rounded-full px-5 py-2 transition-colors"
-                  >
-                    Register as Housegirl
-                  </Button>
-                  <Button
-                    onClick={() => navigate('/login?mode=signup')}
-                    className="hidden md:inline-flex rounded-full px-6 bg-black hover:bg-[#333] text-white font-medium"
-                  >
-                    Join Today
-                  </Button>
-                </>
-              )}
-
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
 
 
@@ -834,16 +773,7 @@ const HousegirlsListPage = () => {
         </section>
       </div>
 
-      <footer className="bg-black text-white py-8 mt-10">
-        <div className="max-w-6xl mx-auto px-4 text-center">
-          <p className="text-gray-300">© 2024 Domestic Connect. All rights reserved.</p>
-          <div className="mt-3 flex items-center justify-center gap-4 text-sm">
-            <a href="/privacy-policy" className="text-gray-300 hover:text-white transition-colors">Privacy Policy</a>
-            <span className="text-gray-500">·</span>
-            <a href="/terms" className="text-gray-300 hover:text-white transition-colors">Terms of Service</a>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {showPaymentModal && (
         <PaymentModal

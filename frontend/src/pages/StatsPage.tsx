@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 const StatsPage = () => {
   const navigate = useNavigate();
@@ -262,16 +263,7 @@ const StatsPage = () => {
       </section>
 
       {/* FOOTER */}
-      <footer className="bg-[#111] text-white border-t border-white/10 py-8">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
-          <p>© {new Date().getFullYear()} Domestic Connect Kenya</p>
-          <div className="flex gap-4">
-            <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <Link to="/contact-us" className="hover:text-white transition-colors">Contact Us</Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
 
       {/* WhatsApp */}
       <div className="fixed bottom-5 left-5 z-50 group flex items-center">

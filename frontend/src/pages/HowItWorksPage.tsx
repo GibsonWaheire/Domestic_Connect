@@ -2,6 +2,7 @@ import { Search, Shield, CheckCircle, PhoneCall, Star, Clock, MapPin, Users } fr
 import { Helmet } from 'react-helmet-async';
 import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 const faqSchema = {
   "@context": "https://schema.org",
@@ -219,6 +220,7 @@ const HowItWorksPage = () => {
           </Link>
         </div>
       </div>
+      <Footer />
     </div>
   );
 };
