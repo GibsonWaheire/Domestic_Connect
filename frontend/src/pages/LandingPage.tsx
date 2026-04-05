@@ -1,14 +1,14 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Search, Lock, Phone, Menu, MessageCircle, Users, MapPin, Banknote, Clock, Star, ShieldCheck, Zap, ThumbsUp } from 'lucide-react';
+import { Search, Lock, Phone, MessageCircle, Users, MapPin, Banknote, Clock, Star, ShieldCheck, Zap, ThumbsUp } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuthEnhanced';
+import Navbar from '@/components/Navbar';
 
 const LandingPage = () => {
   const navigate = useNavigate();
   const heroImage = '/woooies.avif';
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [heroSlide, setHeroSlide] = useState(0);
   const { user } = useAuth();
 
@@ -71,42 +71,9 @@ const LandingPage = () => {
     return '/employer-dashboard';
   };
 
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-
-  const openRegister = () => {
-    navigate('/login?mode=signup');
-    setIsMenuOpen(false);
-  };
-
-  const openHousegirlRegister = () => {
-    navigate('/login?mode=signup&userType=housegirl');
-    setIsMenuOpen(false);
-  };
-
-  const openLogin = () => {
-    navigate('/login');
-    setIsMenuOpen(false);
-  };
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsMenuOpen(false);
-    };
-    const handleClickOutside = (event: MouseEvent) => {
-      if (drawerRef.current && !drawerRef.current.contains(event.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleEscape);
-    window.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      window.removeEventListener('keydown', handleEscape);
-      window.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isMenuOpen]);
+  const openRegister = () => navigate('/login?mode=signup');
+  const openHousegirlRegister = () => navigate('/login?mode=signup&userType=housegirl');
+  const openLogin = () => navigate('/login');
 
   return (
     <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
@@ -122,132 +89,7 @@ const LandingPage = () => {
         <script type="application/ld+json">{JSON.stringify(localBusinessSchema)}</script>
       </Helmet>
 
-      {/* NAVBAR — sticky */}
-      <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-          <Link to="/" className="flex flex-col leading-none">
-            <span className="text-xl font-bold tracking-tight text-[#111]">Domestic Connect</span>
-          </Link>
-
-          <nav className="hidden md:flex items-center gap-3">
-            <Link to="/housegirls" className="bg-black text-white rounded-full px-4 py-1.5 text-sm font-medium hover:bg-[#333] transition-colors">
-              Find Househelp
-            </Link>
-            <button type="button" onClick={() => navigate('/for-housegirls')} className="bg-transparent text-black rounded-full px-4 py-1.5 text-sm font-medium border border-black hover:bg-black hover:text-white transition-colors">
-              For Housegirls
-            </button>
-          </nav>
-
-          <div className="hidden md:flex items-center gap-3">
-            {user ? (
-              <Button onClick={() => navigate(getDashboardRoute())} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
-                Dashboard →
-              </Button>
-            ) : (
-              <>
-                <Button onClick={openLogin} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">
-                  Login
-                </Button>
-                <Button onClick={openRegister} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">
-                  Join Today
-                </Button>
-              </>
-            )}
-          </div>
-
-          {/* hamburger — all screen sizes (full site nav lives here) */}
-          <button
-            type="button"
-            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
-            aria-expanded={isMenuOpen}
-            aria-controls="landing-main-menu"
-            onClick={() => setIsMenuOpen((prev) => !prev)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors border-0"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
-      </header>
-
-      {/* MOBILE DRAWER */}
-      <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'bg-black/0 opacity-0 pointer-events-none'}`}>
-        <aside
-          id="landing-main-menu"
-          ref={drawerRef}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Navigation menu"
-          className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}
-        >
-          <div className="h-full overflow-y-auto p-6">
-            <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
-              <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
-              <button
-                type="button"
-                aria-label="Close menu"
-                onClick={() => setIsMenuOpen(false)}
-                className="h-10 w-10 inline-flex items-center justify-center text-gray-500"
-              >
-                ×
-              </button>
-            </div>
-            <div>
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Employers</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find a Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find an Agency</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Pricing & Packages</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); openHousegirlRegister(); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/for-housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">General</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Help Center</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Contact Us</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2">
-                {user ? (
-                  <Button onClick={() => { setIsMenuOpen(false); navigate(getDashboardRoute()); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
-                    Dashboard →
-                  </Button>
-                ) : (
-                  <>
-                    <Button onClick={openLogin} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">
-                      Login
-                    </Button>
-                    <Button onClick={openRegister} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">
-                      Join Today
-                    </Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
+      <Navbar />
 
       {/* HERO SECTION */}
       <section className="bg-[#FDF6F0] py-16 md:py-24">

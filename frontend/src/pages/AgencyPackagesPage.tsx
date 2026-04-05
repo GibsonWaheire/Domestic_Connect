@@ -1,36 +1,14 @@
-import { useRef, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
-  CheckCircle2, Menu, MessageCircle, Shield, Star, Zap, Building2,
+  CheckCircle2, MessageCircle, Shield, Star, Zap, Building2,
   Users, Lock, Briefcase, CreditCard, HelpCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuthEnhanced';
+import Navbar from '@/components/Navbar';
 
 const AgencyPackagesPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const drawerRef = useRef<HTMLDivElement | null>(null);
-
-  const getDashboardRoute = () => {
-    if (!user) return '/';
-    if (user.user_type === 'agency') return '/agency-dashboard';
-    if (user.user_type === 'housegirl') return '/housegirl-dashboard';
-    return '/employer-dashboard';
-  };
-
-  useEffect(() => {
-    if (!isMenuOpen) return;
-    const handleEscape = (e: KeyboardEvent) => { if (e.key === 'Escape') setIsMenuOpen(false); };
-    const handleOutside = (e: MouseEvent) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target as Node)) setIsMenuOpen(false);
-    };
-    window.addEventListener('keydown', handleEscape);
-    window.addEventListener('mousedown', handleOutside);
-    return () => { window.removeEventListener('keydown', handleEscape); window.removeEventListener('mousedown', handleOutside); };
-  }, [isMenuOpen]);
 
   const agencyPackages = [
     {
@@ -130,86 +108,7 @@ const AgencyPackagesPage = () => {
         <meta name="twitter:description" content="Affordable packages for housegirl and maid agencies to list verified workers across Kenya. Plans from KES 1,200." />
       </Helmet>
 
-      {/* NAVBAR */}
-      <header className="border-b border-gray-100 bg-white sticky top-0 z-40">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
-          <Link to="/" className="text-xl font-bold tracking-tight text-[#111]">Domestic Connect</Link>
-          <nav className="hidden md:flex items-center gap-3">
-            <Link to="/housegirls" className="text-sm font-medium text-gray-600 hover:text-black transition-colors px-3 py-1.5">Browse Workers</Link>
-            <Link to="/agency-marketplace" className="text-sm font-medium text-gray-600 hover:text-black transition-colors px-3 py-1.5">Find an Agency</Link>
-          </nav>
-          <div className="hidden md:flex items-center gap-3">
-            {user ? (
-              <Button onClick={() => navigate(getDashboardRoute())} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">Dashboard →</Button>
-            ) : (
-              <>
-                <Button onClick={() => navigate('/login')} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5">Login</Button>
-                <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5">Join Today</Button>
-              </>
-            )}
-          </div>
-          <button type="button" aria-label={isMenuOpen ? 'Close menu' : 'Open menu'} onClick={() => setIsMenuOpen(p => !p)}
-            className="inline-flex h-10 w-10 items-center justify-center rounded-sm text-black hover:bg-gray-100 transition-colors">
-            <Menu className="h-5 w-5" />
-          </button>
-        </div>
-      </header>
-
-      {/* MOBILE DRAWER */}
-      <div className={`fixed inset-0 z-[60] transition-opacity duration-300 ${isMenuOpen ? 'bg-black/30 opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
-        <aside ref={drawerRef} className={`absolute right-0 top-0 h-full w-full max-w-sm bg-white shadow-2xl transition-transform duration-300 ease-out ${isMenuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
-          <div className="h-full overflow-y-auto p-6">
-            <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
-              <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
-              <button type="button" onClick={() => setIsMenuOpen(false)} className="h-10 w-10 inline-flex items-center justify-center text-gray-500 text-xl">×</button>
-            </div>
-            <div>
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Employers</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find a Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find an Agency</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Pricing & Packages</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Housegirls</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup&userType=housegirl'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Register as Housegirl</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/for-housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How to Get Listed</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">For Agencies</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Marketplace</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>List Your Agency</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agency Packages</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-              <div className="bg-gray-50 rounded-xl p-4 mb-3">
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 mb-3">General</p>
-                <div className="flex flex-col">
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/stats'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Help Center</span><span className="text-gray-300 text-sm">›</span></button>
-                  <button type="button" onClick={() => { setIsMenuOpen(false); navigate('/contact-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Contact Us</span><span className="text-gray-300 text-sm">›</span></button>
-                </div>
-              </div>
-              <div className="pt-2 flex flex-col gap-2">
-                {user ? (
-                  <Button onClick={() => { setIsMenuOpen(false); navigate(getDashboardRoute()); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Dashboard →</Button>
-                ) : (
-                  <>
-                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">Login</Button>
-                    <Button onClick={() => { setIsMenuOpen(false); navigate('/login?mode=signup'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Join Today</Button>
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-        </aside>
-      </div>
+      <Navbar />
 
       {/* HERO */}
       <section className="bg-[#111] text-white py-16 md:py-24">
