@@ -555,9 +555,26 @@ const HousegirlsListPage = () => {
         </div>
       </section>
 
+      {/* Divider banner between filters and profiles */}
+      <div className="w-full bg-gradient-to-r from-blue-50 via-white to-blue-50 border-y border-blue-100 px-4 md:px-12 py-4">
+        <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">👇</span>
+            <p className="text-sm font-semibold text-gray-700">
+              Verified profiles ready to hire — unlock contact to connect directly
+            </p>
+          </div>
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">✅ Background checked</span>
+            <span className="flex items-center gap-1">📍 Kenya-wide</span>
+            <span className="flex items-center gap-1">⚡ Instant contact</span>
+          </div>
+        </div>
+      </div>
+
       <div className="max-w-[1200px] mx-auto px-4 md:px-12 w-full">
 
-        <main id="profiles-list" className="mt-10 md:mt-4 py-8">
+        <main id="profiles-list" className="mt-6 md:mt-4 py-8">
           <div className="w-full px-0 md:px-10">
             <div className="flex flex-col w-full relative">
               <div className="flex flex-col gap-[8px] w-full">
