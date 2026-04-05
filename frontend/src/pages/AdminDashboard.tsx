@@ -51,9 +51,9 @@ const AdminDashboard: React.FC = () => {
   const [syncing, setSyncing] = useState(false);
   const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
   const [userSearch, setUserSearch] = useState('');
-  const [userTypeFilter, setUserTypeFilter] = useState('');
+  const [userTypeFilter, setUserTypeFilter] = useState('all');
   const [agencySearch, setAgencySearch] = useState('');
-  const [agencyStatusFilter, setAgencyStatusFilter] = useState('');
+  const [agencyStatusFilter, setAgencyStatusFilter] = useState('all');
 
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -219,7 +219,7 @@ const AdminDashboard: React.FC = () => {
       user.first_name.toLowerCase().includes(userSearch.toLowerCase()) ||
       user.last_name.toLowerCase().includes(userSearch.toLowerCase());
     
-    const matchesType = !userTypeFilter || user.user_type === userTypeFilter;
+    const matchesType = userTypeFilter === 'all' || user.user_type === userTypeFilter;
     
     return matchesSearch && matchesType;
   });
@@ -230,7 +230,7 @@ const AdminDashboard: React.FC = () => {
       agency.license_number.toLowerCase().includes(agencySearch.toLowerCase()) ||
       agency.contact_email.toLowerCase().includes(agencySearch.toLowerCase());
     
-    const matchesStatus = !agencyStatusFilter || agency.verification_status === agencyStatusFilter;
+    const matchesStatus = agencyStatusFilter === 'all' || agency.verification_status === agencyStatusFilter;
     
     return matchesSearch && matchesStatus;
   });
@@ -364,7 +364,7 @@ const AdminDashboard: React.FC = () => {
                       <SelectValue placeholder="Filter by type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Types</SelectItem>
+                      <SelectItem value="all">All Types</SelectItem>
                       <SelectItem value="employer">Employers</SelectItem>
                       <SelectItem value="housegirl">Housegirls</SelectItem>
                       <SelectItem value="agency">Agencies</SelectItem>
@@ -480,7 +480,7 @@ const AdminDashboard: React.FC = () => {
                       <SelectValue placeholder="Filter by status" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">All Status</SelectItem>
+                      <SelectItem value="all">All Status</SelectItem>
                       <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="verified">Verified</SelectItem>
                       <SelectItem value="rejected">Rejected</SelectItem>
