@@ -100,11 +100,13 @@ export const useEmailAuth = (
             const { signInWithEmail, sendVerificationEmail } = await import('@/lib/firebaseAuth');
             const result = await signInWithEmail(email, password);
 
-            // Block unverified email/password accounts
+            // Remind unverified users but do not block them
             if (!result.user.emailVerified) {
-                await sendVerificationEmail(result.user).catch(() => {});
-                setLoading(false);
-                return { error: 'Email not verified. We sent a new verification link to ' + email + '. Please check your inbox and click the link before logging in.' };
+                sendVerificationEmail(result.user).catch(() => {});
+                toast({
+                    title: 'Please verify your email',
+                    description: 'We sent a verification link to ' + email + '. Click it to confirm your account.',
+                });
             }
 
             const token = await result.user.getIdToken();

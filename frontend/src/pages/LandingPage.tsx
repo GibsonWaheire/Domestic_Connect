@@ -144,7 +144,7 @@ const LandingPage = () => {
                   <img src={heroImage} alt="House help in Kenya" className="hero-ken-burns h-full w-full object-cover" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
                   <div className="absolute bottom-9 left-4 right-4">
-                    <p className="text-white font-semibold text-sm drop-shadow">500+ verified workers listed</p>
+                    <p className="text-white font-semibold text-sm drop-shadow">Verified workers listed across Kenya</p>
                     <Button onClick={() => navigate('/housegirls')} size="sm" className="mt-2 rounded-full bg-white text-[#111] hover:bg-gray-100 text-xs px-4 h-7 shadow">
                       Browse →
                     </Button>
@@ -177,7 +177,7 @@ const LandingPage = () => {
                 <p className="text-[10px] font-bold uppercase tracking-widest text-amber-300 mb-6">By the numbers</p>
                 <div className="grid grid-cols-2 gap-5">
                   {[
-                    { value: '500+', label: 'Verified Workers' },
+                    { value: 'Growing', label: 'Verified Workers' },
                     { value: '15+', label: 'Cities in Kenya' },
                     { value: 'KES 200', label: 'One-time fee' },
                     { value: '< 48 hrs', label: 'Avg. time to hire' },
@@ -280,7 +280,7 @@ const LandingPage = () => {
         <div className="max-w-[1100px] mx-auto px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-0">
             {[
-              { icon: <Users size={20} />, value: '500+', label: 'Housegirls' },
+              { icon: <Users size={20} />, value: 'Growing', label: 'Housegirls' },
               { icon: <MapPin size={20} />, value: '15+', label: 'Cities' },
               { icon: <Banknote size={20} />, value: 'KES 200', label: 'One-time fee' },
               { icon: <Clock size={20} />, value: 'Instantly', label: 'Access' },
@@ -295,40 +295,34 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* TESTIMONIALS */}
+      {/* WHY IT WORKS */}
       <section id="testimonials" className="bg-white py-16 md:py-20">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6">
-          <h2 className="text-3xl font-bold text-center mb-3 tracking-tight">What people say</h2>
+          <h2 className="text-3xl font-bold text-center mb-3 tracking-tight">Built for Kenya</h2>
           <p className="text-center text-[#666] text-[14px] max-w-xl mx-auto mb-10">
-            Real stories from families and workers across Kenya.
+            A simple, honest platform designed around how hiring actually works in Kenya.
           </p>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <div className="flex gap-0.5 mb-3">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className="text-amber-400 fill-amber-400" />)}
-              </div>
-              <p className="italic text-[#444] mb-4">
-                "I found work in just 3 days. Domestic Connect truly delivers!"
+              <div className="text-2xl mb-3">📞</div>
+              <h3 className="font-bold text-[#111] mb-2">Direct contact, no middleman</h3>
+              <p className="text-[#666] text-sm leading-relaxed">
+                Pay once via M-Pesa and get the worker's phone number directly. No agency. No commission. No salary cuts.
               </p>
-              <p className="text-[13px] font-bold text-[#111]">— Amina, House Help · Mombasa</p>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-6 shadow-sm">
-              <div className="flex gap-0.5 mb-3">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className="text-amber-400 fill-amber-400" />)}
-              </div>
-              <p className="italic text-[#444] mb-4">
-                "Found a great nanny in 2 days. Honest and straightforward service."
+              <div className="text-2xl mb-3">✅</div>
+              <h3 className="font-bold text-[#111] mb-2">Free for workers to join</h3>
+              <p className="text-[#666] text-sm leading-relaxed">
+                Housegirls, nannies and cooks register and create their profile at no cost. Employers pay only when they find someone they like.
               </p>
-              <p className="text-[13px] font-bold text-[#111]">— Peter, Employer · Nairobi</p>
             </div>
             <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-              <div className="flex gap-0.5 mb-3">
-                {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className="text-amber-400 fill-amber-400" />)}
-              </div>
-              <p className="italic text-[#444] mb-4">
-                "This service is amazing. We hired our housekeeper in under 48 hours."
+              <div className="text-2xl mb-3">🔒</div>
+              <h3 className="font-bold text-[#111] mb-2">Privacy protected</h3>
+              <p className="text-[#666] text-sm leading-relaxed">
+                Worker contact details are hidden until an employer pays. This keeps workers safe and ensures only serious employers get in touch.
               </p>
-              <p className="text-[13px] font-bold text-[#111]">— Joyce, Employer · Kisumu</p>
             </div>
           </div>
         </div>

@@ -356,8 +356,16 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
               {saving ? 'Saving...' : 'Save & Access Dashboard →'}
             </Button>
 
+            <button
+              type="button"
+              onClick={onComplete}
+              className="w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-1"
+            >
+              Skip for now — I'll complete my profile later
+            </button>
+
             <p className="text-xs text-center text-gray-400">
-              You can update these details anytime from your Profile tab.
+              Complete your profile to appear in employer searches.
             </p>
           </div>
         </div>
