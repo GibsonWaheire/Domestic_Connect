@@ -18,6 +18,7 @@ interface AuthContextType {
   handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => Promise<{ error: string | null; user?: User }>;
   signOut: (redirectTo?: string) => Promise<void>;
   checkSession: () => Promise<void>;
+  patchUser: (updates: Partial<User>) => void;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   isFirebaseUser: boolean;
 }
@@ -211,13 +212,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const googleAuth = useGoogleAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
   const emailAuth = useEmailAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
+  const patchUser = useCallback((updates: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : prev);
+  }, []);
+
   const value = {
     user, loading,
     ...emailAuth,
     signInWithGoogle: googleAuth.handleGoogleSignIn,
     handleGoogleSignIn: googleAuth.handleGoogleSignIn,
     handleGoogleRedirectResult: googleAuth.handleGoogleRedirectResult,
-    signOut, checkSession, isFirebaseUser,
+    signOut, checkSession, patchUser, isFirebaseUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

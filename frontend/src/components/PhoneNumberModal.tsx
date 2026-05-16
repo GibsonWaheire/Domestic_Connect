@@ -7,7 +7,7 @@ import { User } from '@/lib/authUtils';
 
 interface PhoneNumberModalProps {
   user: User;
-  onSaved: () => void;
+  onSaved: (phone: string) => void;
 }
 
 const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
@@ -47,7 +47,7 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
         setError('Could not save. Please try again.');
         return;
       }
-      onSaved();
+      onSaved(cleaned);
     } catch {
       setError('Something went wrong. Please try again.');
     } finally {
@@ -62,7 +62,7 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
   return (
     <Dialog open>
       <DialogContent
-        className="sm:max-w-sm [&>button]:hidden"
+        className="sm:max-w-sm [&>button.absolute]:hidden"
         onInteractOutside={e => e.preventDefault()}
         onEscapeKeyDown={e => e.preventDefault()}
       >

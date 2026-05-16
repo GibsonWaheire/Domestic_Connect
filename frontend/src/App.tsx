@@ -85,21 +85,20 @@ const ScrollToTop = () => {
 };
 
 const PhoneGate = () => {
-  const { user, checkSession, loading } = useAuth();
+  const { user, checkSession, patchUser, loading } = useAuth();
   const location = useLocation();
-  const [phoneSaved, setPhoneSaved] = useState(false);
 
   if (location.pathname !== '/housegirl-dashboard') return null;
   if (loading) return null;
   if (!user || user.user_type !== 'housegirl') return null;
-  if (user.phone_number || phoneSaved) return null;
+  if (user.phone_number) return null;
 
   return (
     <PhoneNumberModal
       user={user}
-      onSaved={() => {
-        setPhoneSaved(true);   // dismiss immediately
-        checkSession();        // refresh user in background
+      onSaved={(phone) => {
+        patchUser({ phone_number: phone }); // instant: closes modal + triggers dashboard re-fetch
+        checkSession();                     // background: sync full user state
       }}
     />
   );
