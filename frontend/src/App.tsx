@@ -31,6 +31,7 @@ import TermsOfService from "./pages/TermsOfService";
 import PaymentCallbackPage from "./pages/PaymentCallbackPage";
 import ForHousegirlsPage from "./pages/ForHousegirlsPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
+import AuthActionPage from "./pages/AuthActionPage";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
 
 const queryClient = new QueryClient({
@@ -104,6 +105,7 @@ const App = () => (
                 <Route path="/register" element={<Navigate to="/login?mode=signup" replace />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/admin/login" element={<AdminLoginPage />} />
+                <Route path="/auth/action" element={<AuthActionPage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/why-choose-us" element={<WhyChoosePage />} />
