@@ -91,12 +91,20 @@ export const signUpWithEmail = async (email: string, password: string) => {
   return createUserWithEmailAndPassword(auth, email, password);
 };
 
+const CUSTOM_DOMAIN = 'https://domestic-connect.co.ke';
+
 export const resetPassword = async (email: string) => {
-  return sendPasswordResetEmail(auth, email);
+  return sendPasswordResetEmail(auth, email, {
+    url: `${CUSTOM_DOMAIN}/login`,
+    handleCodeInApp: false,
+  });
 };
 
 export const sendVerificationEmail = async (user: User) => {
-  return firebaseSendEmailVerification(user);
+  return firebaseSendEmailVerification(user, {
+    url: `${CUSTOM_DOMAIN}/login`,
+    handleCodeInApp: false,
+  });
 };
 
 export const verifyResetCode = (oobCode: string) =>

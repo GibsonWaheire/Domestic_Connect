@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
@@ -84,22 +84,19 @@ const ScrollToTop = () => {
   return null;
 };
 
-const SKIP_PHONE_PATHS = ['/login', '/admin/login', '/auth/action'];
-
 const PhoneGate = () => {
   const { user, checkSession } = useAuth();
   const location = useLocation();
-  const [skipped, setSkipped] = useState(() => sessionStorage.getItem('phone_modal_skip') === '1');
 
-  if (SKIP_PHONE_PATHS.includes(location.pathname)) return null;
-  if (!user || user.user_type === 'admin' || user.user_type === 'agency') return null;
-  if (user.phone_number || skipped) return null;
+  // Only block housegirl accounts on the housegirl dashboard
+  if (location.pathname !== '/housegirl-dashboard') return null;
+  if (!user || user.user_type !== 'housegirl') return null;
+  if (user.phone_number) return null;
 
   return (
     <PhoneNumberModal
       user={user}
       onSaved={async () => { await checkSession(); }}
-      onSkip={() => { sessionStorage.setItem('phone_modal_skip', '1'); setSkipped(true); }}
     />
   );
 };

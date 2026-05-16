@@ -8,10 +8,9 @@ import { User } from '@/lib/authUtils';
 interface PhoneNumberModalProps {
   user: User;
   onSaved: () => void;
-  onSkip: () => void;
 }
 
-const PhoneNumberModal = ({ user, onSaved, onSkip }: PhoneNumberModalProps) => {
+const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -86,22 +85,13 @@ const PhoneNumberModal = ({ user, onSaved, onSkip }: PhoneNumberModalProps) => {
           />
           {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
         </div>
-        <div className="flex flex-col gap-2">
-          <Button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
-          >
-            {saving ? 'Saving...' : 'Save Phone Number'}
-          </Button>
-          <button
-            type="button"
-            onClick={onSkip}
-            className="text-center text-sm text-gray-400 hover:text-gray-600 transition-colors"
-          >
-            Skip for now
-          </button>
-        </div>
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
+        >
+          {saving ? 'Saving...' : 'Save Phone Number'}
+        </Button>
       </DialogContent>
     </Dialog>
   );
