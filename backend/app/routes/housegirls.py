@@ -621,7 +621,12 @@ def update_housegirl(housegirl_id):
                 user_updates['profile_photo_url'] = updates.get('profile_photo_url')
             if user_updates:
                 user_updates['updated_at'] = timestamp
-                db.collection('users').document(getattr(user, 'id')).set(user_updates, merge=True)
+                try:
+                    user_id_val = getattr(user, 'id', None)
+                    if user_id_val:
+                        db.collection('users').document(user_id_val).set(user_updates, merge=True)
+                except Exception as e:
+                    logger.warning(f'users collection sync failed (non-fatal): {e}')
 
             profile_docs = list(
                 db.collection('profiles')
@@ -651,13 +656,18 @@ def update_housegirl(housegirl_id):
 
         updated_data = updated_doc.to_dict() or {}
         # Mark profile as complete once all required fields are present
-        _required = ['phone_number', 'role', 'location', 'experience', 'accommodation_type', 'expected_salary']
-        _has_skills = isinstance(updated_data.get('skills'), list) and len(updated_data.get('skills', [])) > 0
-        if all(updated_data.get(f) for f in _required) and _has_skills:
-            if not updated_data.get('profile_complete'):
-                doc_ref.update({'profile_complete': True})
-                db.collection('users').document(getattr(user, 'id')).set({'profile_complete': True}, merge=True)
-            updated_data['profile_complete'] = True
+        try:
+            _required = ['phone_number', 'role', 'location', 'experience', 'accommodation_type', 'expected_salary']
+            _has_skills = isinstance(updated_data.get('skills'), list) and len(updated_data.get('skills', [])) > 0
+            if all(updated_data.get(f) for f in _required) and _has_skills:
+                if not updated_data.get('profile_complete'):
+                    doc_ref.update({'profile_complete': True})
+                    user_id_val = getattr(user, 'id', None)
+                    if user_id_val:
+                        db.collection('users').document(user_id_val).set({'profile_complete': True}, merge=True)
+                updated_data['profile_complete'] = True
+        except Exception as e:
+            logger.warning(f'profile_complete update failed (non-fatal): {e}')
 
         return jsonify(updated_data), 200
 

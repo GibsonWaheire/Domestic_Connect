@@ -182,7 +182,8 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
         return;
       }
       if (!res.ok) {
-        setError('Could not save profile. Please try again.');
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.error || `Could not save profile (${res.status}). Please try again.`);
         return;
       }
       sessionStorage.removeItem(`profile_draft_${userId}`);
