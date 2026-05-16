@@ -62,7 +62,7 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
   return (
     <Dialog open>
       <DialogContent
-        className="sm:max-w-sm"
+        className="sm:max-w-sm [&>button]:hidden"
         onInteractOutside={e => e.preventDefault()}
         onEscapeKeyDown={e => e.preventDefault()}
       >

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
@@ -87,17 +87,20 @@ const ScrollToTop = () => {
 const PhoneGate = () => {
   const { user, checkSession, loading } = useAuth();
   const location = useLocation();
+  const [phoneSaved, setPhoneSaved] = useState(false);
 
-  // Only block housegirl accounts on the housegirl dashboard
   if (location.pathname !== '/housegirl-dashboard') return null;
-  if (loading) return null; // wait for auth to resolve before deciding
+  if (loading) return null;
   if (!user || user.user_type !== 'housegirl') return null;
-  if (user.phone_number) return null;
+  if (user.phone_number || phoneSaved) return null;
 
   return (
     <PhoneNumberModal
       user={user}
-      onSaved={async () => { await checkSession(); }}
+      onSaved={() => {
+        setPhoneSaved(true);   // dismiss immediately
+        checkSession();        // refresh user in background
+      }}
     />
   );
 };
