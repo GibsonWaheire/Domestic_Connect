@@ -144,6 +144,11 @@ export const useEmailAuth = (
 
             const pendingUnlockRawSignin = sessionStorage.getItem('unlock_after_login');
             if (pendingUnlockRawSignin) {
+                if (resolvedUserType === 'housegirl') {
+                    sessionStorage.removeItem('unlock_after_login');
+                    setLoading(false);
+                    return { error: 'This is a worker account. Only employer accounts can unlock contacts. Please sign up as an employer to access this feature.' };
+                }
                 try {
                     const pendingUnlock = JSON.parse(pendingUnlockRawSignin);
                     sessionStorage.removeItem('unlock_after_login');
