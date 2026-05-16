@@ -1,9 +1,4 @@
 User-agent: *
 Allow: /
-Disallow: /employer-dashboard
-Disallow: /housegirl-dashboard
-Disallow: /agency-dashboard
-Disallow: /admin-dashboard
-Disallow: /payment-callback
 
 Sitemap: https://domestic-connect.co.ke/sitemap.xml

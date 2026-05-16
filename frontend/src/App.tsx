@@ -1,4 +1,4 @@
-import { Toaster } from "@/components/ui/toaster";
+ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -116,7 +116,14 @@ const App = () => (
                 <Route path="/agencies" element={<AgencyPage />} />
                 <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
                 <Route path="/browse-housegirls" element={<BrowseHousegirls />} />
-                <Route path="/payment-callback" element={<PaymentCallbackPage />} />
+                <Route
+                  path="/payment-callback"
+                  element={
+                    <AuthGuard allowedUserTypes={['employer', 'agency', 'admin']}>
+                      <PaymentCallbackPage />
+                    </AuthGuard>
+                  }
+                />
                 <Route path="/for-housegirls" element={<ForHousegirlsPage />} />
 
                 {/* Protected Dashboard Routes */}
