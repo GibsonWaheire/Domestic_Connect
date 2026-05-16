@@ -914,14 +914,6 @@ const AdminDashboard: React.FC = () => {
                             <TableCell>{formatDate(u.created_at)}</TableCell>
                             <TableCell>
                               <div className="flex flex-wrap gap-2">
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handlePromoteUser(u.id, !u.is_admin)}
-                                  title={u.is_admin ? 'Revoke admin' : 'Make admin'}
-                                >
-                                  <Shield className={`h-4 w-4 ${u.is_admin ? 'text-yellow-500' : 'text-gray-400'}`} />
-                                </Button>
                                 <Button variant="outline" size="sm" onClick={() => openUserSheet(u)}>
                                   <Eye className="h-4 w-4" />
                                 </Button>
