@@ -30,6 +30,12 @@ except ImportError:  # pragma: no cover - environment-specific dependency
 health_bp = Blueprint('health', __name__)
 
 
+@health_bp.route('/ping', methods=['GET'])
+def ping():
+    """Ultra-lightweight wake-up endpoint — no DB, no auth."""
+    return jsonify({'ok': True}), 200
+
+
 def _get_system_metrics():
     """
     Return system metrics if psutil is available, else None.

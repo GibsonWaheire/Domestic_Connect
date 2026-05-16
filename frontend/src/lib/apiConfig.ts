@@ -11,10 +11,16 @@ export const getApiBaseUrl = (): string => {
     }
     return envUrl;
   }
-  
+
   // Prefer relative URLs both in development and production.
   // In development, Vite proxy handles forwarding /api to the backend.
   return '';
 };
 
 export const API_BASE_URL = getApiBaseUrl();
+
+// Pre-warm the Railway backend on page load to eliminate cold-start delays.
+// Fires immediately as this module is imported — before React renders, before auth.
+if (typeof window !== 'undefined' && typeof fetch !== 'undefined') {
+  fetch(`${API_BASE_URL}/api/ping`).catch(() => {});
+}

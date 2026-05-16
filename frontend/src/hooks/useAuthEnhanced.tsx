@@ -43,6 +43,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [authReady, setAuthReady] = useState({ firebase: false, session: false });
   const shouldSyncFirebaseUserRef = useRef(false);
+  const checkSessionDoneRef = useRef(false);
   const userRef = useRef<User | null>(null);
   useEffect(() => { userRef.current = user; }, [user]);
   const normalizeUser = useCallback((incomingUser: User | null): User | null => {
@@ -83,6 +84,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const normalizedUser = normalizeUser(firebaseResponse.user);
             setUser(normalizedUser);
             setIsFirebaseUser(true);
+            checkSessionDoneRef.current = true;
             return;
           }
         }
@@ -92,6 +94,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const normalizedUser = normalizeUser(response.user);
         setUser(normalizedUser);
         setIsFirebaseUser(normalizedUser?.is_firebase_user || false);
+        checkSessionDoneRef.current = true;
       } else {
         setUser(null);
         setIsFirebaseUser(false);
@@ -154,7 +157,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                   user.id === firebaseUser.uid ||
                   user.id === `user_${firebaseUser.uid}`
                 );
-              if (firebaseMatchesUser) {
+              // Skip the extra API call if checkSession already resolved this user
+              if (firebaseMatchesUser || checkSessionDoneRef.current) {
                 setLoading(false);
                 clearTimeout(fallbackTimeout);
                 return;
