@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { useAuthEnhanced } from '@/hooks/useAuthEnhanced';
+import { resetPassword } from '@/lib/firebaseAuth';
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ const AdminLoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   useEffect(() => {
     if (loading || !user) return;
@@ -29,6 +32,23 @@ const AdminLoginPage = () => {
       navigate('/agency-dashboard', { replace: true });
     }
   }, [user, loading, navigate]);
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('Enter your email address above, then click Forgot password.');
+      return;
+    }
+    setResetLoading(true);
+    setError(null);
+    try {
+      await resetPassword(email);
+      setResetSent(true);
+    } catch {
+      setError('Could not send reset email. Check the address and try again.');
+    } finally {
+      setResetLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -122,6 +142,21 @@ const AdminLoginPage = () => {
           >
             {submitting ? 'Signing in…' : 'Sign In'}
           </Button>
+
+          {resetSent ? (
+            <p className="text-center text-green-400 text-sm">
+              Reset email sent — check your inbox.
+            </p>
+          ) : (
+            <button
+              type="button"
+              onClick={handleResetPassword}
+              disabled={resetLoading}
+              className="w-full text-center text-white/30 hover:text-white/60 text-sm transition-colors disabled:opacity-50"
+            >
+              {resetLoading ? 'Sending…' : 'Forgot password?'}
+            </button>
+          )}
         </form>
 
         <p className="text-center text-white/20 text-xs mt-8">
