@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Briefcase, Camera, Heart, Home, LogOut, MessageCircle, Settings, User, X } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuthEnhanced';
+import PhoneNumberModal from '@/components/PhoneNumberModal';
 import { toast } from '@/hooks/use-toast';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { API_BASE_URL } from '@/lib/apiConfig';
@@ -91,11 +92,12 @@ const HousegirlMessages = () => {
 };
 
 const HousegirlDashboard = () => {
-  const { user, signOut, loading } = useAuth();
+  const { user, signOut, loading, patchUser } = useAuth();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'jobs' | 'messages' | 'settings'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
   const [showCompletionWall, setShowCompletionWall] = useState(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPhotoReminder, setShowPhotoReminder] = useState(false);
   const photoReminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -152,6 +154,14 @@ const HousegirlDashboard = () => {
         });
         if (res.ok) {
           const data = await res.json();
+
+          // Phone is highest priority — gate everything else behind it
+          if (!data.phone_number) {
+            setShowPhoneModal(true);
+            return;
+          }
+          setShowPhoneModal(false);
+
           const photoUrl = toAbsolutePhotoUrl(data.profile_photo_url || data.photo_url);
           if (photoUrl) {
             setProfilePhoto(photoUrl);
@@ -194,6 +204,16 @@ const HousegirlDashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {showPhoneModal && user && (
+        <PhoneNumberModal
+          user={user}
+          onSaved={(phone) => {
+            patchUser({ phone_number: phone });
+            setShowPhoneModal(false);
+          }}
+        />
+      )}
+
       {showCompletionWall && resolvedUserId && (
         <ProfileCompletionWall
           userId={resolvedUserId}

@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
@@ -33,8 +33,6 @@ import ForHousegirlsPage from "./pages/ForHousegirlsPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AuthActionPage from "./pages/AuthActionPage";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
-import PhoneNumberModal from "@/components/PhoneNumberModal";
-import { useAuth } from "@/hooks/useAuthEnhanced";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -84,25 +82,8 @@ const ScrollToTop = () => {
   return null;
 };
 
-const PhoneGate = () => {
-  const { user, checkSession, patchUser, loading } = useAuth();
-  const location = useLocation();
-
-  if (location.pathname !== '/housegirl-dashboard') return null;
-  if (loading) return null;
-  if (!user || user.user_type !== 'housegirl') return null;
-  if (user.phone_number) return null;
-
-  return (
-    <PhoneNumberModal
-      user={user}
-      onSaved={(phone) => {
-        patchUser({ phone_number: phone }); // instant: closes modal + triggers dashboard re-fetch
-        checkSession();                     // background: sync full user state
-      }}
-    />
-  );
-};
+// Phone modal is now handled inside HousegirlDashboard using profileData as source of truth
+const PhoneGate = () => null;
 
 const App = () => (
   <ErrorBoundary>
