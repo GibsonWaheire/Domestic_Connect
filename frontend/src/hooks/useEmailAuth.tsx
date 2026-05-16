@@ -74,15 +74,19 @@ export const useEmailAuth = (
                 return { error: null };
             }
 
-            // Only show the verification screen if the backend confirmed account creation
+            // Only navigate if the backend confirmed account creation
             const backendOk = (response as { status?: string; user?: unknown }).status === 'ok' || !!(response as { user?: unknown }).user;
             setLoading(false);
             if (!backendOk) {
-                // Backend returned an unexpected response — don't silently swallow it
                 return { error: 'Account setup incomplete. Please try registering again.' };
             }
-            // Account created — require email verification before dashboard access
-            return { error: null, needsVerification: true };
+            // Set user state BEFORE navigating so AuthGuard lets them through
+            if (response.user) {
+                setUser(response.user);
+                setIsFirebaseUser(true);
+            }
+            navigate(userType === 'housegirl' ? '/housegirl-dashboard' : '/employer-dashboard', { replace: true });
+            return { error: null };
         } catch (error: unknown) {
             shouldSyncFirebaseUserRef.current = false;
             const errorCode = typeof error === 'object' && error !== null && 'code' in error ? String((error as { code: unknown }).code) : undefined;
@@ -100,13 +104,11 @@ export const useEmailAuth = (
             const { signInWithEmail, sendVerificationEmail } = await import('@/lib/firebaseAuth');
             const result = await signInWithEmail(email, password);
 
-            // Remind unverified users but do not block them
+            // Block unverified email/password accounts
             if (!result.user.emailVerified) {
-                sendVerificationEmail(result.user).catch(() => {});
-                toast({
-                    title: 'Please verify your email',
-                    description: 'We sent a verification link to ' + email + '. Click it to confirm your account.',
-                });
+                await sendVerificationEmail(result.user).catch(() => {});
+                setLoading(false);
+                return { error: 'Email not verified. We sent a new verification link to ' + email + '. Please check your inbox and click the link before logging in.' };
             }
 
             const token = await result.user.getIdToken();

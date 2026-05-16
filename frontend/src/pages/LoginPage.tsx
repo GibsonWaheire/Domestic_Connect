@@ -102,8 +102,8 @@ const LoginPage = () => {
       return;
     }
     if (result.needsVerification) {
-      // Navigate directly to dashboard — verification email sent in background
-      navigate(userType === 'housegirl' ? '/housegirl-dashboard' : '/employer-dashboard', { replace: true });
+      setVerificationEmail(emailInput);
+      setEmailVerificationSent(true);
     }
   };
 
