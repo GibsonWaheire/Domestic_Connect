@@ -66,6 +66,30 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
   useEffect(() => {
     const load = async () => {
       try {
+        // Restore unsaved draft first (saved when validation fails mid-save)
+        const draftRaw = sessionStorage.getItem(`profile_draft_${userId}`);
+        if (draftRaw) {
+          try {
+            const draft = JSON.parse(draftRaw);
+            if (draft.firstName) setFirstName(draft.firstName);
+            if (draft.lastName) setLastName(draft.lastName);
+            if (draft.phone) setPhone(draft.phone);
+            if (draft.role) setRole(draft.role);
+            if (draft.location) setLocation(draft.location);
+            if (draft.experience) setExperience(draft.experience);
+            if (draft.accommodationType) setAccommodationType(draft.accommodationType);
+            if (draft.expectedSalary) setExpectedSalary(draft.expectedSalary);
+            if (draft.education) setEducation(draft.education);
+            if (draft.community) setCommunity(draft.community);
+            if (draft.age) setAge(draft.age);
+            if (Array.isArray(draft.skills) && draft.skills.length) setSkills(draft.skills);
+            if (Array.isArray(draft.languages) && draft.languages.length) setLanguages(draft.languages);
+            if (draft.bio) setBio(draft.bio);
+          } catch { /* ignore malformed draft */ }
+          setLoadingProfile(false);
+          return;
+        }
+
         const token = await FirebaseAuthService.getIdToken().catch(() => null);
         const res = await fetch(`${API_BASE_URL}/api/housegirls/${userId}`, {
           headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -98,6 +122,13 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
 
   const handleSave = async () => {
     setError('');
+
+    // Persist current form state so fields survive a close/reopen if validation fails
+    sessionStorage.setItem(`profile_draft_${userId}`, JSON.stringify({
+      firstName, lastName, phone, role, location, experience,
+      accommodationType, expectedSalary, education, community,
+      age, skills, languages, bio,
+    }));
 
     if (!firstName.trim()) { setError('First name is required.'); return; }
     if (!lastName.trim()) { setError('Last name is required.'); return; }
@@ -154,6 +185,7 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
         setError('Could not save profile. Please try again.');
         return;
       }
+      sessionStorage.removeItem(`profile_draft_${userId}`);
       onComplete();
     } catch {
       setError('Something went wrong. Please try again.');
