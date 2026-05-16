@@ -85,11 +85,12 @@ const ScrollToTop = () => {
 };
 
 const PhoneGate = () => {
-  const { user, checkSession } = useAuth();
+  const { user, checkSession, loading } = useAuth();
   const location = useLocation();
 
   // Only block housegirl accounts on the housegirl dashboard
   if (location.pathname !== '/housegirl-dashboard') return null;
+  if (loading) return null; // wait for auth to resolve before deciding
   if (!user || user.user_type !== 'housegirl') return null;
   if (user.phone_number) return null;
 
