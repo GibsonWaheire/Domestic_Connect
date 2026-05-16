@@ -1,8 +1,8 @@
- import { Toaster } from "@/components/ui/toaster";
+import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
@@ -33,6 +33,8 @@ import ForHousegirlsPage from "./pages/ForHousegirlsPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AuthActionPage from "./pages/AuthActionPage";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
+import PhoneNumberModal from "@/components/PhoneNumberModal";
+import { useAuth } from "@/hooks/useAuthEnhanced";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +84,26 @@ const ScrollToTop = () => {
   return null;
 };
 
+const SKIP_PHONE_PATHS = ['/login', '/admin/login', '/auth/action'];
+
+const PhoneGate = () => {
+  const { user, checkSession } = useAuth();
+  const location = useLocation();
+  const [skipped, setSkipped] = useState(() => sessionStorage.getItem('phone_modal_skip') === '1');
+
+  if (SKIP_PHONE_PATHS.includes(location.pathname)) return null;
+  if (!user || user.user_type === 'admin' || user.user_type === 'agency') return null;
+  if (user.phone_number || skipped) return null;
+
+  return (
+    <PhoneNumberModal
+      user={user}
+      onSaved={async () => { await checkSession(); }}
+      onSkip={() => { sessionStorage.setItem('phone_modal_skip', '1'); setSkipped(true); }}
+    />
+  );
+};
+
 const App = () => (
   <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -97,6 +119,7 @@ const App = () => (
           <HelmetProvider>
             <TooltipProvider>
               <CookieConsentBanner />
+              <PhoneGate />
               <Toaster />
               <Sonner />
               <Routes>

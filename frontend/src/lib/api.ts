@@ -780,6 +780,9 @@ export const adminApi = {
       skills: string[];
       is_available: boolean;
       profile_complete: boolean;
+      phone_number: string;
+      first_name: string;
+      last_name: string;
     }>
   ) =>
     apiRequest<{ message: string }>(`/api/admin/housegirls/${userId}`, {

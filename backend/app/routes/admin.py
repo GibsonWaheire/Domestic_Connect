@@ -803,9 +803,21 @@ def edit_housegirl_profile(user_id):
             return jsonify({'error': 'User is not a housegirl'}), 400
 
         data = request.get_json() or {}
+
+        # Phone uniqueness check
+        new_phone = (data.get('phone_number') or '').strip()
+        if new_phone:
+            for u_doc in db.collection('users').where('phone_number', '==', new_phone).limit(5).stream():
+                if u_doc.id != user_id:
+                    return jsonify({'error': 'This phone number is already registered to another account.'}), 409
+            for hg in db.collection('housegirl_profiles').where('phone_number', '==', new_phone).limit(5).stream():
+                if hg.id != user_id:
+                    return jsonify({'error': 'This phone number is already registered to another account.'}), 409
+
         allowed = {
             'bio', 'location', 'experience', 'expected_salary',
             'accommodation_type', 'skills', 'is_available', 'profile_complete',
+            'phone_number', 'first_name', 'last_name',
         }
         updates = {k: v for k, v in data.items() if k in allowed}
         if not updates:
@@ -815,9 +827,22 @@ def edit_housegirl_profile(user_id):
         if not ref:
             return jsonify({'error': 'Housegirl profile not found'}), 404
 
-        updates['updated_at'] = datetime.utcnow().isoformat()
-        ref.set(updates, merge=True)
-        return jsonify({'message': 'Profile updated', 'updated': updates}), 200
+        # Fields that live on the users doc, not the profile doc
+        user_updates = {}
+        for field in ('phone_number', 'first_name', 'last_name'):
+            if field in updates:
+                user_updates[field] = updates.pop(field)
+
+        timestamp = datetime.utcnow().isoformat()
+        if user_updates:
+            user_updates['updated_at'] = timestamp
+            db.collection('users').document(user_id).set(user_updates, merge=True)
+
+        if updates:
+            updates['updated_at'] = timestamp
+            ref.set(updates, merge=True)
+
+        return jsonify({'message': 'Profile updated'}), 200
     except Exception as e:
         logger.error(f'edit_housegirl_profile error: {str(e)}')
         return jsonify({'error': 'Something went wrong. Please try again.'}), 500

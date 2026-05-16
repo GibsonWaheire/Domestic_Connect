@@ -166,6 +166,9 @@ const AdminDashboard: React.FC = () => {
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  const [editPhone, setEditPhone] = useState('');
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
   const [editBio, setEditBio] = useState('');
   const [editLocation, setEditLocation] = useState('');
   const [editExperience, setEditExperience] = useState('no_experience');
@@ -174,6 +177,7 @@ const AdminDashboard: React.FC = () => {
   const [editSkills, setEditSkills] = useState('');
   const [editAvailable, setEditAvailable] = useState(true);
   const [editProfileComplete, setEditProfileComplete] = useState(false);
+  const [editSaveError, setEditSaveError] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
 
   const [jobs, setJobs] = useState<AdminJobRow[]>([]);
@@ -343,6 +347,10 @@ const AdminDashboard: React.FC = () => {
       try {
         const d = await adminApi.getUserDetails(token, uid);
         setUserDetail(d);
+        setEditPhone(d.phone_number || '');
+        setEditFirstName(d.first_name || '');
+        setEditLastName(d.last_name || '');
+        setEditSaveError('');
         const hg = d.profile?.housegirl;
         if (hg) {
           setEditBio(hg.bio || '');
@@ -472,6 +480,7 @@ const AdminDashboard: React.FC = () => {
 
   const handleSaveHousegirlProfile = async () => {
     if (!token || !detailUserId) return;
+    setEditSaveError('');
     const skills = editSkills
       .split(/[,\n]/)
       .map((s) => s.trim())
@@ -479,6 +488,9 @@ const AdminDashboard: React.FC = () => {
     setSavingProfile(true);
     try {
       await adminApi.patchHousegirlProfile(token, detailUserId, {
+        ...(editPhone.trim() ? { phone_number: editPhone.trim() } : {}),
+        ...(editFirstName.trim() ? { first_name: editFirstName.trim() } : {}),
+        ...(editLastName.trim() ? { last_name: editLastName.trim() } : {}),
         bio: editBio,
         location: editLocation,
         experience: editExperience,
@@ -488,11 +500,11 @@ const AdminDashboard: React.FC = () => {
         is_available: editAvailable,
         profile_complete: editProfileComplete,
       });
-      toast({ title: 'Saved', description: 'Housegirl profile updated.' });
+      toast({ title: 'Saved', description: 'Profile updated.' });
       await fetchUserDetail(detailUserId);
     } catch (e) {
-      console.error(e);
-      toast({ title: 'Error', description: 'Failed to save profile', variant: 'destructive' });
+      const msg = e instanceof Error ? e.message : 'Failed to save profile.';
+      setEditSaveError(msg);
     } finally {
       setSavingProfile(false);
     }
@@ -1571,6 +1583,20 @@ const AdminDashboard: React.FC = () => {
               {userDetail.user_type === 'housegirl' && (
                 <div className="border rounded-lg p-4 space-y-3">
                   <h3 className="font-semibold">Edit profile</h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-xs text-muted-foreground">First name</label>
+                      <Input value={editFirstName} onChange={(e) => setEditFirstName(e.target.value)} placeholder="First name" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground">Last name</label>
+                      <Input value={editLastName} onChange={(e) => setEditLastName(e.target.value)} placeholder="Last name" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-xs text-muted-foreground">Phone number</label>
+                    <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="e.g. 0712345678" type="tel" />
+                  </div>
                   <div>
                     <label className="text-xs text-muted-foreground">Bio</label>
                     <Textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} rows={3} />
@@ -1629,6 +1655,9 @@ const AdminDashboard: React.FC = () => {
                     <span className="text-sm">Profile complete</span>
                     <Switch checked={editProfileComplete} onCheckedChange={setEditProfileComplete} />
                   </div>
+                  {editSaveError && (
+                    <p className="text-sm text-destructive">{editSaveError}</p>
+                  )}
                   <Button onClick={handleSaveHousegirlProfile} disabled={savingProfile}>
                     {savingProfile ? 'Saving…' : 'Save profile'}
                   </Button>
