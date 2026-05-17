@@ -36,7 +36,7 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
         : `${API_BASE_URL}/api/employers/${user.id}`;
       const body = isHousegirl ? { phone_number: cleaned } : { phone: cleaned };
 
-      const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+      const res = await fetch(url, { method: 'PATCH', headers, body: JSON.stringify(body) });
 
       if (res.status === 409) {
         const data = await res.json().catch(() => ({}));

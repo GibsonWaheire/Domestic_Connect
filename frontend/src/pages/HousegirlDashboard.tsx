@@ -100,6 +100,7 @@ const HousegirlDashboard = () => {
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPhotoReminder, setShowPhotoReminder] = useState(false);
   const photoReminderTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phoneConfirmedRef = useRef(false);
 
   const isProfileComplete = (data: Record<string, unknown>): boolean => {
     // Primary: backend sets this flag once all required fields are saved — never re-prompt
@@ -156,7 +157,10 @@ const HousegirlDashboard = () => {
           const data = await res.json();
 
           // Phone is highest priority — gate everything else behind it
-          if (!data.phone_number) {
+          if (data.phone_number) {
+            phoneConfirmedRef.current = true;
+          }
+          if (!data.phone_number && !phoneConfirmedRef.current) {
             setShowPhoneModal(true);
             return;
           }
@@ -185,7 +189,7 @@ const HousegirlDashboard = () => {
     return () => {
       if (photoReminderTimerRef.current) clearTimeout(photoReminderTimerRef.current);
     };
-  }, [resolvedUserId, user?.phone_number]);
+  }, [resolvedUserId]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -208,8 +212,9 @@ const HousegirlDashboard = () => {
         <PhoneNumberModal
           user={user}
           onSaved={(phone) => {
-            patchUser({ phone_number: phone });
+            phoneConfirmedRef.current = true;
             setShowPhoneModal(false);
+            patchUser({ phone_number: phone });
           }}
         />
       )}
