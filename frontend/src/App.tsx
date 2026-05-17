@@ -2,7 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { AuthProvider } from "@/hooks/useAuthEnhanced";
@@ -13,10 +13,10 @@ import HousegirlsListPage from "./pages/HousegirlsListPage";
 import HousegirlPage from "./pages/HousegirlPage";
 import AgencyPage from "./pages/AgencyPage";
 import AgencyMarketplace from "./pages/AgencyMarketplace";
-const EmployerDashboard = lazy(() => import("./pages/EmployerDashboard"));
-const HousegirlDashboard = lazy(() => import("./pages/HousegirlDashboard"));
-const AgencyDashboard = lazy(() => import("./pages/AgencyDashboard"));
-const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+import EmployerDashboard from "./pages/EmployerDashboard";
+import HousegirlDashboard from "./pages/HousegirlDashboard";
+import AgencyDashboard from "./pages/AgencyDashboard";
+import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import BrowseHousegirls from "./pages/BrowseHousegirls";
 
@@ -103,11 +103,6 @@ const App = () => (
               <PhoneGate />
               <Toaster />
               <Sonner />
-              <Suspense fallback={
-                <div className="min-h-screen flex items-center justify-center">
-                  <div className="w-8 h-8 border-2 border-black border-t-transparent rounded-full animate-spin" />
-                </div>
-              }>
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/home" element={<LandingPage />} />
@@ -174,7 +169,6 @@ const App = () => (
                 {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
                 <Route path="*" element={<NotFound />} />
               </Routes>
-              </Suspense>
             </TooltipProvider>
           </HelmetProvider>
         </AuthProvider>
