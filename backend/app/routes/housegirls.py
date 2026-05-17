@@ -126,7 +126,7 @@ def get_authenticated_user_id_from_request():
         user = next(user_doc, None)
         if not user:
             return None
-        return user.to_dict().get('id')
+        return user.to_dict().get('id') or normalize_id(user.id)
     except Exception:
         return None
 
