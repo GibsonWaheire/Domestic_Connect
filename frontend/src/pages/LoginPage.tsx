@@ -19,8 +19,16 @@ const LoginPage = () => {
       navigate('/admin-dashboard', { replace: true });
       return;
     }
-    if (user.user_type === 'agency') {
-      navigate('/agency-dashboard', { replace: true });
+    switch (user.user_type) {
+      case 'housegirl':
+        navigate('/housegirl-dashboard', { replace: true });
+        break;
+      case 'employer':
+        navigate('/employer-dashboard', { replace: true });
+        break;
+      case 'agency':
+        navigate('/agency-dashboard', { replace: true });
+        break;
     }
   }, [loading, user, navigate]);
   const handleGoogleSignIn = authContext?.handleGoogleSignIn || (async () => ({ error: 'Authentication is unavailable.' }));
