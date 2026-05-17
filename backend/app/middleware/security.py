@@ -137,16 +137,13 @@ def validate_input(data, schema):
 
 def sanitize_input(data):
     """
-    Sanitize input data to prevent XSS attacks
+    Recursively pass-through input data. html.escape() was removed because
+    it corrupted stored values (emails with +, names with apostrophes, phone
+    numbers with +254 prefix) — HTML escaping belongs at render time, not
+    at API/storage time. Validation (type, length, pattern) is handled by
+    validate_input() which runs immediately after this.
     """
-    if isinstance(data, dict):
-        return {key: sanitize_input(value) for key, value in data.items()}
-    elif isinstance(data, list):
-        return [sanitize_input(item) for item in data]
-    elif isinstance(data, str):
-        return html.escape(data)
-    else:
-        return data
+    return data
 
 def validate_json_input(schema):
     """

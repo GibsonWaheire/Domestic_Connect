@@ -60,7 +60,6 @@ class User(BaseModel):
             'marketplace_agency_id': getattr(self, 'marketplace_agency_id', None),
             'created_at': getattr(self, 'created_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'created_at', None), datetime) else getattr(self, 'created_at', datetime.utcnow().isoformat()),
             'updated_at': getattr(self, 'updated_at', datetime.utcnow()).isoformat() if isinstance(getattr(self, 'updated_at', None), datetime) else getattr(self, 'updated_at', datetime.utcnow().isoformat()),
-            'password_hash': getattr(self, 'password_hash', None)
         }
     
     def update_profile(self, **kwargs):

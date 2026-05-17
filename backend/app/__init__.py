@@ -72,7 +72,7 @@ def create_app(config_name=None):
         response = add_security_headers(response)
         response = add_performance_headers(response)
         response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
-        response.headers['Content-Security-Policy'] = "default-src 'self'; frame-ancestors 'self' https://accounts.google.com"
+        # CSP is set by add_security_headers — do not override it here to avoid conflicts
         return response
     
     # Register blueprints
