@@ -7,7 +7,16 @@ from app.services.auth_service import (
 )
 from app.models import User, Profile
 from app.firebase_init import db
-from app.middleware.security import rate_limit, rate_limit_by_email, validate_json_input, USER_SCHEMA
+from app.middleware.security import validate_json_input, USER_SCHEMA
+from app import limiter
+from flask_limiter.util import get_remote_address
+
+
+def _email_rate_key():
+    """Key function: rate-limit by email address, fall back to IP."""
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').lower().strip()
+    return f'email:{email}' if email else get_remote_address()
 from app.middleware.performance import cache_response, compress_response
 from app.middleware.logging import log_request, log_error, log_user_action
 from app.utils.audit_log import write_audit_log, ACTION_ROLE_CHANGED
@@ -23,7 +32,7 @@ auth_bp = Blueprint('auth', __name__)
 
 @auth_bp.route('/firebase_signup', methods=['POST'])
 @firebase_auth_required
-@rate_limit(max_requests=5, window_seconds=300)
+@limiter.limit("5 per 5 minutes")
 @log_request()
 @log_error()
 def firebase_signup():
@@ -173,7 +182,7 @@ def firebase_user():
 
 @auth_bp.route('/verify', methods=['POST'])
 @firebase_auth_required
-@rate_limit(max_requests=10, window_seconds=300)
+@limiter.limit("10 per 5 minutes")
 @log_request()
 @log_error()
 def verify_phone_auth():
@@ -492,7 +501,7 @@ def verify_phone_auth():
 
 @auth_bp.route('/update-role', methods=['POST'])
 @firebase_auth_required
-@rate_limit(max_requests=10, window_seconds=300)
+@limiter.limit("10 per 5 minutes")
 @log_request()
 @log_error()
 def update_role():
@@ -590,7 +599,7 @@ def update_role():
         }), 500
 
 @auth_bp.route('/signup', methods=['POST'])
-@rate_limit(max_requests=5, window_seconds=300)  # 5 requests per 5 minutes
+@limiter.limit("5 per 5 minutes")
 @validate_json_input(USER_SCHEMA)
 @log_request()
 @log_error()
@@ -643,7 +652,7 @@ def signup():
         }), 500
 
 @auth_bp.route('/login', methods=['POST'])
-@rate_limit(max_requests=10, window_seconds=300)  # 10 requests per 5 minutes
+@limiter.limit("10 per 5 minutes")
 @validate_json_input({'email': {'required': True, 'type': str}, 'password': {'required': True, 'type': str}})
 @log_request()
 @log_error()
@@ -754,7 +763,7 @@ def update_user_profile():
 
 
 @auth_bp.route('/password-reset', methods=['POST'])
-@rate_limit_by_email(max_requests=4, window_seconds=3600)  # 4 requests per email per hour
+@limiter.limit("4 per hour", key_func=_email_rate_key)
 @log_request()
 def request_password_reset():
     """

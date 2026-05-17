@@ -5,11 +5,12 @@ from flask_limiter.util import get_remote_address
 import os
 import sys
 
-# Module-level limiter — routes import this to apply decorators
+# Use Redis when available (multi-worker safe); fall back to memory for dev/CI
+_redis_url = os.environ.get('REDIS_URL') or os.environ.get('REDIS_PRIVATE_URL')
 limiter = Limiter(
     key_func=get_remote_address,
-    default_limits=[],          # no global limit; apply selectively
-    storage_uri="memory://",    # upgrade to redis:// in production if multiple workers
+    default_limits=[],          # no global limit; applied per route
+    storage_uri=_redis_url or "memory://",
 )
 
 # Add the backend directory to Python path
@@ -37,16 +38,19 @@ def create_app(config_name=None):
     if hasattr(config_class, 'init_app'):
         config_class.init_app(app)
         
-    allowed_origins = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "https://domestic-connect.up.railway.app",
-        "https://domestic-connect-production.up.railway.app",
-        "https://domesticconnect-production.up.railway.app",
-        "https://domesticconnect.vercel.app",
-        "https://domestic-connect.co.ke",
-        "https://www.domestic-connect.co.ke"
-    ]
+    # Read from env var in production; fall back to a minimal safe list.
+    # Stale railway subdomains have been removed — if Railway reassigns them
+    # to another tenant, they would otherwise have credentialed API access.
+    _cors_env = os.environ.get('CORS_ORIGINS', '')
+    if _cors_env:
+        allowed_origins = [o.strip() for o in _cors_env.split(',') if o.strip()]
+    else:
+        allowed_origins = [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            "https://domestic-connect.co.ke",
+            "https://www.domestic-connect.co.ke",
+        ]
 
     CORS(
         app,

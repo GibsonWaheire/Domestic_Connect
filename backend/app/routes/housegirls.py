@@ -619,15 +619,6 @@ def update_housegirl(housegirl_id):
                 user_updates['phone_number'] = data.get('phone_number')
             if 'profile_photo_url' in updates or 'photo_url' in updates:
                 user_updates['profile_photo_url'] = updates.get('profile_photo_url')
-            if user_updates:
-                user_updates['updated_at'] = timestamp
-                try:
-                    user_id_val = getattr(user, 'id', None)
-                    if user_id_val:
-                        db.collection('users').document(user_id_val).set(user_updates, merge=True)
-                except Exception as e:
-                    logger.warning(f'users collection sync failed (non-fatal): {e}')
-
             profile_docs = list(
                 db.collection('profiles')
                 .where('user_id', '==', getattr(user, 'id'))
@@ -639,14 +630,27 @@ def update_housegirl(housegirl_id):
             if not hg_doc.exists:
                 updates['user_id'] = getattr(user, 'id')
 
+            # Atomic batch: housegirl_profiles + users written together so a
+            # partial failure cannot leave phone_number inconsistent across collections.
+            batch = db.batch()
             if hg_doc.exists:
-                doc_ref.update(updates)
+                batch.update(doc_ref, updates)
             else:
-                doc_ref.set({
+                batch.set(doc_ref, {
                     'id': housegirl_id,
                     'created_at': timestamp,
                     **updates
                 })
+            if user_updates:
+                user_updates['updated_at'] = timestamp
+                user_id_val = getattr(user, 'id', None)
+                if user_id_val:
+                    batch.set(
+                        db.collection('users').document(user_id_val),
+                        user_updates,
+                        merge=True,
+                    )
+            batch.commit()
             logger.info(f'Profile saved: {doc_ref.path} -> {updates}')
 
         updated_doc = doc_ref.get()

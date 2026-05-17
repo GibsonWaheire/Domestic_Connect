@@ -1,80 +1,9 @@
 """
 Security middleware for the Flask application
 """
-import time
 from functools import wraps
 from flask import request, jsonify, g
-from collections import defaultdict, deque
 import re
-import html
-
-# Rate limiting storage (in production, use Redis)
-rate_limit_storage = defaultdict(lambda: deque(maxlen=100))
-
-# Separate store keyed by email for password-reset rate limiting
-email_rate_limit_storage = defaultdict(lambda: deque(maxlen=50))
-
-def rate_limit(max_requests=100, window_seconds=60):
-    """
-    Rate limiting decorator
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            # Get client IP
-            client_ip = request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
-            if client_ip:
-                client_ip = client_ip.split(',')[0].strip()
-            
-            # Get current time
-            current_time = time.time()
-            
-            # Clean old requests
-            while rate_limit_storage[client_ip] and rate_limit_storage[client_ip][0] < current_time - window_seconds:
-                rate_limit_storage[client_ip].popleft()
-            
-            # Check if limit exceeded
-            if len(rate_limit_storage[client_ip]) >= max_requests:
-                return jsonify({
-                    'error': 'Rate limit exceeded',
-                    'message': f'Too many requests. Maximum {max_requests} requests per {window_seconds} seconds.'
-                }), 429
-            
-            # Add current request
-            rate_limit_storage[client_ip].append(current_time)
-            
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
-
-def rate_limit_by_email(max_requests=4, window_seconds=3600):
-    """
-    Rate-limit a route by the `email` field in the JSON body.
-    Falls back to IP-based limiting if no email is present.
-    Intended for password-reset and other per-email-address throttles.
-    """
-    def decorator(f):
-        @wraps(f)
-        def decorated_function(*args, **kwargs):
-            data = request.get_json(silent=True) or {}
-            email = (data.get('email') or '').lower().strip()
-            key = f'email:{email}' if email else request.environ.get('HTTP_X_FORWARDED_FOR', request.remote_addr)
-
-            current_time = time.time()
-            bucket = email_rate_limit_storage[key]
-
-            while bucket and bucket[0] < current_time - window_seconds:
-                bucket.popleft()
-
-            if len(bucket) >= max_requests:
-                return jsonify({
-                    'error': 'Too many requests. Please wait before trying again.'
-                }), 429
-
-            bucket.append(current_time)
-            return f(*args, **kwargs)
-        return decorated_function
-    return decorator
 
 
 def validate_input(data, schema):
