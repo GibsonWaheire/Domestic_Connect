@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
@@ -8,9 +9,10 @@ import { User } from '@/lib/authUtils';
 interface PhoneNumberModalProps {
   user: User;
   onSaved: (phone: string) => void;
+  onDismiss?: () => void;
 }
 
-const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
+const PhoneNumberModal = ({ user, onSaved, onDismiss }: PhoneNumberModalProps) => {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -66,6 +68,15 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
         onInteractOutside={e => e.preventDefault()}
         onEscapeKeyDown={e => e.preventDefault()}
       >
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
         <DialogHeader>
           <DialogTitle>Add Your Phone Number</DialogTitle>
         </DialogHeader>
@@ -92,6 +103,14 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
         >
           {saving ? 'Saving...' : 'Save Phone Number'}
         </Button>
+        {onDismiss && (
+          <button
+            onClick={onDismiss}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors text-center mt-1"
+          >
+            I'll update this in my profile later
+          </button>
+        )}
       </DialogContent>
     </Dialog>
   );

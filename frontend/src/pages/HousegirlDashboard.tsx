@@ -216,6 +216,11 @@ const HousegirlDashboard = () => {
             setShowPhoneModal(false);
             patchUser({ phone_number: phone });
           }}
+          onDismiss={() => {
+            phoneConfirmedRef.current = true;
+            setShowPhoneModal(false);
+            setActiveTab('profile');
+          }}
         />
       )}
 
