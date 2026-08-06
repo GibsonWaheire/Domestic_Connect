@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 jobs_bp = Blueprint('jobs', __name__)
 
 @jobs_bp.route('/', methods=['GET'])
+@limiter.limit("60 per hour")
 def get_jobs():
     """Get all job postings with filtering"""
     try:
@@ -108,14 +109,12 @@ def get_jobs():
                 'employer': {
                     'id': emp_id,
                     'name': f"{emp_data.get('first_name', '')} {emp_data.get('last_name', '')}".strip(),
-                    'email': emp_data.get('email'),
-                    'phone_number': emp_data.get('phone_number'),
                     'company_name': comp_name,
                     'company_location': comp_loc
                 },
                 'applications_count': apps_count
             })
-        
+
         return jsonify({
             'jobs': result,
             'pagination': {
@@ -187,6 +186,7 @@ def get_my_applications():
 
 
 @jobs_bp.route('/<job_id>', methods=['GET'])
+@limiter.limit("60 per hour")
 def get_job(job_id):
     """Get specific job posting"""
     try:
@@ -237,14 +237,12 @@ def get_job(job_id):
             'employer': {
                 'id': emp_id,
                 'name': f"{emp_data.get('first_name', '')} {emp_data.get('last_name', '')}".strip(),
-                'email': emp_data.get('email'),
-                'phone_number': emp_data.get('phone_number'),
                 'company_name': comp_name,
                 'company_location': comp_loc
             },
             'applications_count': apps_count
         }), 200
-        
+
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({

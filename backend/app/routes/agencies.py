@@ -5,6 +5,7 @@ from app.services.auth_service import (
     agency_operator_required,
 )
 from app.firebase_init import db
+from app import limiter
 from datetime import datetime
 import uuid
 import logging
@@ -42,6 +43,7 @@ def agencies_health():
         }), 500
 
 @agencies_bp.route('/', methods=['GET'])
+@limiter.limit("60 per hour")
 def get_agencies():
     """Get all agencies"""
     try:
@@ -73,13 +75,11 @@ def get_agencies():
                 'verified_workers': agency.get('verified_workers'),
                 'successful_placements': agency.get('successful_placements'),
                 'description': agency.get('description'),
-                'contact_email': agency.get('contact_email'),
-                'contact_phone': agency.get('contact_phone'),
                 'website': agency.get('website'),
                 'created_at': agency.get('created_at'),
                 'updated_at': agency.get('updated_at')
             })
-        
+
         return jsonify({
             'agencies': result,
             'pagination': {
@@ -102,6 +102,7 @@ def get_agencies():
         }), 500
 
 @agencies_bp.route('/<agency_id>', methods=['GET'])
+@limiter.limit("60 per hour")
 def get_agency(agency_id):
     """Get specific agency"""
     try:
