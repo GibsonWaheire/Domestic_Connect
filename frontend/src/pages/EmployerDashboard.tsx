@@ -17,7 +17,7 @@ import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Building2, Briefcase, LogOut, MessageCircle, Phone,
+  Building2, Briefcase, CheckCircle, ClipboardList, LogOut, MessageCircle, Phone,
   Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X
 } from 'lucide-react';
 import {
@@ -170,6 +170,17 @@ const EmployerDashboard = () => {
     company_name?: string; description?: string;
   } | null>(null);
 
+  // My staffing requests
+  const [myRequests, setMyRequests] = useState<any[]>([]);
+  const [loadingRequests, setLoadingRequests] = useState(false);
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [submittingRequest, setSubmittingRequest] = useState(false);
+  const [requestFormData, setRequestFormData] = useState({
+    category: '', location: '', live_in: 'flexible',
+    start_date: '', salary_budget: '', duties: '', contact_phone: '',
+  });
+  const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
+
   // Real-time data
   const { dashboardData, loading: dataLoading, error: dataError, refreshing, refreshData, lastUpdated } = useRealTimeData();
 
@@ -222,6 +233,43 @@ const EmployerDashboard = () => {
   useEffect(() => {
     if (dataError) toast({ title: 'Data Sync Error', description: 'Failed to sync latest data.', variant: 'destructive' });
   }, [dataError]);
+
+  // Check payment verification status
+  useEffect(() => {
+    if (!user?.id) return;
+    const checkPayment = async () => {
+      try {
+        const token = await FirebaseAuthService.getIdToken().catch(() => null);
+        const res = await fetch(`${API_BASE_URL}/api/payments/credit-summary`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setPaymentVerified((data.total_credits ?? 0) > 0 || data.employer_active === true);
+        }
+      } catch { /* silent */ }
+    };
+    checkPayment();
+  }, [user?.id]);
+
+  // Load employer requests when tab is active
+  useEffect(() => {
+    if (activeSection !== 'requests') return;
+    const load = async () => {
+      setLoadingRequests(true);
+      try {
+        const token = await FirebaseAuthService.getIdToken().catch(() => null);
+        const res = await fetch(`${API_BASE_URL}/api/employer-requests/mine`, {
+          headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setMyRequests(data.requests || []);
+        }
+      } catch { /* silent */ } finally { setLoadingRequests(false); }
+    };
+    load();
+  }, [activeSection]);
 
   // Profile completion
   const employerCompletionItems = [
@@ -320,9 +368,39 @@ const EmployerDashboard = () => {
     }
   };
 
+  const handleSubmitRequest = async () => {
+    if (!requestFormData.category || !requestFormData.location) {
+      toast({ title: 'Missing fields', description: 'Please fill in category and location.', variant: 'destructive' });
+      return;
+    }
+    setSubmittingRequest(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/employer-requests/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify(requestFormData),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+      const data = await res.json();
+      toast({ title: 'Request submitted!', description: data.message });
+      setShowRequestForm(false);
+      setRequestFormData({ category: '', location: '', live_in: 'flexible', start_date: '', salary_budget: '', duties: '', contact_phone: '' });
+      // Reload requests list
+      const token2 = await FirebaseAuthService.getIdToken().catch(() => null);
+      const listRes = await fetch(`${API_BASE_URL}/api/employer-requests/mine`, {
+        headers: { ...(token2 ? { Authorization: `Bearer ${token2}` } : {}) },
+      });
+      if (listRes.ok) { const d = await listRes.json(); setMyRequests(d.requests || []); }
+    } catch (err: unknown) {
+      toast({ title: 'Failed to submit', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+    } finally { setSubmittingRequest(false); }
+  };
+
   const sidebarItems = [
     { id: 'housegirls', label: 'Browse Workers',  icon: Users },
     { id: 'contacts',   label: 'My Contacts',     icon: Phone },
+    { id: 'requests',   label: 'My Request',      icon: ClipboardList },
     { id: 'jobs',       label: 'Post a Job',      icon: Briefcase },
     { id: 'messages',   label: 'Messages',        icon: MessageCircle },
     { id: 'agency',     label: 'Agency Services', icon: Building2 },
@@ -533,6 +611,138 @@ const EmployerDashboard = () => {
           </div>
         );
 
+      case 'requests': {
+        const WORKER_CATEGORIES = [
+          'Housegirl / House Manager', 'Gardener', 'Gateman / Security',
+          'Nurse / Caregiver', 'Daily Casual',
+        ];
+        const STATUS_LABELS: Record<string, { label: string; className: string }> = {
+          in_progress: { label: 'In Progress', className: 'bg-amber-100 text-amber-800' },
+          matched:     { label: 'Matched',     className: 'bg-green-100 text-green-800' },
+          closed:      { label: 'Closed',      className: 'bg-gray-100 text-gray-500' },
+        };
+        return (
+          <div className="space-y-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">My Staffing Request</h2>
+                <p className="mt-1 text-sm text-gray-600">
+                  Tell us what kind of worker you need. We will match you within 24–48 hours.
+                </p>
+              </div>
+              <button type="button"
+                className="inline-flex items-center gap-2 rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 transition-colors"
+                onClick={() => setShowRequestForm(v => !v)}>
+                {showRequestForm ? <><X className="h-4 w-4" />Cancel</> : <><Plus className="h-4 w-4" />New Request</>}
+              </button>
+            </div>
+
+            {showRequestForm && (
+              <div className="rounded-xl border border-gray-200 bg-white p-6 space-y-4">
+                <h3 className="text-base font-semibold text-gray-900">Staffing Needs</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Worker Category *</label>
+                    <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      value={requestFormData.category}
+                      onChange={e => setRequestFormData(p => ({ ...p, category: e.target.value }))}>
+                      <option value="">Select category</option>
+                      {WORKER_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Your Location *</label>
+                    <input type="text" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholder="e.g. Westlands, Nairobi"
+                      value={requestFormData.location}
+                      onChange={e => setRequestFormData(p => ({ ...p, location: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Live-in Preference</label>
+                    <select className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      value={requestFormData.live_in}
+                      onChange={e => setRequestFormData(p => ({ ...p, live_in: e.target.value }))}>
+                      <option value="flexible">Flexible</option>
+                      <option value="live_in">Live-in</option>
+                      <option value="live_out">Live-out</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Preferred Start Date</label>
+                    <input type="date" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      value={requestFormData.start_date}
+                      min={new Date().toISOString().split('T')[0]}
+                      onChange={e => setRequestFormData(p => ({ ...p, start_date: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Monthly Budget (KES)</label>
+                    <input type="text" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholder="e.g. 15,000 – 20,000"
+                      value={requestFormData.salary_budget}
+                      onChange={e => setRequestFormData(p => ({ ...p, salary_budget: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+                    <input type="tel" className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      placeholder="+254 7XX XXX XXX"
+                      value={requestFormData.contact_phone}
+                      onChange={e => setRequestFormData(p => ({ ...p, contact_phone: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Key Duties / Requirements</label>
+                  <textarea className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-teal-500" rows={3}
+                    placeholder="Describe duties, special needs, languages preferred, etc."
+                    value={requestFormData.duties}
+                    onChange={e => setRequestFormData(p => ({ ...p, duties: e.target.value }))} />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                    onClick={() => setShowRequestForm(false)}>Cancel</button>
+                  <button type="button" disabled={submittingRequest}
+                    className="rounded-lg bg-teal-700 px-4 py-2 text-sm font-medium text-white hover:bg-teal-800 disabled:opacity-60"
+                    onClick={handleSubmitRequest}>
+                    {submittingRequest ? 'Submitting…' : 'Submit Request'}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {loadingRequests ? (
+              <div className="py-8 text-center text-sm text-gray-400">Loading…</div>
+            ) : myRequests.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center">
+                <ClipboardList className="h-10 w-10 text-gray-200 mx-auto mb-3" />
+                <p className="text-sm text-gray-500 font-medium">No staffing requests yet</p>
+                <p className="text-xs text-gray-400 mt-1">Click "New Request" to tell us what kind of worker you need.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {myRequests.map((req: any) => {
+                  const s = STATUS_LABELS[req.status] || { label: req.status, className: 'bg-gray-100 text-gray-500' };
+                  return (
+                    <div key={req.id} className="rounded-xl border border-gray-200 bg-white p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{req.category}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">{req.location} · {req.live_in?.replace('_', '-')}</p>
+                          {req.salary_budget && <p className="text-xs text-gray-500">Budget: KES {req.salary_budget}</p>}
+                          {req.duties && <p className="text-xs text-gray-600 mt-1 line-clamp-2">{req.duties}</p>}
+                          <p className="text-xs text-gray-400 mt-1">
+                            Submitted {req.submitted_at ? new Date(req.submitted_at).toLocaleDateString() : '—'}
+                          </p>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.className}`}>{s.label}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      }
+
       case 'messages':
         return <EmployerMessages />;
 
@@ -600,13 +810,25 @@ const EmployerDashboard = () => {
             {/* Welcome */}
             <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div>
-                <div className="flex items-center gap-3 mb-1">
+                <div className="flex items-center gap-3 mb-1 flex-wrap">
                   <h1 className="text-2xl font-bold text-gray-900">
                     {user?.first_name ? `Welcome back, ${user.first_name}` : 'Welcome, Employer'}
                   </h1>
                   <span className="bg-gray-100 text-gray-600 rounded-full px-3 py-1 text-xs font-medium border border-gray-200">
-                    👔 Employer Account
+                    Employer Account
                   </span>
+                  {paymentVerified === true && (
+                    <span className="flex items-center gap-1 rounded-full bg-green-100 text-green-800 px-3 py-1 text-xs font-medium border border-green-200">
+                      <CheckCircle className="h-3.5 w-3.5" /> Payment Verified
+                    </span>
+                  )}
+                  {paymentVerified === false && (
+                    <button type="button"
+                      className="flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-medium border border-amber-200 hover:bg-amber-200 transition-colors"
+                      onClick={() => navigate('/agency-marketplace')}>
+                      Pending Payment — Register Now
+                    </button>
+                  )}
                 </div>
                 <p className="text-gray-500 text-sm">Find and manage the perfect domestic staff for your home.</p>
               </div>
@@ -633,7 +855,7 @@ const EmployerDashboard = () => {
                   const isActive = activeSection === item.id;
                   return (
                     <Button key={item.id} type="button" variant="outline"
-                      onClick={() => item.id === 'housegirls' ? navigate('/housegirls') : setActiveSection(item.id)}
+                      onClick={() => setActiveSection(item.id)}
                       className={isActive ? 'bg-slate-900 text-white hover:bg-slate-800 hover:text-white border-slate-900' : 'text-gray-700'}>
                       <Icon className="h-4 w-4 mr-2" />{item.label}
                     </Button>
