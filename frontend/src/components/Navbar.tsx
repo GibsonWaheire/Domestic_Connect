@@ -66,14 +66,14 @@ const Navbar = () => {
 
                     {/* Desktop nav links */}
                     <nav className="hidden md:flex items-center gap-1">
-                        <Link to="/agency-marketplace" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
-                            Find a Worker
-                        </Link>
                         <Link to="/how-it-works" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
                             How It Works
                         </Link>
-                        <Link to="/agencies" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
-                            Agencies
+                        <Link to="/why-choose-us" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
+                            About Us
+                        </Link>
+                        <Link to="/contact-us" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
+                            Contact
                         </Link>
                         <Link to="/for-housegirls" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
                             Join as a Worker
@@ -122,7 +122,7 @@ const Navbar = () => {
                                 <Button onClick={() => navigate('/login')} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5 transition-all duration-200 font-medium">
                                     Login
                                 </Button>
-                                <Button onClick={() => navigate('/agency-marketplace')} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white h-[38px] px-5 transition-all duration-200 font-medium">
+                                <Button onClick={() => navigate('/login')} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white h-[38px] px-5 transition-all duration-200 font-medium">
                                     Find a Worker
                                 </Button>
                             </div>
@@ -178,9 +178,7 @@ const Navbar = () => {
                         )}
 
                         <div className="bg-gray-50 rounded-xl p-2 mb-3 flex flex-col">
-                            <button type="button" onClick={() => { close(); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find a Worker</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
-                            <button type="button" onClick={() => { close(); navigate('/agencies'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agencies</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/contact-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Contact Us</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/for-housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Join as a Worker</span><span className="text-gray-300 text-sm">›</span></button>
@@ -195,7 +193,7 @@ const Navbar = () => {
                             ) : (
                                 <>
                                     <Button onClick={() => { close(); navigate('/login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">Login</Button>
-                                    <Button onClick={() => { close(); navigate('/agency-marketplace'); }} className="w-full rounded-xl py-3 text-center font-medium bg-teal-700 text-white hover:bg-teal-800">Find a Worker →</Button>
+                                    <Button onClick={() => { close(); navigate('/login'); }} className="w-full rounded-xl py-3 text-center font-medium bg-teal-700 text-white hover:bg-teal-800">Find a Worker →</Button>
                                 </>
                             )}
                         </div>
@@ -209,7 +207,7 @@ const Navbar = () => {
                                 <span className="text-gray-200">·</span>
                                 <button type="button" onClick={() => { close(); navigate('/contact-us'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">Contact</button>
                                 <span className="text-gray-200">·</span>
-                                <button type="button" onClick={() => { close(); navigate('/agency-packages'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">Pricing</button>
+                                <button type="button" onClick={() => { close(); navigate('/how-it-works'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">How It Works</button>
                             </div>
                             <p className="text-[10px] text-gray-300 mt-3">© {new Date().getFullYear()} Domestic Connect</p>
                         </div>

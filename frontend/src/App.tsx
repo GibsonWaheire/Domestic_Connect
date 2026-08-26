@@ -11,8 +11,6 @@ import { AuthGuard } from "@/components/AuthGuard";
 import LandingPage from "./pages/LandingPage";
 import HousegirlsListPage from "./pages/HousegirlsListPage";
 import HousegirlPage from "./pages/HousegirlPage";
-import AgencyPage from "./pages/AgencyPage";
-import AgencyMarketplace from "./pages/AgencyMarketplace";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import HousegirlDashboard from "./pages/HousegirlDashboard";
 import AgencyDashboard from "./pages/AgencyDashboard";
@@ -24,7 +22,6 @@ import LoginPage from "./pages/LoginPage";
 import HowItWorksPage from "./pages/HowItWorksPage";
 import StatsPage from "./pages/StatsPage";
 import WhyChoosePage from "./pages/WhyChoosePage";
-import AgencyPackagesPage from "./pages/AgencyPackagesPage";
 import ContactUsPage from "./pages/ContactUsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
@@ -46,19 +43,14 @@ const queryClient = new QueryClient({
 });
 
 const PAGE_TITLES: Record<string, string> = {
-  "/": "Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers",
-  "/home": "Domestic Connect Kenya | Find Trusted House Help, Nannies & Caregivers",
-  "/housegirls": "Browse Domestic Workers | Domestic Connect Kenya",
-  "/browse-housegirls": "Browse House Help in Kenya | Domestic Connect",
-  "/agencies": "Domestic Worker Agencies in Kenya | Domestic Connect",
-  "/agency-marketplace": "Agency Marketplace | Domestic Connect Kenya",
+  "/": "Domestic Connect Kenya | Vetted Domestic Staff — Housegirls, Nannies, Caregivers",
+  "/home": "Domestic Connect Kenya | Vetted Domestic Staff — Housegirls, Nannies, Caregivers",
   "/how-it-works": "How It Works | Domestic Connect Kenya",
-  "/why-choose-us": "Why Choose Domestic Connect Kenya | Trusted House Help Platform",
-  "/agency-packages": "Agency Packages & Pricing | Domestic Connect Kenya",
+  "/why-choose-us": "Why Choose Domestic Connect Kenya | Vetted Domestic Staffing Agency",
   "/contact-us": "Contact Us | Domestic Connect Kenya",
   "/contact": "Contact Us | Domestic Connect Kenya",
-  "/login": "Login | Domestic Connect Kenya",
-  "/for-housegirls": "Find House Help Jobs in Kenya | Domestic Connect",
+  "/login": "Register or Log In | Domestic Connect Kenya",
+  "/for-housegirls": "Join as a Domestic Worker | Domestic Connect Kenya",
   "/privacy-policy": "Privacy Policy | Domestic Connect Kenya",
   "/terms": "Terms of Service | Domestic Connect Kenya",
 };
@@ -113,15 +105,17 @@ const App = () => (
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/why-choose-us" element={<WhyChoosePage />} />
-                <Route path="/agency-packages" element={<AgencyPackagesPage />} />
+                {/* Suppressed agency/browse routes — redirect without deleting files */}
+                <Route path="/agency-packages" element={<Navigate to="/how-it-works" replace />} />
+                <Route path="/agencies" element={<Navigate to="/" replace />} />
+                <Route path="/agency-marketplace" element={<Navigate to="/login" replace />} />
+                <Route path="/browse-housegirls" element={<Navigate to="/" replace />} />
                 <Route path="/contact-us" element={<ContactUsPage />} />
                 <Route path="/contact" element={<ContactUsPage />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/housegirls" element={<HousegirlsListPage />} />
-                <Route path="/agencies" element={<AgencyPage />} />
-                <Route path="/agency-marketplace" element={<AgencyMarketplace />} />
-                <Route path="/browse-housegirls" element={<BrowseHousegirls />} />
+                <Route path="/browse-housegirls-admin" element={<BrowseHousegirls />} />
                 <Route
                   path="/payment-callback"
                   element={

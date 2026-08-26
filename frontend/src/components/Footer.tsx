@@ -29,12 +29,10 @@ const Footer = () => {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-[#aaa] mb-3">For Employers</p>
           <div className="flex flex-col gap-2 text-sm">
-            <Link to="/agency-marketplace" className="text-white hover:text-[#aaa] transition-colors">Find a Worker</Link>
+            <Link to="/login" className="text-white hover:text-[#aaa] transition-colors">Find a Worker</Link>
             <Link to="/how-it-works" className="text-white hover:text-[#aaa] transition-colors">How It Works</Link>
             <Link to="/why-choose-us" className="text-white hover:text-[#aaa] transition-colors">Why Choose Us</Link>
-            <Link to="/agency-packages" className="text-white hover:text-[#aaa] transition-colors">Pricing</Link>
             <Link to="/contact-us" className="text-white hover:text-[#aaa] transition-colors">Contact Us</Link>
-            <Link to="/agencies" className="text-white hover:text-[#aaa] transition-colors">Our Agencies</Link>
           </div>
         </div>
 

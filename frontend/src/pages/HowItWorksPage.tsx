@@ -131,7 +131,7 @@ const HowItWorksPage = () => {
           </div>
           <div className="text-center mt-12">
             <Button
-              onClick={() => navigate('/agency-marketplace')}
+              onClick={() => navigate('/login')}
               className="rounded-full bg-teal-700 hover:bg-teal-800 text-white h-12 px-10 text-base"
             >
               Find a Worker Now →
@@ -241,7 +241,7 @@ const HowItWorksPage = () => {
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <Button
-              onClick={() => navigate('/agency-marketplace')}
+              onClick={() => navigate('/login')}
               className="rounded-full bg-white text-teal-700 hover:bg-teal-50 font-semibold h-12 px-8"
             >
               Find a Worker →

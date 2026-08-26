@@ -174,7 +174,7 @@ const LandingPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mb-6">
               <Button
-                onClick={() => navigate('/agency-marketplace')}
+                onClick={() => navigate('/login')}
                 className="rounded-full bg-teal-700 hover:bg-teal-800 text-white h-12 px-8 text-[15px] w-full sm:w-auto"
               >
                 Find a Worker →
@@ -223,7 +223,7 @@ const LandingPage = () => {
                   <div className="absolute bottom-9 left-4 right-4">
                     <p className="text-white font-semibold text-sm drop-shadow">Every worker personally vetted by us</p>
                     <Button
-                      onClick={() => navigate('/agency-marketplace')}
+                      onClick={() => navigate('/login')}
                       size="sm"
                       className="mt-2 rounded-full bg-white text-[#111] hover:bg-gray-100 text-xs px-4 h-7 shadow"
                     >
@@ -270,7 +270,7 @@ const LandingPage = () => {
                   ))}
                 </div>
                 <Button
-                  onClick={() => navigate('/agency-marketplace')}
+                  onClick={() => navigate('/login')}
                   className="mt-7 rounded-full bg-teal-600 hover:bg-teal-700 text-white text-xs px-4 h-8 w-full"
                 >
                   Find a Worker →
@@ -306,7 +306,7 @@ const LandingPage = () => {
               <div
                 key={title}
                 className="bg-[#F9FAFB] border border-gray-100 rounded-xl p-6 flex flex-col gap-4 hover:shadow-md transition-shadow cursor-pointer group"
-                onClick={() => navigate('/agency-marketplace')}
+                onClick={() => navigate('/login')}
               >
                 <div className="w-12 h-12 rounded-full bg-teal-50 text-teal-700 flex items-center justify-center group-hover:bg-teal-100 transition-colors">
                   {icon}
@@ -364,7 +364,7 @@ const LandingPage = () => {
           </div>
           <div className="text-center mt-10">
             <Button
-              onClick={() => navigate('/agency-marketplace')}
+              onClick={() => navigate('/login')}
               className="rounded-full bg-teal-700 hover:bg-teal-800 text-white h-12 px-10 text-[15px]"
             >
               Get Started — Find a Worker

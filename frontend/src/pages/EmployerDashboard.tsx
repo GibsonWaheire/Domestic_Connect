@@ -17,7 +17,7 @@ import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Building2, Briefcase, CheckCircle, ClipboardList, LogOut, MessageCircle, Phone,
+  Briefcase, CheckCircle, ClipboardList, LogOut, MessageCircle, Phone,
   Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X
 } from 'lucide-react';
 import {
@@ -398,13 +398,12 @@ const EmployerDashboard = () => {
   };
 
   const sidebarItems = [
-    { id: 'housegirls', label: 'Browse Workers',  icon: Users },
-    { id: 'contacts',   label: 'My Contacts',     icon: Phone },
-    { id: 'requests',   label: 'My Request',      icon: ClipboardList },
-    { id: 'jobs',       label: 'Post a Job',      icon: Briefcase },
-    { id: 'messages',   label: 'Messages',        icon: MessageCircle },
-    { id: 'agency',     label: 'Agency Services', icon: Building2 },
-    { id: 'settings',   label: 'Settings',        icon: SettingsIcon },
+    { id: 'housegirls', label: 'Browse Workers', icon: Users },
+    { id: 'contacts',   label: 'My Contacts',    icon: Phone },
+    { id: 'requests',   label: 'My Request',     icon: ClipboardList },
+    { id: 'jobs',       label: 'Post a Job',     icon: Briefcase },
+    { id: 'messages',   label: 'Messages',       icon: MessageCircle },
+    { id: 'settings',   label: 'Settings',       icon: SettingsIcon },
   ] as const;
 
   // ─── Section renderer ────────────────────────────────────────────────────────
@@ -749,33 +748,6 @@ const EmployerDashboard = () => {
       case 'settings':
         return <Settings stats={stats} profileData={employerProfileData} />;
 
-      case 'agency':
-        return (
-          <div className="space-y-4">
-            <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <h2 className="text-lg font-semibold text-gray-900">Agency Services</h2>
-              <p className="mt-1 text-sm text-gray-600">
-                Explore trusted agency options and packages when you need fully managed hiring support.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-base font-semibold text-gray-900">Agency Marketplace</p>
-                <p className="mt-1 text-sm text-gray-600">Compare agencies by services and location before you hire.</p>
-                <Button type="button" className="mt-3" onClick={() => navigate('/agency-marketplace')}>
-                  Browse Agencies
-                </Button>
-              </div>
-              <div className="rounded-xl border border-gray-200 bg-white p-4">
-                <p className="text-base font-semibold text-gray-900">Agency Packages</p>
-                <p className="mt-1 text-sm text-gray-600">View package plans with replacement and support options.</p>
-                <Button type="button" variant="outline" className="mt-3" onClick={() => navigate('/agency-packages')}>
-                  View Packages
-                </Button>
-              </div>
-            </div>
-          </div>
-        );
 
       default:
         return null;
@@ -825,8 +797,8 @@ const EmployerDashboard = () => {
                   {paymentVerified === false && (
                     <button type="button"
                       className="flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-medium border border-amber-200 hover:bg-amber-200 transition-colors"
-                      onClick={() => navigate('/agency-marketplace')}>
-                      Pending Payment — Register Now
+                      onClick={() => setActiveSection('requests')}>
+                      Pending Payment — Submit Request
                     </button>
                   )}
                 </div>

@@ -96,10 +96,10 @@ const PrivacyPolicy = () => {
           <div>
             <p className="text-[11px] font-bold uppercase tracking-wide text-[#aaa] mb-3">For Employers</p>
             <div className="flex flex-col gap-2 text-sm">
-              <Link to="/housegirls" className="text-white hover:text-[#aaa] transition-colors">Find a Housegirl</Link>
+              <Link to="/login" className="text-white hover:text-[#aaa] transition-colors">Find a Worker</Link>
               <Link to="/how-it-works" className="text-white hover:text-[#aaa] transition-colors">How It Works</Link>
-              <Link to="/agency-packages" className="text-white hover:text-[#aaa] transition-colors">Pricing</Link>
-              <Link to="/agency-marketplace" className="text-white hover:text-[#aaa] transition-colors">Agency Marketplace</Link>
+              
+              
             </div>
           </div>
           <div>
