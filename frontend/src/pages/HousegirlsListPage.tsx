@@ -815,6 +815,9 @@ const HousegirlsListPage = () => {
             verified_workers: 0,
             successful_placements: 0,
           }}
+          targetProfileId={selectedProfileId || undefined}
+          housegirlId={selectedProfileId || undefined}
+          redirectAfter="/housegirls"
           onClose={() => {
             setShowPaymentModal(false);
             setSelectedProfileId(null);

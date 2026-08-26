@@ -43,6 +43,9 @@ interface PaymentModalProps {
     contact_phone?: string;
     website?: string;
   };
+  targetProfileId?: string;
+  housegirlId?: string;
+  redirectAfter?: string;
   onClose: () => void;
   onSuccess: (paymentData: {
     id: string;
@@ -62,7 +65,7 @@ interface PaymentModalProps {
   }) => void;
 }
 
-const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: PaymentModalProps) => {
+const PaymentModal = ({ package: packageDetails, agency, targetProfileId, housegirlId, redirectAfter, onClose, onSuccess }: PaymentModalProps) => {
   const { user } = useAuth();
   const { showErrorNotification } = useNotificationActions();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -89,6 +92,8 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
         body: JSON.stringify({
           package_id: packageDetails.id,
           amount: packageDetails.price,
+          ...(targetProfileId ? { target_profile_id: targetProfileId } : {}),
+          ...(housegirlId ? { housegirl_id: housegirlId } : {}),
         }),
       });
 
@@ -109,7 +114,9 @@ const PaymentModal = ({ package: packageDetails, agency, onClose, onSuccess }: P
         agency_fee: packageDetails.agencyFee,
         platform_fee: packageDetails.platformFee,
         agency_name: agency.name,
-        redirect_after: '/employer-dashboard',
+        target_profile_id: targetProfileId || null,
+        housegirl_id: housegirlId || null,
+        redirect_after: redirectAfter || '/employer-dashboard',
       }));
 
       // Validate redirect_url is a Pesapal domain before redirecting (prevent open redirect)

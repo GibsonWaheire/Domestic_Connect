@@ -80,7 +80,7 @@ const PaymentCallbackPage = () => {
           }
 
           // Only allow known relative paths — prevent open redirect via localStorage tampering
-          const ALLOWED_REDIRECTS = ['/employer-dashboard', '/housegirl-dashboard', '/agency-dashboard'];
+          const ALLOWED_REDIRECTS = ['/employer-dashboard', '/housegirl-dashboard', '/agency-dashboard', '/housegirls'];
           const raw = pendingData?.redirect_after;
           const redirectTo = ALLOWED_REDIRECTS.includes(raw) ? raw : '/employer-dashboard';
           setTimeout(() => navigate(redirectTo), 3000);
