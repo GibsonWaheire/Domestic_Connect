@@ -232,6 +232,19 @@ def _complete_purchase(purchase_doc_id, purchase_data, pesapal_status_data):
                 details={'access_id': access_id, 'housegirl_id': housegirl_id, 'job_id': job_id, 'package_id': APPLY_CONTACT_UNLOCK_PACKAGE_ID}
             )
 
+    # Activate employer plan (diy / concierge)
+    pkg_id = purchase_data.get('package_id', '')
+    if pkg_id in ('employer_plan_diy', 'employer_plan_concierge'):
+        ep_user_id = purchase_data.get('user_id')
+        if ep_user_id:
+            plan_value = 'diy' if pkg_id == 'employer_plan_diy' else 'concierge'
+            db.collection('users').document(ep_user_id).set({
+                'employer_plan': plan_value,
+                'employer_plan_activated_at': datetime.utcnow().isoformat(),
+                'updated_at': datetime.utcnow().isoformat(),
+            }, merge=True)
+            logger.info('Employer plan activated: user=%s plan=%s', ep_user_id, plan_value)
+
     write_audit_log(
         user_id=purchase_data.get('user_id', 'unknown'),
         action=ACTION_PAYMENT_COMPLETED,
@@ -724,6 +737,119 @@ def get_contact_credits():
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@payments_bp.route('/credit-summary', methods=['GET'])
+@firebase_auth_required
+def get_credit_summary():
+    """Return contact credits + employer plan for the employer dashboard."""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        user_id = getattr(user, 'id')
+        summary = get_contact_credit_summary(user_id)
+        summary['employer_active'] = summary['total_credits'] > 0
+
+        # Check for active employer plan (diy / concierge)
+        plan_docs = list(
+            db.collection('user_purchases')
+            .where('user_id', '==', user_id)
+            .where('package_id', 'in', ['employer_plan_diy', 'employer_plan_concierge'])
+            .where('status', '==', 'completed')
+            .limit(1)
+            .stream()
+        )
+        if plan_docs:
+            pkg = plan_docs[0].to_dict().get('package_id', '')
+            summary['employer_plan'] = 'diy' if 'diy' in pkg else 'concierge'
+        else:
+            summary['employer_plan'] = None
+
+        return jsonify(summary), 200
+    except Exception as e:
+        logger.error('credit_summary error: %s', e)
+        return jsonify({'error': 'Something went wrong.'}), 500
+
+
+EMPLOYER_PLAN_PRICE = 1500
+
+
+@payments_bp.route('/initiate-employer-plan', methods=['POST'])
+@firebase_auth_required
+@limiter.limit('5 per hour')
+def initiate_employer_plan():
+    """Create a Pesapal KES 1,500 payment for employer DIY or Concierge plan."""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        user_id = getattr(user, 'id')
+
+        data = request.get_json(silent=True) or {}
+        plan = data.get('plan', '')
+        if plan not in ('diy', 'concierge'):
+            return jsonify({'error': 'Invalid plan. Choose diy or concierge.'}), 400
+
+        package_id = f'employer_plan_{plan}'
+
+        # Reject if they already have the OTHER plan active
+        existing = list(
+            db.collection('user_purchases')
+            .where('user_id', '==', user_id)
+            .where('package_id', 'in', ['employer_plan_diy', 'employer_plan_concierge'])
+            .where('status', '==', 'completed')
+            .limit(1)
+            .stream()
+        )
+        if existing:
+            existing_plan = existing[0].to_dict().get('package_id', '')
+            if existing_plan != package_id:
+                return jsonify({'error': 'You already have an active plan. Only one plan is allowed.'}), 409
+            return jsonify({'error': 'This plan is already active on your account.'}), 409
+
+        purchase_id = str(uuid.uuid4())
+        label = 'DIY Job Posting' if plan == 'diy' else 'Concierge Matching'
+        email = getattr(user, 'email', '') or ''
+        first_name = getattr(user, 'first_name', '') or ''
+
+        token = get_pesapal_token()
+        pesapal_response = submit_pesapal_order(
+            token=token,
+            amount=EMPLOYER_PLAN_PRICE,
+            purchase_id=purchase_id,
+            description=f'Employer Plan — {label}',
+            billing_email=email,
+            billing_first_name=first_name,
+        )
+
+        order_tracking_id = pesapal_response.get('order_tracking_id')
+        redirect_url = pesapal_response.get('redirect_url')
+        if not order_tracking_id or not redirect_url:
+            logger.error('Pesapal employer plan failed: %s', pesapal_response)
+            return jsonify({'error': 'Failed to create payment. Please try again.'}), 502
+
+        db.collection('user_purchases').document(purchase_id).set({
+            'id': purchase_id,
+            'user_id': user_id,
+            'package_id': package_id,
+            'employer_plan': plan,
+            'amount': EMPLOYER_PLAN_PRICE,
+            'status': 'pending',
+            'order_tracking_id': order_tracking_id,
+            'merchant_reference': purchase_id,
+            'purchase_date': datetime.utcnow().isoformat(),
+        })
+
+        return jsonify({
+            'redirect_url': redirect_url,
+            'order_tracking_id': order_tracking_id,
+            'purchase_id': purchase_id,
+        }), 200
+
+    except Exception as e:
+        logger.error('initiate_employer_plan error: %s', e)
+        return jsonify({'error': 'Internal server error. Please try again.'}), 500
 
 
 @payments_bp.route('/job-access-status', methods=['GET'])

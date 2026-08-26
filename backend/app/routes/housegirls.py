@@ -453,6 +453,10 @@ def get_housegirl(housegirl_id):
             first_name = name_parts[0]
             last_name = ' '.join(name_parts[1:]).strip() if len(name_parts) > 1 else ''
 
+        # Fallback: phone stored directly on housegirl_profiles doc (e.g. written by /api/workers/complete-profile)
+        if not phone_number:
+            phone_number = housegirl.get('phone_number', '')
+
         current_user_id = get_authenticated_user_id_from_request()
         # Owner can always see their own contact details
         is_own_profile = current_user_id and (
@@ -493,6 +497,7 @@ def get_housegirl(housegirl_id):
             'phone_number': phone_number if can_view_contact else '',
             'email': email if can_view_contact else 'Unlock to view',
             'profile_complete': housegirl.get('profile_complete', False),
+            'category': housegirl.get('category', ''),
             'created_at': housegirl.get('created_at'),
             'updated_at': housegirl.get('updated_at')
         }), 200

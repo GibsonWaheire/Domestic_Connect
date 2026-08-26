@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import {
   CheckCircle, MessageCircle, Loader2, AlertCircle,
-  ChevronRight, ChevronLeft, User, MapPin, Briefcase, FileText, Star
+  ChevronRight, ChevronLeft, MapPin, Briefcase, FileText, Star
 } from 'lucide-react';
 import { useAuthEnhanced } from '@/hooks/useAuthEnhanced';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
@@ -13,13 +13,16 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 
 const WA_NUMBER = '254726899113';
+const PENDING_CAT_KEY = 'dc_pending_worker_category';
+
 const CATEGORIES = [
-  'Housegirl / House Manager',
-  'Gardener',
-  'Gateman / Security',
-  'Nurse / Caregiver',
-  'Daily Casual',
+  { label: 'Housegirl / House Manager', icon: '🧹', desc: 'Cleaning, cooking, household management' },
+  { label: 'Gardener', icon: '🌿', desc: 'Garden maintenance, landscaping' },
+  { label: 'Gateman / Security', icon: '🛡️', desc: 'Gate security, property watchman' },
+  { label: 'Nurse / Caregiver', icon: '💊', desc: 'Patient care, elderly & child care' },
+  { label: 'Daily Casual', icon: '📋', desc: 'General daily household tasks' },
 ];
+
 const COUNTIES = [
   'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret / Uasin Gishu',
   'Machakos', 'Kiambu', 'Kajiado', 'Nyeri', 'Muranga', 'Thika',
@@ -33,7 +36,6 @@ const buildWaLink = (name: string, category: string) => {
   return `https://wa.me/${WA_NUMBER}?text=${msg}`;
 };
 
-// ─── Google SVG ───────────────────────────────────────────────────────────────
 const GoogleIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -55,14 +57,14 @@ const ForWorkersPage = () => {
   const paidCategory = searchParams.get('category') || '';
   const paidName = searchParams.get('name') || '';
 
-  // Active path: 'self' | 'assisted'
   const [path, setPath] = useState<'self' | 'assisted'>('self');
-
-  // Self-register: step 1–3
   const [step, setStep] = useState(1);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+
+  // Pre-auth category selection
+  const [pendingCategory, setPendingCategory] = useState('');
 
   // Step 1 fields
   const [phone, setPhone] = useState('');
@@ -82,11 +84,20 @@ const ForWorkersPage = () => {
   const [photoUrl, setPhotoUrl] = useState('');
   const [cvUrl, setCvUrl] = useState('');
 
-  // WhatsApp-assisted path
+  // Assisted path
   const [assistedName, setAssistedName] = useState('');
   const [assistedCategory, setAssistedCategory] = useState('');
   const [assistedPhone, setAssistedPhone] = useState('');
   const [assistedPayLoading, setAssistedPayLoading] = useState(false);
+
+  // On mount, read pending category from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem(PENDING_CAT_KEY);
+    if (saved) {
+      setPendingCategory(saved);
+      setCategory(saved);
+    }
+  }, []);
 
   // Redirect logged-in workers with complete profile to dashboard
   useEffect(() => {
@@ -95,9 +106,18 @@ const ForWorkersPage = () => {
     }
   }, [user, loading, navigate]);
 
-  // ─── Handlers ────────────────────────────────────────────────────────────────
+  const handleCategorySelect = (cat: string) => {
+    setPendingCategory(cat);
+    setCategory(cat);
+    localStorage.setItem(PENDING_CAT_KEY, cat);
+  };
 
   const handleGoogleClick = async () => {
+    if (!pendingCategory) {
+      setErrorMsg('Please select your role first.');
+      return;
+    }
+    sessionStorage.setItem('return_after_signup', '/for-workers');
     setGoogleLoading(true);
     setErrorMsg('');
     try {
@@ -177,6 +197,7 @@ const ForWorkersPage = () => {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Submission failed');
+      localStorage.removeItem(PENDING_CAT_KEY);
       setSubmitStatus('success');
     } catch (e: any) {
       setErrorMsg(e.message || 'Something went wrong. Please try again.');
@@ -219,17 +240,14 @@ const ForWorkersPage = () => {
   const workerName = user?.first_name ? `${user.first_name} ${(user as any).last_name || ''}`.trim() : '';
   const isWorkerLoggedIn = user && user.user_type === 'housegirl';
 
-  // ─── Render ───────────────────────────────────────────────────────────────────
+  // ─── Paid success screen ──────────────────────────────────────────────────────
 
-  // Paid success screen (after KES 300 payment)
   if (paidSuccess) {
     const displayCategory = paidCategory || 'domestic worker';
     const displayName = paidName || 'Worker';
     return (
       <div className="min-h-screen bg-[#F9FAFB]">
-        <Helmet>
-          <title>Registration Paid | Domestic Connect Kenya</title>
-        </Helmet>
+        <Helmet><title>Registration Paid | Domestic Connect Kenya</title></Helmet>
         <Navbar />
         <div className="max-w-lg mx-auto px-4 py-20 text-center">
           <div className="w-20 h-20 rounded-full bg-teal-100 text-teal-600 flex items-center justify-center mx-auto mb-6">
@@ -285,7 +303,6 @@ const ForWorkersPage = () => {
         </div>
       </section>
 
-      {/* Path selector */}
       <section className="py-10 md:py-14">
         <div className="max-w-2xl mx-auto px-4">
 
@@ -311,41 +328,72 @@ const ForWorkersPage = () => {
           {path === 'self' && (
             <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
 
-              {/* Not logged in */}
-              {!isWorkerLoggedIn && !loading && (
-                <div className="p-8 text-center">
-                  <div className="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-5">
-                    <User size={28} className="text-teal-700" />
-                  </div>
-                  <h2 className="text-xl font-bold mb-2">Create Your Worker Account</h2>
-                  <p className="text-gray-500 text-sm mb-8 max-w-sm mx-auto">
-                    Sign in with Google to start your free registration. We'll collect your details step by step.
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleGoogleClick}
-                    disabled={googleLoading}
-                    className="inline-flex items-center gap-3 justify-center bg-white border border-gray-200 rounded-xl h-14 px-8 text-base font-medium text-[#111] hover:bg-gray-50 shadow-sm transition-all w-full max-w-sm mx-auto disabled:opacity-60"
-                  >
-                    {googleLoading ? <Loader2 className="animate-spin h-5 w-5" /> : <GoogleIcon />}
-                    {googleLoading ? 'Signing in…' : 'Continue with Google'}
-                  </button>
-                  {errorMsg && (
-                    <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 max-w-sm mx-auto">
-                      <AlertCircle size={16} className="shrink-0" />{errorMsg}
-                    </div>
-                  )}
-                  <p className="mt-6 text-xs text-gray-400">
-                    Already have an account?{' '}
-                    <Link to="/login" className="underline text-gray-600">Log in</Link>
-                  </p>
-                </div>
-              )}
-
               {/* Loading */}
               {loading && (
                 <div className="p-12 flex justify-center">
                   <Loader2 className="animate-spin text-teal-600 h-8 w-8" />
+                </div>
+              )}
+
+              {/* Not logged in — step 0: pick category first */}
+              {!isWorkerLoggedIn && !loading && (
+                <div className="p-8">
+                  <h2 className="text-xl font-bold mb-1 text-center">What type of work are you applying for?</h2>
+                  <p className="text-gray-500 text-sm mb-6 text-center">Select your role to get started</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-8">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.label}
+                        type="button"
+                        onClick={() => handleCategorySelect(cat.label)}
+                        className={`flex items-start gap-3 rounded-xl border-2 px-4 py-3.5 text-left transition-all ${pendingCategory === cat.label
+                          ? 'border-[#0B6B5E] bg-teal-50'
+                          : 'border-gray-200 hover:border-teal-300 hover:bg-gray-50'}`}
+                      >
+                        <span className="text-2xl leading-none mt-0.5">{cat.icon}</span>
+                        <div>
+                          <p className={`text-sm font-semibold ${pendingCategory === cat.label ? 'text-[#0B6B5E]' : 'text-gray-800'}`}>{cat.label}</p>
+                          <p className="text-xs text-gray-400 mt-0.5">{cat.desc}</p>
+                        </div>
+                        {pendingCategory === cat.label && (
+                          <CheckCircle size={18} className="text-[#0B6B5E] ml-auto shrink-0 mt-0.5" />
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {pendingCategory ? (
+                    <>
+                      <div className="rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 mb-5 flex items-center gap-3">
+                        <CheckCircle size={18} className="text-teal-600 shrink-0" />
+                        <p className="text-sm text-teal-800">
+                          Registering as: <strong>{pendingCategory}</strong>. Sign in with Google to continue.
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleGoogleClick}
+                        disabled={googleLoading}
+                        className="inline-flex items-center gap-3 justify-center bg-white border border-gray-200 rounded-xl h-14 px-8 text-base font-medium text-[#111] hover:bg-gray-50 shadow-sm transition-all w-full disabled:opacity-60"
+                      >
+                        {googleLoading ? <Loader2 className="animate-spin h-5 w-5" /> : <GoogleIcon />}
+                        {googleLoading ? 'Signing in…' : `Continue as ${pendingCategory.split(' /')[0]}`}
+                      </button>
+                    </>
+                  ) : (
+                    <p className="text-center text-sm text-gray-400 mt-2">Select your role above to proceed</p>
+                  )}
+
+                  {errorMsg && (
+                    <div className="mt-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                      <AlertCircle size={16} className="shrink-0" />{errorMsg}
+                    </div>
+                  )}
+                  <p className="mt-6 text-xs text-gray-400 text-center">
+                    Already have an account?{' '}
+                    <Link to="/login" className="underline text-gray-600">Log in</Link>
+                  </p>
                 </div>
               )}
 
@@ -367,7 +415,6 @@ const ForWorkersPage = () => {
                         </div>
                       ))}
                     </div>
-
                     <p className="text-sm text-gray-500 mb-6">
                       Welcome, <strong>{workerName || user?.email}</strong>. Fill in your details carefully — this is what employers see.
                     </p>
@@ -385,11 +432,20 @@ const ForWorkersPage = () => {
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-1.5">Type of Work <span className="text-red-500">*</span></label>
-                        <select value={category} onChange={e => setCategory(e.target.value)}
-                          className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white">
-                          <option value="">Select a category</option>
-                          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                        </select>
+                        {category ? (
+                          <div className="flex items-center gap-3 rounded-xl border-2 border-[#0B6B5E] bg-teal-50 px-4 py-3">
+                            <span className="text-xl">{CATEGORIES.find(c => c.label === category)?.icon || '👷'}</span>
+                            <span className="text-sm font-semibold text-[#0B6B5E]">{category}</span>
+                            <button type="button" onClick={() => { setCategory(''); setPendingCategory(''); localStorage.removeItem(PENDING_CAT_KEY); }}
+                              className="ml-auto text-xs text-teal-600 underline">Change</button>
+                          </div>
+                        ) : (
+                          <select value={category} onChange={e => { setCategory(e.target.value); setPendingCategory(e.target.value); localStorage.setItem(PENDING_CAT_KEY, e.target.value); }}
+                            className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white">
+                            <option value="">Select a category</option>
+                            {CATEGORIES.map(c => <option key={c.label} value={c.label}>{c.label}</option>)}
+                          </select>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-semibold mb-1.5">County / Area <span className="text-red-500">*</span></label>
@@ -448,7 +504,6 @@ const ForWorkersPage = () => {
                           className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 resize-none" />
                       </div>
 
-                      {/* Previous employer reference */}
                       <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                         <div className="flex items-start gap-2 mb-3">
                           <Star size={16} className="text-amber-600 mt-0.5 shrink-0" />
@@ -612,11 +667,21 @@ const ForWorkersPage = () => {
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-1.5">Type of Work <span className="text-red-500">*</span></label>
-                  <select value={assistedCategory} onChange={e => setAssistedCategory(e.target.value)}
-                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 bg-white">
-                    <option value="">Select a category</option>
-                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {CATEGORIES.map((cat) => (
+                      <button
+                        key={cat.label}
+                        type="button"
+                        onClick={() => setAssistedCategory(cat.label)}
+                        className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-all ${assistedCategory === cat.label
+                          ? 'border-[#0B6B5E] bg-teal-50'
+                          : 'border-gray-200 hover:border-teal-300'}`}
+                      >
+                        <span className="text-lg">{cat.icon}</span>
+                        <span className={`text-xs font-semibold ${assistedCategory === cat.label ? 'text-[#0B6B5E]' : 'text-gray-700'}`}>{cat.label}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold mb-1.5">Your Phone Number</label>
@@ -644,7 +709,6 @@ const ForWorkersPage = () => {
             </div>
           )}
 
-          {/* Footer note */}
           <p className="text-center text-xs text-gray-400 mt-8 leading-relaxed">
             Your details are kept private and never displayed publicly. Once verified by our team, employers contact <em>us</em> — we match you, you don't have to search.
           </p>

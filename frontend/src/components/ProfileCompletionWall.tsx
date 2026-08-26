@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { API_BASE_URL } from '@/lib/apiConfig';
+import { PESAPAL_PENDING_KEY } from '@/components/employer/UnlockModal';
 import { User } from '@/lib/authUtils';
 import {
   AGE_OPTIONS,
@@ -42,6 +43,8 @@ const numberToSalaryRange = (n: number): string => {
 
 const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWallProps) => {
   const [loadingProfile, setLoadingProfile] = useState(true);
+  const [assistedPayLoading, setAssistedPayLoading] = useState(false);
+  const [assistedPayError, setAssistedPayError] = useState('');
 
   // Form state — pre-populated from fetched profile
   const [firstName, setFirstName] = useState(user.first_name || '');
@@ -389,17 +392,45 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
               {saving ? 'Saving...' : 'Save & Access Dashboard →'}
             </Button>
 
-            <button
-              type="button"
-              onClick={onComplete}
-              className="w-full text-center text-sm text-gray-400 hover:text-gray-600 transition-colors py-1"
-            >
-              Skip for now — I'll complete my profile later
-            </button>
-
-            <p className="text-xs text-center text-gray-400">
-              Complete your profile to appear in employer searches.
-            </p>
+            {/* KES 300 escape hatch — shown instead of skip */}
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-center">
+              <p className="text-sm font-semibold text-amber-800 mb-1">This feels like too much?</p>
+              <p className="text-xs text-amber-700 mb-3">
+                Let us complete your profile for you. Pay KES 300 and our team will fill in your details within 2 business days.
+              </p>
+              {assistedPayError && <p className="text-xs text-red-600 mb-2">{assistedPayError}</p>}
+              <button
+                type="button"
+                disabled={assistedPayLoading}
+                onClick={async () => {
+                  setAssistedPayLoading(true);
+                  setAssistedPayError('');
+                  try {
+                    const workerName = `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Worker';
+                    const res = await fetch(`${API_BASE_URL}/api/workers/initiate-registration`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({ worker_name: workerName, worker_category: 'Domestic Worker', worker_phone: '' }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.error || 'Failed');
+                    localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+                      package_id: 'worker_admin_registration',
+                      worker_name: workerName,
+                      worker_category: 'Domestic Worker',
+                      redirect_after: '/for-workers',
+                    }));
+                    window.location.href = data.redirect_url;
+                  } catch (e: any) {
+                    setAssistedPayError(e.message || 'Something went wrong. Please try again.');
+                    setAssistedPayLoading(false);
+                  }
+                }}
+                className="inline-flex items-center gap-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-5 py-2 text-sm font-semibold transition-colors disabled:opacity-60"
+              >
+                {assistedPayLoading ? 'Please wait…' : 'Get Help — KES 300'}
+              </button>
+            </div>
           </div>
         </div>
       </div>

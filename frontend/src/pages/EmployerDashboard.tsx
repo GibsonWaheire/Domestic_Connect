@@ -17,9 +17,10 @@ import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
-  Briefcase, CheckCircle, ClipboardList, LogOut, MessageCircle, Phone,
+  Briefcase, CheckCircle, ClipboardList, CreditCard, LogOut, MessageCircle, Phone,
   Plus, RefreshCw, Settings as SettingsIcon, Trash2, Users, X
 } from 'lucide-react';
+import { PESAPAL_PENDING_KEY } from '@/components/employer/UnlockModal';
 import {
   KENYA_CITIES, SKILLS_OPTIONS, EXPERIENCE_OPTIONS,
   WORK_TYPE_OPTIONS, EDUCATION_OPTIONS
@@ -180,6 +181,9 @@ const EmployerDashboard = () => {
     start_date: '', salary_budget: '', duties: '', contact_phone: '',
   });
   const [paymentVerified, setPaymentVerified] = useState<boolean | null>(null);
+  const [employerPlan, setEmployerPlan] = useState<'diy' | 'concierge' | null>(null);
+  const [planPayLoading, setPlanPayLoading] = useState<'diy' | 'concierge' | null>(null);
+  const [planPayError, setPlanPayError] = useState('');
 
   // Real-time data
   const { dashboardData, loading: dataLoading, error: dataError, refreshing, refreshData, lastUpdated } = useRealTimeData();
@@ -246,6 +250,7 @@ const EmployerDashboard = () => {
         if (res.ok) {
           const data = await res.json();
           setPaymentVerified((data.total_credits ?? 0) > 0 || data.employer_active === true);
+          if (data.employer_plan) setEmployerPlan(data.employer_plan);
         }
       } catch { /* silent */ }
     };
@@ -400,6 +405,7 @@ const EmployerDashboard = () => {
   const sidebarItems = [
     { id: 'housegirls', label: 'Browse Workers', icon: Users },
     { id: 'contacts',   label: 'My Contacts',    icon: Phone },
+    { id: 'plans',      label: 'Plans & Pay',    icon: CreditCard },
     { id: 'requests',   label: 'My Request',     icon: ClipboardList },
     { id: 'jobs',       label: 'Post a Job',     icon: Briefcase },
     { id: 'messages',   label: 'Messages',       icon: MessageCircle },
@@ -742,6 +748,160 @@ const EmployerDashboard = () => {
         );
       }
 
+      case 'plans': {
+        const initiatePlan = async (plan: 'diy' | 'concierge') => {
+          if (employerPlan && employerPlan !== plan) {
+            setPlanPayError(`You have already activated the ${employerPlan === 'diy' ? 'DIY Job Posting' : 'Concierge'} plan. Only one plan is allowed.`);
+            return;
+          }
+          setPlanPayLoading(plan);
+          setPlanPayError('');
+          try {
+            const token = await FirebaseAuthService.getIdToken().catch(() => null);
+            const res = await fetch(`${API_BASE_URL}/api/payments/initiate-employer-plan`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+              body: JSON.stringify({ plan }),
+            });
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to initiate payment');
+            localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+              package_id: `employer_plan_${plan}`,
+              employer_plan: plan,
+              redirect_after: '/employer-dashboard',
+            }));
+            window.location.href = data.redirect_url;
+          } catch (e: any) {
+            setPlanPayError(e.message || 'Something went wrong. Please try again.');
+          } finally {
+            setPlanPayLoading(null);
+          }
+        };
+
+        return (
+          <div className="space-y-4 max-w-3xl">
+            <div className="rounded-xl border border-gray-200 bg-white p-5">
+              <h2 className="text-lg font-bold text-gray-900 mb-1">Plans & Pricing</h2>
+              <p className="text-sm text-gray-500">Choose how you want to hire. All payments are processed securely via Pesapal (M-Pesa, card).</p>
+            </div>
+
+            {planPayError && (
+              <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{planPayError}</div>
+            )}
+
+            {/* Option 1 — per-worker unlock */}
+            <div className="rounded-xl border-2 border-gray-200 bg-white p-5">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-lg font-bold text-gray-900">Contact Unlock</span>
+                    <span className="rounded-full bg-blue-100 text-blue-700 text-xs font-semibold px-2.5 py-0.5">KES 599 / worker</span>
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Browse our verified worker listings. Pay KES 599 per worker to reveal their phone number and contact them directly. No commitment.
+                  </p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> See all worker profiles for free</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> Pay only when you want a contact</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> Unlock as many as you need</li>
+                  </ul>
+                </div>
+                <Button onClick={() => setActiveSection('housegirls')} className="bg-teal-700 hover:bg-teal-800 text-white shrink-0 self-start">
+                  Browse Workers →
+                </Button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 text-xs text-gray-400 font-medium uppercase tracking-wide">
+              <div className="flex-1 h-px bg-gray-200" />
+              Or choose a full-access plan (pick one)
+              <div className="flex-1 h-px bg-gray-200" />
+            </div>
+
+            {/* Option 2 — DIY */}
+            <div className={`rounded-xl border-2 bg-white p-5 ${employerPlan === 'diy' ? 'border-teal-500' : 'border-gray-200'}`}>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-lg font-bold text-gray-900">DIY Job Posting</span>
+                    <span className="rounded-full bg-teal-100 text-teal-700 text-xs font-semibold px-2.5 py-0.5">KES 1,500</span>
+                    {employerPlan === 'diy' && (
+                      <span className="rounded-full bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-0.5 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" /> Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Post your job opening on our platform. All applicants go directly to your dashboard. You review, shortlist and contact them yourself.
+                  </p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> Job listing posted on domestic-connect.co.ke</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> All applicants viewable in your dashboard</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> Full contact details of every applicant</li>
+                  </ul>
+                </div>
+                {employerPlan !== 'diy' ? (
+                  <Button
+                    disabled={!!employerPlan || planPayLoading === 'diy'}
+                    onClick={() => initiatePlan('diy')}
+                    className="bg-teal-700 hover:bg-teal-800 text-white shrink-0 self-start disabled:opacity-50"
+                  >
+                    {planPayLoading === 'diy' ? 'Please wait…' : 'Pay KES 1,500 →'}
+                  </Button>
+                ) : (
+                  <Button onClick={() => setActiveSection('jobs')} className="bg-teal-700 hover:bg-teal-800 text-white shrink-0 self-start">
+                    Post a Job →
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* Option 3 — Concierge */}
+            <div className={`rounded-xl border-2 bg-white p-5 ${employerPlan === 'concierge' ? 'border-purple-500' : 'border-gray-200'}`}>
+              <div className="flex items-start justify-between gap-4 flex-wrap">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className="text-lg font-bold text-gray-900">Concierge Matching</span>
+                    <span className="rounded-full bg-purple-100 text-purple-700 text-xs font-semibold px-2.5 py-0.5">KES 1,500</span>
+                    {employerPlan === 'concierge' && (
+                      <span className="rounded-full bg-green-100 text-green-700 text-xs font-semibold px-2.5 py-0.5 flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" /> Active
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mb-3">
+                    Tell us your requirements. Our team hand-picks 1–3 pre-vetted candidates that match your needs and sends their profiles to your email within 48 hours.
+                  </p>
+                  <ul className="text-sm text-gray-600 space-y-1">
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-purple-500 shrink-0" /> You fill in your needs (one short form)</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-purple-500 shrink-0" /> We find 1–3 vetted matches for you</li>
+                    <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-purple-500 shrink-0" /> Candidate profiles sent to your email in 48h</li>
+                  </ul>
+                </div>
+                {employerPlan !== 'concierge' ? (
+                  <Button
+                    disabled={!!employerPlan || planPayLoading === 'concierge'}
+                    onClick={() => initiatePlan('concierge')}
+                    className="bg-purple-700 hover:bg-purple-800 text-white shrink-0 self-start disabled:opacity-50"
+                  >
+                    {planPayLoading === 'concierge' ? 'Please wait…' : 'Pay KES 1,500 →'}
+                  </Button>
+                ) : (
+                  <Button onClick={() => setActiveSection('requests')} className="bg-purple-700 hover:bg-purple-800 text-white shrink-0 self-start">
+                    Submit My Needs →
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-400 text-center pb-4">
+              Payments via M-Pesa, Visa or Mastercard · Powered by Pesapal · All amounts in Kenya Shillings
+            </p>
+          </div>
+        );
+      }
+
       case 'messages':
         return <EmployerMessages />;
 
@@ -797,8 +957,8 @@ const EmployerDashboard = () => {
                   {paymentVerified === false && (
                     <button type="button"
                       className="flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-3 py-1 text-xs font-medium border border-amber-200 hover:bg-amber-200 transition-colors"
-                      onClick={() => setActiveSection('requests')}>
-                      Pending Payment — Submit Request
+                      onClick={() => setActiveSection('plans')}>
+                      View Plans & Pay →
                     </button>
                   )}
                 </div>

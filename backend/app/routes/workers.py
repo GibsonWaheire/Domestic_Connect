@@ -31,7 +31,7 @@ def _require_employer(req):
     if not decoded:
         raise ValueError('Invalid token')
     uid = decoded['uid']
-    user_doc = db.collection('users').document(uid).get()
+    user_doc = db.collection('users').document(f'user_{uid}').get()
     if not user_doc.exists:
         raise ValueError('User not found')
     data = user_doc.to_dict()
@@ -48,7 +48,7 @@ def _require_worker(req):
     if not decoded:
         raise ValueError('Invalid token')
     uid = decoded['uid']
-    user_doc = db.collection('users').document(uid).get()
+    user_doc = db.collection('users').document(f'user_{uid}').get()
     if not user_doc.exists:
         raise ValueError('User not found')
     data = user_doc.to_dict()
@@ -265,8 +265,9 @@ def complete_worker_profile():
         if not has_no_referee and not prev_employer_name:
             return jsonify({'error': 'Please provide a previous employer reference, or indicate you have none.'}), 400
 
+        user_id = f'user_{uid}'
         profile = {
-            'user_id': uid,
+            'user_id': user_id,
             'first_name': user_data.get('first_name', ''),
             'last_name': user_data.get('last_name', ''),
             'category': category,
@@ -285,14 +286,19 @@ def complete_worker_profile():
             'updated_at': datetime.utcnow().isoformat(),
         }
 
-        existing = list(db.collection('housegirl_profiles').where('user_id', '==', uid).limit(1).stream())
+        existing = list(db.collection('housegirl_profiles').where('user_id', '==', user_id).limit(1).stream())
         if existing:
             db.collection('housegirl_profiles').document(existing[0].id).set(profile, merge=True)
         else:
-            profile['created_at'] = datetime.utcnow().isoformat()
-            db.collection('housegirl_profiles').add(profile)
+            # Also try by doc ID (workers created via verify endpoint use user_id as doc ID)
+            direct_doc = db.collection('housegirl_profiles').document(user_id).get()
+            if direct_doc.exists:
+                db.collection('housegirl_profiles').document(user_id).set(profile, merge=True)
+            else:
+                profile['created_at'] = datetime.utcnow().isoformat()
+                db.collection('housegirl_profiles').document(user_id).set(profile)
 
-        db.collection('users').document(uid).set({
+        db.collection('users').document(user_id).set({
             'phone_number': phone,
             'category': category,
             'profile_complete': True,

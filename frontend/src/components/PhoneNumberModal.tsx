@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { X } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
@@ -9,10 +8,9 @@ import { User } from '@/lib/authUtils';
 interface PhoneNumberModalProps {
   user: User;
   onSaved: (phone: string) => void;
-  onDismiss?: () => void;
 }
 
-const PhoneNumberModal = ({ user, onSaved, onDismiss }: PhoneNumberModalProps) => {
+const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
   const [phone, setPhone] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -57,10 +55,6 @@ const PhoneNumberModal = ({ user, onSaved, onDismiss }: PhoneNumberModalProps) =
     }
   };
 
-  const description = user.user_type === 'housegirl'
-    ? 'Your phone number is required so employers can contact you. It stays hidden until they unlock your profile.'
-    : 'Add your phone number so we can keep you updated on workers you contact.';
-
   return (
     <Dialog open>
       <DialogContent
@@ -68,19 +62,12 @@ const PhoneNumberModal = ({ user, onSaved, onDismiss }: PhoneNumberModalProps) =
         onInteractOutside={e => e.preventDefault()}
         onEscapeKeyDown={e => e.preventDefault()}
       >
-        {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
         <DialogHeader>
           <DialogTitle>Add Your Phone Number</DialogTitle>
         </DialogHeader>
-        <p className="text-sm text-gray-500">{description}</p>
+        <p className="text-sm text-gray-500">
+          Your phone number is required to complete your registration. Employers cannot contact you without it — and it stays hidden until they pay to unlock your profile.
+        </p>
         <div>
           <label className="text-sm font-medium text-gray-700 block mb-1">
             Phone Number <span className="text-red-500">*</span>
@@ -101,16 +88,8 @@ const PhoneNumberModal = ({ user, onSaved, onDismiss }: PhoneNumberModalProps) =
           disabled={saving}
           className="w-full bg-blue-600 hover:bg-blue-700 text-white rounded-xl"
         >
-          {saving ? 'Saving...' : 'Save Phone Number'}
+          {saving ? 'Saving...' : 'Save & Continue →'}
         </Button>
-        {onDismiss && (
-          <button
-            onClick={onDismiss}
-            className="text-xs text-gray-400 hover:text-gray-600 transition-colors text-center mt-1"
-          >
-            I'll update this in my profile later
-          </button>
-        )}
       </DialogContent>
     </Dialog>
   );

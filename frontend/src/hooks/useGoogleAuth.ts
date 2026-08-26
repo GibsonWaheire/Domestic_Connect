@@ -83,6 +83,13 @@ export const useGoogleAuth = (
                     const signupUserType = signupResponse.user_type;
                     setLoading(false);
 
+                    const returnAfterSignup = sessionStorage.getItem('return_after_signup');
+                    if (returnAfterSignup) {
+                        sessionStorage.removeItem('return_after_signup');
+                        navigate(returnAfterSignup, { replace: true });
+                        return { error: null, user: signupResponse.user };
+                    }
+
                     const pendingUnlockRawSignup = sessionStorage.getItem('unlock_after_login');
                     if (pendingUnlockRawSignup) {
                         try {

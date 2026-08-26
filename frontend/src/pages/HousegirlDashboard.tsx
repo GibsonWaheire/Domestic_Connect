@@ -96,6 +96,7 @@ const HousegirlDashboard = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'profile' | 'jobs' | 'messages' | 'settings'>('overview');
   const [profilePhoto, setProfilePhoto] = useState<string | null>(null);
+  const [profileData, setProfileData] = useState<Record<string, any> | null>(null);
   const [showCompletionWall, setShowCompletionWall] = useState(false);
   const [showPhoneModal, setShowPhoneModal] = useState(false);
   const [showPhotoReminder, setShowPhotoReminder] = useState(false);
@@ -155,6 +156,7 @@ const HousegirlDashboard = () => {
         });
         if (res.ok) {
           const data = await res.json();
+          setProfileData(data);
 
           // Phone is highest priority — gate everything else behind it
           if (data.phone_number) {
@@ -215,11 +217,6 @@ const HousegirlDashboard = () => {
             phoneConfirmedRef.current = true;
             setShowPhoneModal(false);
             patchUser({ phone_number: phone });
-          }}
-          onDismiss={() => {
-            phoneConfirmedRef.current = true;
-            setShowPhoneModal(false);
-            setActiveTab('profile');
           }}
         />
       )}
@@ -318,7 +315,15 @@ const HousegirlDashboard = () => {
                 {user?.first_name ? `Welcome, ${user.first_name}` : 'Welcome!'}
               </h2>
               <span className="bg-green-50 text-green-700 rounded-full px-3 py-1 text-xs font-medium border border-green-200 shadow-sm flex items-center">
-                👩 Housegirl Account
+                {(() => {
+                  const cat = profileData?.category || (user as any)?.category || '';
+                  if (!cat) return '👷 Worker Account';
+                  if (cat.includes('Gardener')) return '🌿 Gardener Account';
+                  if (cat.includes('Gateman') || cat.includes('Security')) return '🛡️ Security Account';
+                  if (cat.includes('Nurse') || cat.includes('Caregiver')) return '💊 Caregiver Account';
+                  if (cat.includes('Daily') || cat.includes('Casual')) return '📋 Casual Worker Account';
+                  return '🧹 Housegirl Account';
+                })()}
               </span>
             </div>
           </div>
