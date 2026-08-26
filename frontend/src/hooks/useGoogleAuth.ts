@@ -45,6 +45,34 @@ export const useGoogleAuth = (
             });
 
 
+            if ((response as { status?: string }).status === 'account_exists') {
+                // An account already exists — clear any pending redirects first
+                sessionStorage.removeItem('return_after_signup');
+                const existingType = response.user_type;
+                setLoading(false);
+
+                if (resolvedRedirectUserType && existingType !== resolvedRedirectUserType) {
+                    // Cross-type attempt — deny and redirect to their correct dashboard
+                    const label = existingType === 'employer' ? 'employer' : 'worker';
+                    const otherLabel = resolvedRedirectUserType === 'employer' ? 'employer' : 'worker';
+                    toast({
+                        title: 'Wrong account type',
+                        description: `You have a ${label} account. You cannot log in as a ${otherLabel}.`,
+                        variant: 'destructive',
+                    });
+                }
+
+                // Redirect to their actual dashboard regardless
+                switch (existingType) {
+                    case 'employer': navigate('/employer-dashboard', { replace: true }); break;
+                    case 'housegirl': navigate('/housegirl-dashboard', { replace: true }); break;
+                    case 'agency': navigate('/agency-dashboard', { replace: true }); break;
+                    case 'admin': navigate('/admin-dashboard', { replace: true }); break;
+                    default: navigate('/login', { replace: true });
+                }
+                return { error: null };
+            }
+
             if ((response as { status?: string; uid?: string }).status === 'role_required') {
                 const responseUid = (response as { uid?: string }).uid || result.user.uid;
                 setLoading(false);
@@ -142,6 +170,25 @@ export const useGoogleAuth = (
 
             const resolvedUserType = response.user_type;
             setLoading(false);
+
+            // Cross-type login guard: deny if they tried to log in as a different type
+            if (resolvedRedirectUserType && resolvedUserType !== resolvedRedirectUserType) {
+                sessionStorage.removeItem('return_after_signup');
+                const label = resolvedUserType === 'employer' ? 'employer' : 'worker';
+                const otherLabel = resolvedRedirectUserType === 'employer' ? 'employer' : 'worker';
+                toast({
+                    title: 'Wrong account type',
+                    description: `You have a ${label} account. You cannot log in as a ${otherLabel}.`,
+                    variant: 'destructive',
+                });
+                switch (resolvedUserType) {
+                    case 'employer': navigate('/employer-dashboard', { replace: true }); break;
+                    case 'housegirl': navigate('/housegirl-dashboard', { replace: true }); break;
+                    case 'agency': navigate('/agency-dashboard', { replace: true }); break;
+                    default: navigate('/login', { replace: true });
+                }
+                return { error: null, user: response.user };
+            }
 
             const pendingUnlockRaw = sessionStorage.getItem('unlock_after_login');
             if (pendingUnlockRaw) {
