@@ -7,7 +7,7 @@ import uuid
 from app.routes.payments import submit_pesapal_order, get_pesapal_token, APPLY_CONTACT_UNLOCK_PACKAGE_ID, APPLY_CONTACT_UNLOCK_PRICE
 
 logger = logging.getLogger(__name__)
-employer_bp = Blueprint('employers', __name__)
+employer_bp = Blueprint('employer_jobs', __name__)
 
 @employer_bp.route('/jobs/<job_id>/applied-housegirls', methods=['GET'])
 @firebase_auth_required
