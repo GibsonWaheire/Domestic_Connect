@@ -194,33 +194,44 @@ const LoginPage = () => {
   return (
     <div className="flex min-h-screen bg-[#FDF6F0] font-sans text-[#111]">
       {/* Left Panel - Hidden on Mobile */}
-      <div className="hidden md:flex flex-col justify-between w-[45%] bg-[#111] text-white p-12 relative overflow-hidden">
+      <div className="hidden md:flex flex-col justify-between w-[45%] bg-[#0B6B5E] text-white p-12 relative overflow-hidden">
         <div
           className="absolute inset-0 opacity-5 pointer-events-none"
           style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }}
         />
         <div className="relative z-10 flex flex-col items-start gap-6">
-          <Link to="/" className="text-2xl font-bold tracking-tight text-white hover:opacity-90 transition-all duration-200">
-            Domestic Connect
+          <Link to="/" className="flex flex-col leading-none hover:opacity-90 transition-opacity">
+            <span className="text-2xl font-bold tracking-tight text-white">Domestic Connect</span>
+            <span className="text-[11px] text-white/60 font-medium tracking-wide mt-0.5">Vetted Domestic Staff · Kenya</span>
           </Link>
-          <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mt-12 w-full max-w-sm">
-            Find trusted house help across Kenya
+          <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mt-10 w-full max-w-sm">
+            {mode === 'signup'
+              ? 'Get matched with vetted domestic staff in 48 hours'
+              : 'Welcome back to Domestic Connect'}
           </h1>
-          <div className="flex flex-col gap-6 mt-12">
-            {['Verified profiles', 'Trusted by 1,000+ families', 'Safe & secure'].map((text) => (
+          <p className="text-white/70 text-base leading-relaxed max-w-xs">
+            {mode === 'signup'
+              ? 'Register as an employer (KES 1,500) or join as a worker — we handle the rest.'
+              : 'Kenya\'s trusted domestic staffing agency. Every worker personally interviewed and vetted.'}
+          </p>
+          <div className="flex flex-col gap-5 mt-6">
+            {(mode === 'signup'
+              ? ['Tell us what kind of worker you need', 'We match you from our vetted pool', '30-day replacement guarantee']
+              : ['Every worker personally interviewed', 'Matched within 48 hours', '30-day replacement guarantee']
+            ).map((text) => (
               <div key={text} className="flex items-center gap-4">
-                <div className="rounded-full bg-white/10 p-1.5 shrink-0">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white">
+                <div className="rounded-full bg-white/15 p-1.5 shrink-0">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="text-white">
                     <polyline points="20 6 9 17 4 12"></polyline>
                   </svg>
                 </div>
-                <span className="font-medium text-lg text-white/90">{text}</span>
+                <span className="font-medium text-base text-white/90">{text}</span>
               </div>
             ))}
           </div>
         </div>
         <div className="relative z-10 mt-auto pt-16">
-          <Link to="/" className="text-white/60 hover:text-white transition-all duration-200 text-sm font-medium">
+          <Link to="/" className="text-white/50 hover:text-white transition-all duration-200 text-sm font-medium">
             ← Back to Home
           </Link>
         </div>
@@ -249,9 +260,13 @@ const LoginPage = () => {
                 </>
               ) : (
                 <>
-                  <h2 className="text-xl font-semibold text-gray-900">Welcome to Domestic Connect</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">
+                    {mode === 'login' ? 'Log in to your account' : 'Create your account'}
+                  </h2>
                   <p className="mt-1 text-sm text-gray-500">
-                    {mode === 'login' ? 'Log in to your account' : 'Create your free account'}
+                    {mode === 'login'
+                      ? 'Employers and workers — log in below.'
+                      : 'Register as an employer or join as a worker.'}
                   </p>
                 </>
               )}
@@ -362,19 +377,19 @@ const LoginPage = () => {
                   type="button"
                   onClick={() => handleSelectRole('employer')}
                   disabled={isUpdatingRole}
-                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
+                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-[#0B6B5E] hover:border disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
                 >
                   <div className="text-lg font-semibold text-gray-900">👔 I am an Employer</div>
-                  <div className="mt-1 text-sm text-gray-500">I am looking for house help</div>
+                  <div className="mt-1 text-sm text-gray-500">I need domestic staff for my home</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => handleSelectRole('housegirl')}
                   disabled={isUpdatingRole}
-                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-gray-300 disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
+                  className="w-full rounded-2xl border border-gray-200 bg-white p-5 text-left shadow-sm hover:border-[#0B6B5E] hover:border disabled:opacity-60 disabled:cursor-not-allowed transition-all duration-200"
                 >
-                  <div className="text-lg font-semibold text-gray-900">👩 I am a Housegirl</div>
-                  <div className="mt-1 text-sm text-gray-500">I am looking for work</div>
+                  <div className="text-lg font-semibold text-gray-900">🧹 I am a Worker</div>
+                  <div className="mt-1 text-sm text-gray-500">I am looking for domestic work</div>
                 </button>
                 {isUpdatingRole && (
                   <div className="flex items-center justify-center gap-2 mt-2 text-sm text-gray-500">
@@ -392,14 +407,14 @@ const LoginPage = () => {
                 {mode === 'signup' && (
                   <div className="flex w-full rounded-[14px] bg-white border border-gray-200 p-1.5 mb-6 shadow-sm">
                     {[
-                      { value: 'employer', label: 'Employer', desc: 'I want to hire house help' },
-                      { value: 'housegirl', label: 'Housegirl', desc: 'I am looking for work' },
+                      { value: 'employer', label: 'Employer', desc: 'I need domestic staff' },
+                      { value: 'housegirl', label: 'Worker', desc: 'I am looking for work' },
                     ].map((option) => (
                       <button
                         key={option.value}
                         type="button"
                         onClick={() => setUserType(option.value as 'employer' | 'housegirl')}
-                        className={`flex-1 rounded-[10px] py-3 text-center transition-all duration-200 ${userType === option.value ? 'bg-[#111] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-gray-50'}`}
+                        className={`flex-1 rounded-[10px] py-3 text-center transition-all duration-200 ${userType === option.value ? 'bg-[#0B6B5E] text-white shadow-md' : 'text-gray-500 hover:text-[#111] hover:bg-gray-50'}`}
                       >
                         <div className="flex flex-col items-center">
                           <span className="text-sm font-semibold">{option.label}</span>
@@ -409,6 +424,18 @@ const LoginPage = () => {
                         </div>
                       </button>
                     ))}
+                  </div>
+                )}
+                {/* Employer fee note */}
+                {mode === 'signup' && userType === 'employer' && (
+                  <div className="mb-4 rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 text-xs text-teal-800">
+                    <span className="font-semibold">Employer registration:</span> KES 1,500 one-time fee. After signing up, submit your staffing needs from your dashboard and we'll match you within 48 hours.
+                  </div>
+                )}
+                {/* Worker note */}
+                {mode === 'signup' && userType === 'housegirl' && (
+                  <div className="mb-4 rounded-xl bg-amber-50 border border-amber-100 px-4 py-3 text-xs text-amber-800">
+                    <span className="font-semibold">Prefer a quick form?</span> You can also <a href="/for-housegirls" className="underline font-semibold">register as a worker here</a> — no account needed.
                   </div>
                 )}
 
