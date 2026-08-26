@@ -37,29 +37,73 @@ export const UnlockModal = ({
 
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const headers = {
+      const headers: Record<string, string> = {
         'Content-Type': 'application/json',
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
 
-      const response = await fetch(
+      let data: Record<string, unknown>;
+      let response: Response;
+
+      if (!jobId) {
+        // Browse context — no job; use the generic purchase flow
+        response = await fetch(`${API_BASE_URL}/api/payments/purchase`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            package_id: 'contact_unlock',
+            amount: 200,
+            target_profile_id: housegirlId,
+            housegirl_id: housegirlId,
+          }),
+        });
+        data = await response.json() as Record<string, unknown>;
+
+        if (!response.ok) {
+          throw new Error((data?.error as string) || 'Failed to initiate payment.');
+        }
+
+        const redirectUrl = data.redirect_url as string | undefined;
+        if (!redirectUrl) {
+          throw new Error('No payment URL returned. Please try again or contact support.');
+        }
+
+        const parsed = new URL(redirectUrl);
+        if (!parsed.hostname.endsWith('pesapal.com')) {
+          throw new Error('Invalid payment redirect destination.');
+        }
+
+        localStorage.setItem(
+          PESAPAL_PENDING_KEY,
+          JSON.stringify({
+            order_tracking_id: data.order_tracking_id,
+            package_id: 'contact_unlock',
+            target_profile_id: housegirlId,
+            housegirl_id: housegirlId,
+            redirect_after: '/employer-dashboard',
+          })
+        );
+        window.location.href = redirectUrl;
+        return;
+      }
+
+      // Job-applicant context — use the job-specific unlock endpoint
+      response = await fetch(
         `${API_BASE_URL}/api/employers/jobs/${jobId}/housegirls/${housegirlId}/unlock-contact`,
         { method: 'POST', headers }
       );
 
-      const data = await response.json();
+      data = await response.json() as Record<string, unknown>;
 
       if (response.ok) {
         if (data.contact_details) {
-          // Already unlocked or just unlocked — show contact directly
-          setUnlockedContact(data.contact_details);
+          // Already unlocked — show contact directly
+          setUnlockedContact(data.contact_details as { email: string | null; phone_number: string | null });
           onContactUnlocked();
         } else if (data.redirect_url) {
-          const redirectUrl: string = data.redirect_url;
-          try {
-            const parsed = new URL(redirectUrl);
-            if (!parsed.hostname.endsWith('pesapal.com')) throw new Error('Invalid redirect');
-          } catch {
+          const redirectUrl = data.redirect_url as string;
+          const parsed = new URL(redirectUrl);
+          if (!parsed.hostname.endsWith('pesapal.com')) {
             throw new Error('Invalid payment redirect destination.');
           }
           localStorage.setItem(
@@ -73,9 +117,11 @@ export const UnlockModal = ({
             })
           );
           window.location.href = redirectUrl;
+        } else {
+          throw new Error('Unexpected response from server. Please try again.');
         }
       } else {
-        throw new Error(data?.error || 'Failed to initiate contact unlock.');
+        throw new Error((data?.error as string) || 'Failed to initiate contact unlock.');
       }
     } catch (error) {
       showErrorNotification(
