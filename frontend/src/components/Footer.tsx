@@ -29,7 +29,7 @@ const Footer = () => {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-[#aaa] mb-3">For Employers</p>
           <div className="flex flex-col gap-2 text-sm">
-            <Link to="/login" className="text-white hover:text-[#aaa] transition-colors">Find a Worker</Link>
+            <Link to="/workers" className="text-white hover:text-[#aaa] transition-colors">Find a Worker</Link>
             <Link to="/how-it-works" className="text-white hover:text-[#aaa] transition-colors">How It Works</Link>
             <Link to="/why-choose-us" className="text-white hover:text-[#aaa] transition-colors">Why Choose Us</Link>
             <Link to="/contact-us" className="text-white hover:text-[#aaa] transition-colors">Contact Us</Link>
@@ -39,8 +39,8 @@ const Footer = () => {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-wide text-[#aaa] mb-3">For Workers</p>
           <div className="flex flex-col gap-2 text-sm">
-            <Link to="/for-housegirls" className="text-white hover:text-[#aaa] transition-colors">Register as a Worker</Link>
-            <Link to="/for-housegirls" className="text-white hover:text-[#aaa] transition-colors">How to Get Listed</Link>
+            <Link to="/for-workers" className="text-white hover:text-[#aaa] transition-colors">Register as a Worker</Link>
+            <Link to="/for-workers" className="text-white hover:text-[#aaa] transition-colors">How to Get Listed</Link>
             {user ? (
               <button type="button" onClick={() => navigate(getDashboardRoute())} className="text-left text-white hover:text-[#aaa] transition-colors">Go to Dashboard</button>
             ) : (

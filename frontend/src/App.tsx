@@ -11,6 +11,8 @@ import { AuthGuard } from "@/components/AuthGuard";
 import LandingPage from "./pages/LandingPage";
 import HousegirlsListPage from "./pages/HousegirlsListPage";
 import HousegirlPage from "./pages/HousegirlPage";
+import ForWorkersPage from "./pages/ForWorkersPage";
+import WorkersMarketplace from "./pages/WorkersMarketplace";
 import EmployerDashboard from "./pages/EmployerDashboard";
 import HousegirlDashboard from "./pages/HousegirlDashboard";
 import AgencyDashboard from "./pages/AgencyDashboard";
@@ -26,7 +28,6 @@ import ContactUsPage from "./pages/ContactUsPage";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import PaymentCallbackPage from "./pages/PaymentCallbackPage";
-import ForHousegirlsPage from "./pages/ForHousegirlsPage";
 import AdminLoginPage from "./pages/AdminLoginPage";
 import AuthActionPage from "./pages/AuthActionPage";
 import { CookieConsentBanner } from "@/components/CookieConsentBanner";
@@ -43,6 +44,8 @@ const queryClient = new QueryClient({
 });
 
 const PAGE_TITLES: Record<string, string> = {
+  "/workers": "Browse Verified Workers | Domestic Connect Kenya",
+  "/for-workers": "Register as a Worker | Domestic Connect Kenya",
   "/": "Domestic Connect Kenya | Vetted Domestic Staff — Housegirls, Nannies, Caregivers",
   "/home": "Domestic Connect Kenya | Vetted Domestic Staff — Housegirls, Nannies, Caregivers",
   "/how-it-works": "How It Works | Domestic Connect Kenya",
@@ -105,10 +108,22 @@ const App = () => (
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/stats" element={<StatsPage />} />
                 <Route path="/why-choose-us" element={<WhyChoosePage />} />
+                {/* Worker pages */}
+                <Route path="/for-workers" element={<ForWorkersPage />} />
+                <Route path="/for-housegirls" element={<Navigate to="/for-workers" replace />} />
+                <Route
+                  path="/workers"
+                  element={
+                    <AuthGuard allowedUserTypes={['employer', 'admin']}>
+                      <WorkersMarketplace />
+                    </AuthGuard>
+                  }
+                />
+
                 {/* Suppressed agency/browse routes — redirect without deleting files */}
                 <Route path="/agency-packages" element={<Navigate to="/how-it-works" replace />} />
                 <Route path="/agencies" element={<Navigate to="/" replace />} />
-                <Route path="/agency-marketplace" element={<Navigate to="/login" replace />} />
+                <Route path="/agency-marketplace" element={<Navigate to="/workers" replace />} />
                 <Route path="/browse-housegirls" element={<Navigate to="/" replace />} />
                 <Route path="/contact-us" element={<ContactUsPage />} />
                 <Route path="/contact" element={<ContactUsPage />} />
@@ -116,15 +131,9 @@ const App = () => (
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/housegirls" element={<HousegirlsListPage />} />
                 <Route path="/browse-housegirls-admin" element={<BrowseHousegirls />} />
-                <Route
-                  path="/payment-callback"
-                  element={
-                    <AuthGuard allowedUserTypes={['employer', 'agency', 'admin']}>
-                      <PaymentCallbackPage />
-                    </AuthGuard>
-                  }
-                />
-                <Route path="/for-housegirls" element={<ForHousegirlsPage />} />
+                {/* Payment callback — also handles unauthenticated worker registration payments */}
+                <Route path="/payment-callback" element={<PaymentCallbackPage />} />
+                {/* /for-housegirls handled above via Navigate */}
 
                 {/* Protected Dashboard Routes */}
                 <Route

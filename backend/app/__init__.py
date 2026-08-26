@@ -95,6 +95,7 @@ def create_app(config_name=None):
     from app.routes.messages import messages_bp
     from app.routes.worker_inquiries import worker_inquiries_bp
     from app.routes.employer_requests import employer_requests_bp
+    from app.routes.workers import workers_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(profiles_bp, url_prefix='/api/profiles')
@@ -112,6 +113,7 @@ def create_app(config_name=None):
     app.register_blueprint(messages_bp, url_prefix='/api/messages')
     app.register_blueprint(worker_inquiries_bp, url_prefix='/api/worker-inquiries')
     app.register_blueprint(employer_requests_bp, url_prefix='/api/employer-requests')
+    app.register_blueprint(workers_bp, url_prefix='/api/workers')
     
     # Error handlers
     @app.errorhandler(404)

@@ -429,7 +429,7 @@ const LoginPage = () => {
                 {/* Employer fee note */}
                 {mode === 'signup' && userType === 'employer' && (
                   <div className="mb-4 rounded-xl bg-teal-50 border border-teal-100 px-4 py-3 text-xs text-teal-800">
-                    <span className="font-semibold">Employer registration:</span> KES 1,500 one-time fee. After signing up, submit your staffing needs from your dashboard and we'll match you within 48 hours.
+                    <span className="font-semibold">Employer registration: KES 599</span> — unlocks the verified worker list and staffing request. A placement fee of KES 3,000 applies only when you hire.
                   </div>
                 )}
                 {/* Worker note */}

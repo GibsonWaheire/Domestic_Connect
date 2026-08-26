@@ -54,10 +54,13 @@ const PaymentCallbackPage = () => {
           if (token) headers['Authorization'] = `Bearer ${token}`;
         }
 
-        const response = await fetch(
-          `${API_BASE_URL}/api/payments/purchase-status/${orderTrackingId}`,
-          { headers }
-        );
+        // Worker registration uses a separate public endpoint (no auth required)
+        const isWorkerReg = pendingData?.package_id === 'worker_admin_registration';
+        const statusUrl = isWorkerReg
+          ? `${API_BASE_URL}/api/workers/payment-status/${orderTrackingId}`
+          : `${API_BASE_URL}/api/payments/purchase-status/${orderTrackingId}`;
+
+        const response = await fetch(statusUrl, { headers });
         const data = await response.json();
 
         if (data.status === 'completed') {
@@ -67,6 +70,14 @@ const PaymentCallbackPage = () => {
           // show the "Payment received!" toast, then removes it.
           setStatus('completed');
           setMessage('Payment confirmed! Redirecting you...');
+
+          // Worker registration — redirect to /for-workers with success params
+          if (pendingData?.package_id === 'worker_admin_registration') {
+            const name = encodeURIComponent(pendingData?.worker_name || '');
+            const cat = encodeURIComponent(pendingData?.worker_category || '');
+            setTimeout(() => navigate(`/for-workers?paid=1&name=${name}&category=${cat}`), 2000);
+            return;
+          }
 
           // Only allow known relative paths — prevent open redirect via localStorage tampering
           const ALLOWED_REDIRECTS = ['/employer-dashboard', '/housegirl-dashboard', '/agency-dashboard'];
