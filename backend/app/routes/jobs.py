@@ -291,14 +291,11 @@ def create_job():
         if salary_min > salary_max:
             return jsonify({'error': 'Minimum salary cannot be greater than maximum salary'}), 400
 
-        # Enum checks
-        valid_accommodation = {'live_in', 'live_out', 'both'}
-        if data.get('accommodation_type') and data['accommodation_type'] not in valid_accommodation:
-            return jsonify({'error': f'accommodation_type must be one of: {", ".join(valid_accommodation)}'}), 400
-
-        valid_experience = {'no_experience', '1_year', '2_years', '3_years', '4_years', '5_plus_years'}
-        if data.get('required_experience') and data['required_experience'] not in valid_experience:
-            return jsonify({'error': 'Invalid required_experience value'}), 400
+        # Sanitize free-text enum fields (accept any reasonable string; no hard enum list)
+        if data.get('accommodation_type') and len(str(data['accommodation_type'])) > 50:
+            return jsonify({'error': 'accommodation_type is too long'}), 400
+        if data.get('required_experience') and len(str(data['required_experience'])) > 50:
+            return jsonify({'error': 'required_experience is too long'}), 400
 
         # Create job posting
         job_id = f'job_{uuid.uuid4().hex[:12]}'
@@ -457,7 +454,17 @@ def apply_to_job(job_id):
         }
         
         db.collection('job_applications').document(app_id).set(application_data)
-        
+
+        # Auto-close job when it reaches 5 applicants — drops from public listing for renewal
+        MAX_APPLICANTS = 5
+        total_apps = len(list(db.collection('job_applications').where('job_id', '==', job_id).stream()))
+        if total_apps >= MAX_APPLICANTS:
+            db.collection('job_postings').document(job_id).update({
+                'status': 'full',
+                'updated_at': datetime.utcnow().isoformat()
+            })
+            logger.info('Job %s closed (full): %d applicants', job_id, total_apps)
+
         return jsonify(application_data), 201
         
     except Exception as e:
