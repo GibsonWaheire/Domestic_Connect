@@ -16,11 +16,11 @@ const WA_NUMBER = '254726899113';
 const PENDING_CAT_KEY = 'dc_pending_worker_category';
 
 const CATEGORIES = [
-  { label: 'Housegirl / House Manager', icon: '🧹', desc: 'Cleaning, cooking, household management' },
-  { label: 'Gardener', icon: '🌿', desc: 'Garden maintenance, landscaping' },
-  { label: 'Gateman / Security', icon: '🛡️', desc: 'Gate security, property watchman' },
-  { label: 'Nurse / Caregiver', icon: '💊', desc: 'Patient care, elderly & child care' },
-  { label: 'Daily Casual', icon: '📋', desc: 'General daily household tasks' },
+  { label: 'Housegirl / House Manager', desc: 'Cleaning, cooking, household management' },
+  { label: 'Gardener', desc: 'Garden maintenance, landscaping' },
+  { label: 'Gateman / Security', desc: 'Gate security, property watchman' },
+  { label: 'Nurse / Caregiver', desc: 'Patient care, elderly & child care' },
+  { label: 'Daily Casual', desc: 'General daily household tasks' },
 ];
 
 const COUNTIES = [
@@ -351,8 +351,7 @@ const ForWorkersPage = () => {
                           ? 'border-[#0B6B5E] bg-teal-50'
                           : 'border-gray-200 hover:border-teal-300 hover:bg-gray-50'}`}
                       >
-                        <span className="text-2xl leading-none mt-0.5">{cat.icon}</span>
-                        <div>
+                        <div className="flex-1">
                           <p className={`text-sm font-semibold ${pendingCategory === cat.label ? 'text-[#0B6B5E]' : 'text-gray-800'}`}>{cat.label}</p>
                           <p className="text-xs text-gray-400 mt-0.5">{cat.desc}</p>
                         </div>
@@ -390,10 +389,14 @@ const ForWorkersPage = () => {
                       <AlertCircle size={16} className="shrink-0" />{errorMsg}
                     </div>
                   )}
-                  <p className="mt-6 text-xs text-gray-400 text-center">
-                    Already have an account?{' '}
-                    <Link to="/login" className="underline text-gray-600">Log in</Link>
-                  </p>
+                  <div className="mt-5">
+                    <Link
+                      to="/login"
+                      className="block w-full text-center border border-gray-300 rounded-xl py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      Already have an account? Log In
+                    </Link>
+                  </div>
                 </div>
               )}
 
@@ -434,7 +437,6 @@ const ForWorkersPage = () => {
                         <label className="block text-sm font-semibold mb-1.5">Type of Work <span className="text-red-500">*</span></label>
                         {category ? (
                           <div className="flex items-center gap-3 rounded-xl border-2 border-[#0B6B5E] bg-teal-50 px-4 py-3">
-                            <span className="text-xl">{CATEGORIES.find(c => c.label === category)?.icon || '👷'}</span>
                             <span className="text-sm font-semibold text-[#0B6B5E]">{category}</span>
                             <button type="button" onClick={() => { setCategory(''); setPendingCategory(''); localStorage.removeItem(PENDING_CAT_KEY); }}
                               className="ml-auto text-xs text-teal-600 underline">Change</button>
@@ -677,7 +679,6 @@ const ForWorkersPage = () => {
                           ? 'border-[#0B6B5E] bg-teal-50'
                           : 'border-gray-200 hover:border-teal-300'}`}
                       >
-                        <span className="text-lg">{cat.icon}</span>
                         <span className={`text-xs font-semibold ${assistedCategory === cat.label ? 'text-[#0B6B5E]' : 'text-gray-700'}`}>{cat.label}</span>
                       </button>
                     ))}
