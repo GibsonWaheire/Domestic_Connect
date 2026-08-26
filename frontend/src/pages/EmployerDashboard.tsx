@@ -8,6 +8,8 @@ import { Housegirls } from '@/components/employer/Housegirls';
 import { Settings } from '@/components/employer/Settings';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import AppliedHousegirlsList from '@/components/employer/AppliedHousegirlsList';
+import PaymentModal from '@/components/PaymentModal';
+import type { PackageDetails } from '@/components/PaymentModal';
 import { MessageThread } from '@/components/employer/MessageThread';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
@@ -26,6 +28,17 @@ import {
   WORK_TYPE_OPTIONS, EDUCATION_OPTIONS
 } from '@/constants/employer';
 import { API_BASE_URL } from '@/lib/apiConfig';
+
+const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
+  id: 'contact_unlock',
+  name: 'Contact Unlock',
+  price: 200,
+  agencyFee: 0,
+  platformFee: 200,
+  features: ['Phone number', 'Email address', 'In-platform messaging'],
+  color: 'green',
+  icon: Phone,
+};
 
 // ─── Employer Messages sub-component ─────────────────────────────────────────
 const EmployerMessages = () => {
@@ -1047,16 +1060,28 @@ const EmployerDashboard = () => {
           <Footer filteredHousegirlsCount={filteredHousegirls.length} />
         </div>
 
-        {/* Unlock modal */}
-        <UnlockModal
-          isOpen={showUnlockModal}
-          onClose={() => { setShowUnlockModal(false); setHousegirlToUnlock(null); }}
-          housegirlId={housegirlToUnlock?.id || ''}
-          housegirlName={housegirlToUnlock?.name || ''}
-          jobId=""
-          onPaymentInitiated={() => setIsUnlocking(true)}
-          onContactUnlocked={handleUnlockSuccess}
-        />
+        {/* Browse-worker contact unlock (no job context — uses credit purchase flow) */}
+        {showUnlockModal && housegirlToUnlock && (
+          <PaymentModal
+            package={CONTACT_UNLOCK_PACKAGE}
+            agency={{
+              id: 'contact_unlock_bundle',
+              name: 'Domestic Connect',
+              location: 'Kenya',
+              verification_status: 'verified',
+              subscription_tier: 'premium',
+              license_number: 'DC-2024-001',
+              rating: 5,
+              verified_workers: 0,
+              successful_placements: 0,
+            }}
+            targetProfileId={housegirlToUnlock.id}
+            housegirlId={housegirlToUnlock.id}
+            redirectAfter="/employer-dashboard"
+            onClose={() => { setShowUnlockModal(false); setHousegirlToUnlock(null); }}
+            onSuccess={handleUnlockSuccess}
+          />
+        )}
       </div>
     </NotificationProvider>
   );
