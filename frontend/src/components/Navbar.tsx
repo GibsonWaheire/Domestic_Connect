@@ -61,18 +61,22 @@ const Navbar = () => {
                 <div className="max-w-[1100px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
                     <Link to="/" className="flex flex-col leading-none">
                         <span className="text-xl font-bold tracking-tight text-[#111]">Domestic Connect</span>
+                        <span className="text-[10px] text-teal-700 font-medium tracking-wide">Vetted Domestic Staff · Kenya</span>
                     </Link>
 
                     {/* Desktop nav links */}
                     <nav className="hidden md:flex items-center gap-1">
-                        <Link to="/housegirls" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
-                            Browse
+                        <Link to="/agency-marketplace" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
+                            Find a Worker
+                        </Link>
+                        <Link to="/how-it-works" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
+                            How It Works
+                        </Link>
+                        <Link to="/agencies" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
+                            Agencies
                         </Link>
                         <Link to="/for-housegirls" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
-                            For Housegirls
-                        </Link>
-                        <Link to="/agency-marketplace" className="text-sm font-medium text-[#333] hover:text-black px-3 py-2 transition-colors">
-                            Agencies
+                            Join as a Worker
                         </Link>
                     </nav>
 
@@ -118,13 +122,13 @@ const Navbar = () => {
                                 <Button onClick={() => navigate('/login')} variant="outline" className="rounded-full border-[#111] text-[#111] hover:bg-gray-50 h-[38px] px-5 transition-all duration-200 font-medium">
                                     Login
                                 </Button>
-                                <Button onClick={() => navigate('/login?mode=signup')} className="rounded-full bg-[#111] hover:bg-[#333] text-white h-[38px] px-5 transition-all duration-200 font-medium">
-                                    Join Today
+                                <Button onClick={() => navigate('/agency-marketplace')} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white h-[38px] px-5 transition-all duration-200 font-medium">
+                                    Find a Worker
                                 </Button>
                             </div>
                         )}
 
-                        {/* Hamburger — visible on all screen sizes */}
+                        {/* Hamburger */}
                         <button
                             type="button"
                             aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
@@ -149,11 +153,14 @@ const Navbar = () => {
                 >
                     <div className="h-full overflow-y-auto p-6">
                         <div className="border-b border-gray-100 pb-4 mb-4 flex items-center justify-between">
-                            <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
+                            <div>
+                                <p className="text-[16px] font-bold text-[#111]">Domestic Connect</p>
+                                <p className="text-[11px] text-teal-700 font-medium">Vetted Domestic Staff · Kenya</p>
+                            </div>
                             <button type="button" aria-label="Close menu" onClick={close} className="h-10 w-10 inline-flex items-center justify-center text-gray-500 text-xl">×</button>
                         </div>
 
-                        {/* If logged in, show user info at top */}
+                        {/* Logged-in user info */}
                         {user && (
                             <div className="bg-gray-50 rounded-xl p-4 mb-3 flex items-center gap-3">
                                 {photoUrl ? (
@@ -171,22 +178,24 @@ const Navbar = () => {
                         )}
 
                         <div className="bg-gray-50 rounded-xl p-2 mb-3 flex flex-col">
-                            <button type="button" onClick={() => { close(); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find an Agency</span><span className="text-gray-300 text-sm">›</span></button>
+                            <button type="button" onClick={() => { close(); navigate('/agency-marketplace'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Find a Worker</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/how-it-works'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>How It Works</span><span className="text-gray-300 text-sm">›</span></button>
-                            <button type="button" onClick={() => { close(); navigate('/agency-packages'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Pricing &amp; Packages</span><span className="text-gray-300 text-sm">›</span></button>
+                            <button type="button" onClick={() => { close(); navigate('/agencies'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Agencies</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/why-choose-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>About Us</span><span className="text-gray-300 text-sm">›</span></button>
                             <button type="button" onClick={() => { close(); navigate('/contact-us'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Contact Us</span><span className="text-gray-300 text-sm">›</span></button>
+                            <button type="button" onClick={() => { close(); navigate('/for-housegirls'); }} className="py-3 px-3 rounded-lg text-[15px] text-gray-800 font-medium border-b border-gray-100 last:border-0 hover:bg-white hover:text-black min-h-[48px] flex items-center justify-between"><span>Join as a Worker</span><span className="text-gray-300 text-sm">›</span></button>
                         </div>
+
                         <div className="pt-1 flex flex-col gap-2">
                             {user ? (
                                 <>
-                                    <Button onClick={() => { close(); navigate(getDashboardRoute()); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Dashboard →</Button>
+                                    <Button onClick={() => { close(); navigate(getDashboardRoute()); }} className="w-full rounded-xl py-3 text-center font-medium bg-teal-700 text-white hover:bg-teal-800">Dashboard →</Button>
                                     <Button variant="outline" onClick={() => { close(); signOut(); }} className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">Sign Out</Button>
                                 </>
                             ) : (
                                 <>
                                     <Button onClick={() => { close(); navigate('/login'); }} variant="outline" className="w-full rounded-xl py-3 text-center font-medium border border-black text-black">Login</Button>
-                                    <Button onClick={() => { close(); navigate('/login?mode=signup'); }} className="w-full rounded-xl py-3 text-center font-medium bg-black text-white hover:bg-[#333]">Join Today</Button>
+                                    <Button onClick={() => { close(); navigate('/agency-marketplace'); }} className="w-full rounded-xl py-3 text-center font-medium bg-teal-700 text-white hover:bg-teal-800">Find a Worker →</Button>
                                 </>
                             )}
                         </div>
@@ -194,7 +203,7 @@ const Navbar = () => {
                         {/* Drawer footer */}
                         <div className="mt-6 pt-4 border-t border-gray-100 text-center">
                             <p className="text-[13px] font-semibold text-[#111]">Domestic Connect</p>
-                            <p className="text-[11px] text-gray-400 mt-0.5">Kenya's trusted domestic staffing platform</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">Kenya's trusted vetted domestic staffing agency</p>
                             <div className="flex items-center justify-center gap-3 mt-3">
                                 <button type="button" onClick={() => { close(); navigate('/why-choose-us'); }} className="text-[11px] text-gray-400 hover:text-gray-700 transition-colors">About</button>
                                 <span className="text-gray-200">·</span>

@@ -1,299 +1,338 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
-import { Briefcase, CheckCircle, MapPin, MessageCircle, Star } from 'lucide-react';
+import { CheckCircle, MessageCircle, Loader2, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
+
+const WHATSAPP = 'https://wa.me/254726899113?text=Hello%2C%20I%20would%20like%20to%20register%20as%20a%20domestic%20worker%20with%20Domestic%20Connect.';
+
+const CATEGORIES = [
+  'Housegirl / House Manager',
+  'Gardener',
+  'Gateman / Security',
+  'Nurse / Caregiver',
+  'Daily Casual',
+];
+
+const COUNTIES = [
+  'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Eldoret / Uasin Gishu',
+  'Machakos', 'Kiambu', 'Kajiado', 'Nyeri', 'Muranga', 'Thika',
+  'Meru', 'Kakamega', 'Kilifi', 'Kwale', 'Other',
+];
+
+type FormState = {
+  full_name: string;
+  phone: string;
+  county: string;
+  category: string;
+  experience_years: string;
+  live_in: string;
+  notes: string;
+};
+
+const INITIAL: FormState = {
+  full_name: '',
+  phone: '',
+  county: '',
+  category: '',
+  experience_years: '',
+  live_in: '',
+  notes: '',
+};
 
 const ForHousegirlsPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const [jobs, setJobs] = useState<any[]>([]);
-  const [loadingJobs, setLoadingJobs] = useState(true);
 
+  const [form, setForm] = useState<FormState>(INITIAL);
+  const [status, setStatus] = useState<'idle' | 'submitting' | 'success' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Redirect logged-in workers to their dashboard
   useEffect(() => {
-    const fetchJobs = async () => {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/jobs/?per_page=6`);
-        if (res.ok) {
-          const data = await res.json();
-          setJobs(data.jobs || []);
-        }
-      } catch {
-        // silently fail — jobs section just won't show
-      } finally {
-        setLoadingJobs(false);
-      }
-    };
-    fetchJobs();
-  }, []);
+    if (user && user.user_type === 'housegirl') {
+      navigate('/housegirl-dashboard', { replace: true });
+    }
+  }, [user, navigate]);
 
-  const accommodationLabel: Record<string, string> = {
-    live_in: 'Live-in',
-    live_out: 'Live-out',
-    both: 'Live-in / Live-out',
+  const set = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm(prev => ({ ...prev, [field]: e.target.value }));
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.full_name || !form.phone || !form.county || !form.category) {
+      setErrorMsg('Please fill in all required fields.');
+      return;
+    }
+    setStatus('submitting');
+    setErrorMsg('');
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/worker-inquiries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          full_name: form.full_name.trim(),
+          phone: form.phone.trim(),
+          county: form.county,
+          category: form.category,
+          experience_years: form.experience_years || '0',
+          live_in: form.live_in || 'flexible',
+          notes: form.notes.trim(),
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || 'Submission failed. Please try again.');
+      }
+      setStatus('success');
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+      setStatus('error');
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#FDF6F0] text-[#111] font-sans">
+    <div className="min-h-screen bg-[#F9FAFB] text-[#111] font-sans">
       <Helmet>
-        <title>Find House Help Jobs in Kenya | Domestic Connect</title>
-        <meta name="description" content="Looking for a housegirl, nanny or caregiver job in Kenya? Browse verified job listings from families for free. Register free — pay KSh 100 only when you apply." />
-        <meta name="keywords" content="housegirl jobs kenya, nanny jobs nairobi, caregiver jobs kenya, domestic worker jobs mombasa, house help jobs kenya, find domestic work kenya" />
+        <title>Register as a Domestic Worker | Domestic Connect Kenya</title>
+        <meta name="description" content="Are you a housegirl, gardener, gateman, caregiver or casual worker in Kenya? Register your details with Domestic Connect. We will contact you for an interview and vetting." />
         <link rel="canonical" href="https://domestic-connect.co.ke/for-housegirls" />
-        <meta property="og:title" content="Find House Help Jobs in Kenya | Domestic Connect" />
-        <meta property="og:description" content="Browse free job listings from verified families across Kenya. Register free — pay KSh 100 only when you apply for a job." />
-        <meta property="og:url" content="https://domestic-connect.co.ke/for-housegirls" />
-        <meta property="og:type" content="website" />
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="Find House Help Jobs in Kenya | Domestic Connect" />
-        <meta name="twitter:description" content="Browse free job listings from verified families across Kenya. Register free — pay KSh 100 only when you apply." />
       </Helmet>
 
       <Navbar />
 
       {/* HERO */}
-      <section className="bg-[#111] text-white py-16 md:py-24">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 text-center">
+      <section className="bg-[#111] text-white py-14 md:py-20">
+        <div className="max-w-[700px] mx-auto px-4 md:px-6 text-center">
           <span className="inline-block bg-white/10 text-white text-xs font-semibold px-4 py-1.5 rounded-full mb-5 tracking-wide uppercase">
-            For House Help in Kenya
+            For Domestic Workers
           </span>
-          <h1 className="text-[36px] md:text-[52px] font-extrabold tracking-tight leading-[1.1] mb-5 max-w-3xl mx-auto">
-            Find your next household job — fast
+          <h1 className="text-[32px] md:text-[46px] font-extrabold tracking-tight leading-[1.1] mb-4">
+            Register as a Domestic Worker
           </h1>
-          <p className="text-white/70 text-[16px] mb-8 max-w-xl mx-auto leading-relaxed">
-            Hundreds of verified families in Nairobi, Mombasa, Kisumu and across Kenya are actively looking for housegirls, nannies, cooks and caregivers.
+          <p className="text-white/70 text-[15px] leading-relaxed max-w-lg mx-auto">
+            Fill in the form below. We will contact you within 2 business days to arrange an interview and vetting. Your details are never posted publicly.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={() => navigate('/login?mode=signup&userType=housegirl')}
-              className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-8 text-[15px] font-semibold"
-            >
-              Register Free — Start Today
-            </Button>
-            <Button
-              onClick={() => navigate('/login')}
-              variant="outline"
-              className="rounded-full border-white/40 text-white hover:bg-white/10 h-12 px-8 text-[15px]"
-            >
-              Already registered? Login
-            </Button>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-4 mt-8 text-[13px] text-white/60 font-medium">
-            <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> Free to register</span>
-            <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> KSh 100 per application</span>
-            <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> No agency commission</span>
-            <span className="flex items-center gap-1.5"><CheckCircle size={14} className="text-green-400" /> Direct contact with employer</span>
-          </div>
         </div>
       </section>
 
-      {/* HOW IT WORKS */}
-      <section className="bg-white py-16 md:py-20 border-b border-gray-100">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-3 tracking-tight">How it works for you</h2>
-          <p className="text-center text-[#666] text-sm max-w-md mx-auto mb-10">Three simple steps to land your next job</p>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                step: '1',
-                title: 'Register Free',
-                desc: 'Create your free account in minutes. No upfront fee. No agency commission deducted from your salary.',
-                icon: '👤',
-              },
-              {
-                step: '2',
-                title: 'Browse Jobs Free',
-                desc: 'View all live job listings from verified employers across Kenya — completely free, no payment needed to browse.',
-                icon: '🔍',
-              },
-              {
-                step: '3',
-                title: 'Pay KSh 100 to Apply',
-                desc: 'Found the right job? Pay a small KSh 100 application fee, attach a cover letter, and get hired directly.',
-                icon: '🤝',
-              },
-            ].map((item) => (
-              <div key={item.step} className="bg-gray-50 border border-gray-100 rounded-xl p-6 flex flex-col items-center text-center">
-                <div className="w-14 h-14 rounded-full bg-[#111] text-white flex items-center justify-center text-2xl mb-4">{item.icon}</div>
-                <div className="text-xs font-bold uppercase tracking-widest text-gray-400 mb-2">Step {item.step}</div>
-                <h3 className="text-lg font-bold mb-2">{item.title}</h3>
-                <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
+      {/* FORM / SUCCESS */}
+      <section className="py-14 md:py-20">
+        <div className="max-w-[640px] mx-auto px-4 md:px-6">
+
+          {status === 'success' ? (
+            <div className="bg-white border border-gray-100 rounded-2xl p-10 text-center shadow-sm">
+              <div className="w-16 h-16 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center mx-auto mb-5">
+                <CheckCircle size={32} />
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* LIVE JOB LISTINGS */}
-      <section className="bg-[#fafafa] py-16 md:py-20">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Latest job openings</h2>
-              <p className="text-[#666] text-sm mt-1">Posted by verified families — updated daily</p>
-            </div>
-            <Button onClick={() => navigate('/login?mode=signup&userType=housegirl')} className="rounded-full bg-[#111] text-white hover:bg-[#333] hidden sm:flex">
-              View All Jobs →
-            </Button>
-          </div>
-
-          {loadingJobs ? (
-            <div className="grid md:grid-cols-2 gap-4">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="bg-white border border-gray-200 rounded-xl p-5 animate-pulse">
-                  <div className="h-5 bg-gray-200 rounded w-1/2 mb-3" />
-                  <div className="h-4 bg-gray-200 rounded w-1/3 mb-2" />
-                  <div className="h-4 bg-gray-200 rounded w-2/3" />
-                </div>
-              ))}
-            </div>
-          ) : jobs.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
-              <Briefcase className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500">No job listings yet — check back soon.</p>
+              <h2 className="text-2xl font-bold mb-3">Details Received</h2>
+              <p className="text-[#555] leading-relaxed mb-6">
+                Thank you. We have received your registration details and will call you within 2 business days to arrange an interview and vetting.
+              </p>
+              <p className="text-sm text-gray-400 mb-8">
+                Your information is kept private and will never be displayed publicly on our website.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <a
+                  href={WHATSAPP}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-full px-6 h-11 transition-colors"
+                >
+                  <MessageCircle size={16} /> Follow up on WhatsApp
+                </a>
+                <Button onClick={() => navigate('/')} variant="outline" className="rounded-full border-[#111] text-[#111] px-6 h-11">
+                  Back to Home
+                </Button>
+              </div>
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 gap-4">
-              {jobs.map((job) => (
-                <div key={job.id} className="bg-white border border-gray-200 rounded-xl p-5 shadow-sm hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between gap-3 mb-3">
-                    <h3 className="text-base font-bold text-[#111] leading-tight">{job.title}</h3>
-                    <span className="shrink-0 bg-green-50 text-green-700 text-xs font-medium px-2.5 py-1 rounded-full border border-green-200">
-                      Active
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-3 text-sm text-gray-500 mb-4">
-                    {job.location && (
-                      <span className="flex items-center gap-1">
-                        <MapPin size={13} /> {job.location}
-                      </span>
-                    )}
-                    {(job.salary_min || job.salary_max) && (
-                      <span className="flex items-center gap-1">
-                        💰 KSh {(job.salary_min || 0).toLocaleString()}
-                        {job.salary_max ? ` – ${job.salary_max.toLocaleString()}` : '+'}
-                        /mo
-                      </span>
-                    )}
-                    {job.accommodation_type && (
-                      <span className="flex items-center gap-1">
-                        🏠 {accommodationLabel[job.accommodation_type] || job.accommodation_type}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs text-gray-400">
-                      {job.applications_count || 0} applicant{job.applications_count !== 1 ? 's' : ''}
-                    </span>
-                    <Button
-                      size="sm"
-                      onClick={() => navigate('/login?mode=signup&userType=housegirl')}
-                      className="rounded-full bg-[#111] text-white hover:bg-[#333] text-xs px-4"
-                    >
-                      Apply Now →
-                    </Button>
+            <div className="bg-white border border-gray-100 rounded-2xl p-8 shadow-sm">
+              <h2 className="text-xl font-bold mb-1">Your Details</h2>
+              <p className="text-sm text-gray-500 mb-7">
+                Fields marked <span className="text-red-500">*</span> are required.
+              </p>
+
+              <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                {/* Full name */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-1.5">
+                    Full Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Grace Wanjiku"
+                    value={form.full_name}
+                    onChange={set('full_name')}
+                    required
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-1.5">
+                    Phone Number <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="e.g. 07XX XXX XXX"
+                    value={form.phone}
+                    onChange={set('phone')}
+                    required
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+                  />
+                </div>
+
+                {/* County */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-1.5">
+                    County / Town <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.county}
+                    onChange={set('county')}
+                    required
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select your county / area</option>
+                    {COUNTIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                {/* Category */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-1.5">
+                    Type of Work <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={form.category}
+                    onChange={set('category')}
+                    required
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select a category</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+
+                {/* Experience */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-1.5">
+                    Years of Experience
+                  </label>
+                  <select
+                    value={form.experience_years}
+                    onChange={set('experience_years')}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent bg-white"
+                  >
+                    <option value="">Select</option>
+                    <option value="0">Less than 1 year</option>
+                    <option value="1">1 year</option>
+                    <option value="2">2 years</option>
+                    <option value="3">3 years</option>
+                    <option value="4">4 years</option>
+                    <option value="5">5+ years</option>
+                  </select>
+                </div>
+
+                {/* Live-in preference */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-2">
+                    Live-in or Live-out Preference
+                  </label>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { val: 'live_in', label: 'Live-in (I stay at the employer\'s home)' },
+                      { val: 'live_out', label: 'Live-out (I come daily and go home)' },
+                      { val: 'flexible', label: 'Flexible (either is fine)' },
+                    ].map(({ val, label }) => (
+                      <label key={val} className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="live_in"
+                          value={val}
+                          checked={form.live_in === val}
+                          onChange={set('live_in')}
+                          className="accent-teal-600 w-4 h-4"
+                        />
+                        <span className="text-sm text-[#333]">{label}</span>
+                      </label>
+                    ))}
                   </div>
                 </div>
-              ))}
+
+                {/* Notes */}
+                <div>
+                  <label className="block text-sm font-semibold text-[#111] mb-1.5">
+                    Anything else we should know? (optional)
+                  </label>
+                  <textarea
+                    rows={3}
+                    placeholder="e.g. I have my own ID card. I am comfortable with young children. I can start immediately."
+                    value={form.notes}
+                    onChange={set('notes')}
+                    className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent resize-none"
+                  />
+                </div>
+
+                {/* Error */}
+                {(status === 'error' || errorMsg) && (
+                  <div className="flex items-start gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700">
+                    <AlertCircle size={16} className="mt-0.5 shrink-0" />
+                    <span>{errorMsg || 'Something went wrong. Please try again.'}</span>
+                  </div>
+                )}
+
+                {/* Privacy note */}
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Your details are kept private and are only used internally for interview scheduling and placement. They will never be displayed publicly on our website.
+                </p>
+
+                <Button
+                  type="submit"
+                  disabled={status === 'submitting'}
+                  className="w-full rounded-xl bg-teal-700 hover:bg-teal-800 text-white h-12 text-[15px] font-semibold"
+                >
+                  {status === 'submitting' ? (
+                    <span className="flex items-center gap-2"><Loader2 size={18} className="animate-spin" /> Submitting…</span>
+                  ) : 'Submit My Details'}
+                </Button>
+              </form>
             </div>
           )}
 
-          <div className="mt-8 text-center">
-            <div className="inline-block bg-[#111] text-white rounded-xl px-6 py-4">
-              <p className="font-semibold mb-1">Want to see full job details + apply?</p>
-              <p className="text-sm text-white/70 mb-3">Register free, browse all jobs, and pay KSh 100 only when you apply.</p>
-              <Button
-                onClick={() => navigate('/login?mode=signup&userType=housegirl')}
-                className="rounded-full bg-white text-[#111] hover:bg-gray-100 font-semibold px-6"
-              >
-                Register Free & Browse Jobs
-              </Button>
-            </div>
+          {/* WhatsApp alternative */}
+          <div className="mt-8 bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
+            <p className="font-semibold text-[#111] mb-1">Prefer WhatsApp?</p>
+            <p className="text-sm text-gray-500 mb-4">
+              You can also message us directly on WhatsApp with your name, phone number, location and the type of work you do.
+            </p>
+            <a
+              href={WHATSAPP}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium text-sm rounded-full px-6 py-2.5 transition-colors"
+            >
+              <MessageCircle size={16} /> Message us on WhatsApp
+            </a>
           </div>
         </div>
       </section>
 
-      {/* WHY JOIN */}
-      <section className="bg-white py-16 md:py-20 border-t border-gray-100">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-10 tracking-tight">Why use Domestic Connect?</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-            {[
-              { icon: '🆓', title: 'Free to Register & Browse', desc: 'Create your profile and browse all job listings at no cost. Only pay KSh 100 when you apply.' },
-              { icon: '💼', title: 'Real Jobs, Real Families', desc: 'All listings are posted by verified employers actively looking for house help.' },
-              { icon: '📱', title: 'Direct Contact', desc: 'No agency in between. Employers contact you directly — keep 100% of your salary.' },
-              { icon: '🌍', title: 'All Major Cities', desc: 'Jobs in Nairobi, Mombasa, Kisumu, Nakuru and over 15 cities across Kenya.' },
-              { icon: '🔒', title: 'Secure & Private', desc: 'Your personal details are only shared with employers you accept.' },
-              { icon: '⚡', title: 'Get Hired Fast', desc: 'Employers can see your profile the moment you register. No waiting.' },
-            ].map((item) => (
-              <div key={item.title} className="bg-gray-50 rounded-xl p-5 border border-gray-100">
-                <div className="text-2xl mb-3">{item.icon}</div>
-                <h3 className="font-bold text-[#111] mb-1.5">{item.title}</h3>
-                <p className="text-sm text-gray-500 leading-relaxed">{item.desc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+      <Footer />
 
-      {/* TESTIMONIALS */}
-      <section className="bg-[#fafafa] py-16 border-t border-gray-100">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6">
-          <h2 className="text-2xl font-bold text-center mb-8 tracking-tight">What house help say</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {[
-              { text: '"I got a job in just 3 days. Such a wonderful family. Thank you Domestic Connect!"', name: 'Amina W.', loc: 'Mombasa', stars: 5 },
-              { text: '"Free to register and the jobs are real. I got hired in Nairobi within a week."', name: 'Grace K.', loc: 'Nairobi', stars: 5 },
-              { text: '"No salary deductions at all. The employer called me directly after seeing my profile."', name: 'Fatuma A.', loc: 'Kisumu', stars: 5 },
-            ].map((t) => (
-              <div key={t.name} className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                <div className="flex gap-0.5 mb-3">
-                  {Array.from({ length: t.stars }).map((_, i) => <Star key={i} size={14} className="text-yellow-400 fill-yellow-400" />)}
-                </div>
-                <p className="italic text-[#444] text-sm mb-4 leading-relaxed">"{t.text}"</p>
-                <p className="text-xs font-bold text-[#111]">— {t.name} · {t.loc}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA BANNER */}
-      <section className="bg-[#111] text-white py-14">
-        <div className="max-w-[700px] mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-extrabold mb-3 tracking-tight">Ready to find your next job?</h2>
-          <p className="text-white/70 mb-6 text-sm">Register free today. Browse all jobs for free. Pay KSh 100 only when you apply for a job.</p>
-          <Button
-            onClick={() => navigate('/login?mode=signup&userType=housegirl')}
-            className="rounded-full bg-white text-[#111] hover:bg-gray-100 h-12 px-10 text-base font-semibold"
-          >
-            Register Free Now →
-          </Button>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer className="bg-[#111] text-white border-t border-white/10 py-8">
-        <div className="max-w-[1100px] mx-auto px-4 md:px-6 flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-white/60">
-          <p>© {new Date().getFullYear()} Domestic Connect Kenya</p>
-          <div className="flex gap-4">
-            <Link to="/privacy-policy" className="hover:text-white transition-colors">Privacy Policy</Link>
-            <Link to="/terms" className="hover:text-white transition-colors">Terms of Service</Link>
-            <Link to="/contact-us" className="hover:text-white transition-colors">Contact Us</Link>
-          </div>
-        </div>
-      </footer>
-
-      {/* WhatsApp */}
+      {/* WhatsApp widget */}
       <div className="fixed bottom-5 left-5 z-50 group flex items-center">
         <span className="mr-2 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-sm font-medium text-[#111] shadow-md opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200 pointer-events-none">
           Chat with us
         </span>
         <a
-          href="https://wa.me/254726899113"
+          href={WHATSAPP}
           target="_blank"
           rel="noopener noreferrer"
           className="h-14 w-14 rounded-full bg-green-500 text-white shadow-xl inline-flex items-center justify-center hover:bg-green-600 transition-colors"

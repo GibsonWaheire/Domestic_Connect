@@ -93,6 +93,7 @@ def create_app(config_name=None):
     from app.routes.cross_entity import cross_entity_bp
     from app.routes.health import health_bp
     from app.routes.messages import messages_bp
+    from app.routes.worker_inquiries import worker_inquiries_bp
 
     app.register_blueprint(auth_bp, url_prefix='/api/auth')
     app.register_blueprint(profiles_bp, url_prefix='/api/profiles')
@@ -108,6 +109,7 @@ def create_app(config_name=None):
     app.register_blueprint(cross_entity_bp, url_prefix='/api/cross-entity')
     app.register_blueprint(health_bp, url_prefix='/api')
     app.register_blueprint(messages_bp, url_prefix='/api/messages')
+    app.register_blueprint(worker_inquiries_bp, url_prefix='/api/worker-inquiries')
     
     # Error handlers
     @app.errorhandler(404)

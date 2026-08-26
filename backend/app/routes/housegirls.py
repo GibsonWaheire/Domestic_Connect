@@ -174,7 +174,30 @@ def get_unlock_count(housegirl_id, target_profile_id=None):
 
 @housegirls_bp.route('/', methods=['GET'])
 def get_housegirls():
-    """Get all housegirl profiles with filtering"""
+    """Get all housegirl profiles — admin only."""
+    # Block public access: require a valid Firebase token belonging to an admin user
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return jsonify({'error': 'Admin access required'}), 403
+    try:
+        token = auth_header.split(' ')[1]
+        firebase_user = verify_firebase_token(token)
+        if not firebase_user:
+            return jsonify({'error': 'Invalid token'}), 403
+        user_docs = list(
+            db.collection('users')
+            .where('firebase_uid', '==', firebase_user.get('uid'))
+            .limit(1)
+            .stream()
+        )
+        if not user_docs:
+            return jsonify({'error': 'User not found'}), 403
+        caller = user_docs[0].to_dict()
+        if not caller.get('is_admin') and caller.get('user_type') not in ('admin',):
+            return jsonify({'error': 'Admin access required'}), 403
+    except Exception:
+        return jsonify({'error': 'Admin access required'}), 403
+
     try:
         # Query parameters for filtering
         location = request.args.get('location', '').lower()

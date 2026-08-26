@@ -321,12 +321,12 @@ const EmployerDashboard = () => {
   };
 
   const sidebarItems = [
-    { id: 'housegirls', label: 'Browse Housegirls', icon: Users },
-    { id: 'contacts',   label: 'My Contacts',       icon: Phone },
-    { id: 'jobs',       label: 'Post a Job',         icon: Briefcase },
-    { id: 'messages',   label: 'Messages',           icon: MessageCircle },
-    { id: 'agency',     label: 'Agency Services',    icon: Building2 },
-    { id: 'settings',   label: 'Settings',           icon: SettingsIcon },
+    { id: 'housegirls', label: 'Browse Workers',  icon: Users },
+    { id: 'contacts',   label: 'My Contacts',     icon: Phone },
+    { id: 'jobs',       label: 'Post a Job',      icon: Briefcase },
+    { id: 'messages',   label: 'Messages',        icon: MessageCircle },
+    { id: 'agency',     label: 'Agency Services', icon: Building2 },
+    { id: 'settings',   label: 'Settings',        icon: SettingsIcon },
   ] as const;
 
   // ─── Section renderer ────────────────────────────────────────────────────────

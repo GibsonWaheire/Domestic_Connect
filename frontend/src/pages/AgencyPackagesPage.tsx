@@ -134,18 +134,18 @@ const AgencyPackagesPage = () => {
       <section className="bg-white py-16 md:py-20 border-b border-gray-100">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6">
           <div className="text-center mb-10">
-            <span className="inline-block bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">For Employers</span>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">Hire directly — pay only to connect</h2>
-            <p className="text-gray-500 text-sm max-w-md mx-auto">Browse all worker profiles free. Pay KSh 200 only when you're ready to contact a specific housegirl.</p>
+            <span className="inline-block bg-teal-50 text-teal-700 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">For Employers</span>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">One fee. Full vetting. Personal matching.</h2>
+            <p className="text-gray-500 text-sm max-w-md mx-auto">Every worker is personally interviewed by us before you ever meet them. Pay once — no recurring charges.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { icon: <Users size={22} />, title: 'Browse Profiles', price: 'Free', desc: 'View hundreds of verified housegirl, nanny, cook and caregiver profiles — no payment needed.' },
-              { icon: <Lock size={22} />, title: 'Unlock Contact', price: 'KSh 200', desc: 'Pay once per worker to reveal their phone number and email. Direct contact — no middleman.' },
-              { icon: <Briefcase size={22} />, title: 'Post a Job', price: 'Free', desc: 'Post your job listing and let housegirls apply directly to you. Review and message applicants easily.' },
+              { icon: <Users size={22} />, title: 'Register & Pay', price: 'KES 1,500', desc: 'One-time registration fee covers our full vetting and matching service. Pay via M-Pesa or card through Pesapal.' },
+              { icon: <Briefcase size={22} />, title: 'Tell Us Your Needs', price: 'Included', desc: 'Submit a short form: role, location, live-in or live-out, duties and salary budget. We do the matching.' },
+              { icon: <Lock size={22} />, title: 'We Match You', price: '24–48 hrs', desc: 'Our team personally matches you with a vetted, interviewed worker and facilitates the introduction.' },
             ].map(item => (
               <div key={item.title} className="bg-gray-50 border border-gray-100 rounded-xl p-6 flex flex-col">
-                <div className="w-10 h-10 rounded-lg bg-[#111] text-white flex items-center justify-center mb-4">{item.icon}</div>
+                <div className="w-10 h-10 rounded-lg bg-teal-700 text-white flex items-center justify-center mb-4">{item.icon}</div>
                 <h3 className="font-bold text-lg mb-1">{item.title}</h3>
                 <p className="text-2xl font-extrabold text-[#111] mb-3">{item.price}</p>
                 <p className="text-gray-500 text-sm leading-relaxed">{item.desc}</p>
@@ -153,26 +153,26 @@ const AgencyPackagesPage = () => {
             ))}
           </div>
           <div className="mt-8 text-center">
-            <Button onClick={() => navigate('/housegirls')} className="rounded-full bg-[#111] hover:bg-[#333] text-white px-8 h-11">
-              Browse Housegirls Free →
+            <Button onClick={() => navigate('/agency-marketplace')} className="rounded-full bg-teal-700 hover:bg-teal-800 text-white px-8 h-11">
+              Find a Worker — Register Now →
             </Button>
           </div>
         </div>
       </section>
 
-      {/* HOUSEGIRL PRICING */}
+      {/* WORKER PRICING */}
       <section className="bg-[#fafafa] py-16 md:py-20 border-b border-gray-100">
         <div className="max-w-[1100px] mx-auto px-4 md:px-6">
           <div className="text-center mb-10">
-            <span className="inline-block bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">For Housegirls</span>
-            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">Register free. Pay only when you apply.</h2>
-            <p className="text-gray-500 text-sm max-w-md mx-auto">No salary deductions. No agency commission. Keep 100% of your earnings.</p>
+            <span className="inline-block bg-gray-100 text-gray-600 text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-widest">For Workers</span>
+            <h2 className="text-2xl md:text-3xl font-bold tracking-tight mb-2">Register your details — we'll call you.</h2>
+            <p className="text-gray-500 text-sm max-w-md mx-auto">No public profile. No listing fee. Your details go directly to our vetting team.</p>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { step: '1', icon: '👤', title: 'Create Profile', price: 'Free', desc: 'Set up your full profile with your skills, experience, location, and a profile photo. Takes 5 minutes.' },
-              { step: '2', icon: '🔍', title: 'Browse Jobs', price: 'Free', desc: 'See all active job listings from verified families across Kenya — Nairobi, Mombasa, Kisumu and more.' },
-              { step: '3', icon: '📝', title: 'Apply for a Job', price: 'KSh 100', desc: 'Found the right job? Pay a small KSh 100 fee to apply, attach a short cover letter, and connect directly.' },
+              { step: '1', icon: '📋', title: 'Submit Your Details', price: 'Free', desc: 'Fill in your name, phone, location and type of work. Takes 2 minutes. Your details are never posted publicly.' },
+              { step: '2', icon: '📞', title: 'We Call You', price: 'Free', desc: 'Our team contacts you within 2 business days to arrange an in-person interview and vetting.' },
+              { step: '3', icon: '✅', title: 'Get Placed', price: 'Free', desc: 'Once vetted, we match you with a suitable employer. No fee charged to workers — ever.' },
             ].map(item => (
               <div key={item.title} className="bg-white border border-gray-100 rounded-xl p-6 flex flex-col items-center text-center shadow-sm">
                 <div className="w-14 h-14 rounded-full bg-[#111] text-white flex items-center justify-center text-2xl mb-4">{item.icon}</div>
@@ -184,8 +184,8 @@ const AgencyPackagesPage = () => {
             ))}
           </div>
           <div className="mt-8 text-center">
-            <Button onClick={() => navigate('/login?mode=signup&userType=housegirl')} className="rounded-full bg-[#111] hover:bg-[#333] text-white px-8 h-11">
-              Register Free as Housegirl →
+            <Button onClick={() => navigate('/for-housegirls')} className="rounded-full bg-[#111] hover:bg-[#333] text-white px-8 h-11">
+              Register as a Worker →
             </Button>
           </div>
         </div>

@@ -18,6 +18,13 @@ const BrowseHousegirls = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  // Admin-only: redirect non-admins away immediately
+  useEffect(() => {
+    if (user !== undefined && (!user || user.user_type !== 'admin')) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
+
   // State
   const [showUnlockModal, setShowUnlockModal] = useState(false);
   const [housegirlToUnlock, setHousegirlToUnlock] = useState<Housegirl | null>(null);

@@ -19,6 +19,8 @@ const API_BASE_URL =
   import.meta.env.VITE_API_BASE_URL ||
   'https://domesticconnect-production.up.railway.app';
 
+// Admin guard — enforced via useEffect in the component body
+
 type RoleType = 'House Help' | 'Nanny' | 'Cook' | 'Caregiver' | 'Cleaner';
 
 type Profile = {
@@ -107,6 +109,13 @@ const HousegirlsListPage = () => {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+
+  // Admin-only: redirect non-admins immediately
+  useEffect(() => {
+    if (user !== undefined && (!user || user.user_type !== 'admin')) {
+      navigate('/', { replace: true });
+    }
+  }, [user, navigate]);
 
   const getDashboardRoute = () => {
     if (!user) return '/';
