@@ -18,6 +18,7 @@ interface AuthContextType {
   handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => Promise<{ error: string | null; user?: User }>;
   signOut: (redirectTo?: string) => Promise<void>;
   checkSession: () => Promise<void>;
+  prepareAdminLogin: () => void;
   loginAsAdmin: (adminUser: User) => void;
   patchUser: (updates: Partial<User>) => void;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
@@ -258,6 +259,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const googleAuth = useGoogleAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
   const emailAuth = useEmailAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
+  // Call this BEFORE signInWithEmail so onAuthStateChanged short-circuits
+  // immediately instead of racing against the admin-verify fetch.
+  const prepareAdminLogin = useCallback(() => {
+    checkSessionDoneRef.current = true;
+  }, []);
+
   const loginAsAdmin = useCallback((adminUser: User) => {
     const normalized = normalizeUser({ ...adminUser, is_firebase_user: true, user_type: 'admin' as const });
     setUser(normalized);
@@ -276,7 +283,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle: googleAuth.handleGoogleSignIn,
     handleGoogleSignIn: googleAuth.handleGoogleSignIn,
     handleGoogleRedirectResult: googleAuth.handleGoogleRedirectResult,
-    signOut, checkSession, loginAsAdmin, patchUser, isFirebaseUser,
+    signOut, checkSession, prepareAdminLogin, loginAsAdmin, patchUser, isFirebaseUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

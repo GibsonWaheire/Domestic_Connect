@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuthEnhanced';
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
-  const { loginAsAdmin } = useAuth();
+  const { prepareAdminLogin, loginAsAdmin } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [adminExists, setAdminExists] = useState<boolean | null>(null); // null = loading
 
@@ -61,6 +61,9 @@ const AdminLoginPage = () => {
 
     let firebaseSignedIn = false;
     try {
+      // Block onAuthStateChanged from calling handleFirebaseUser while we
+      // complete admin-verify — prevents it from racing and resetting state.
+      prepareAdminLogin();
       const credential = await signInWithEmail(email, password);
       firebaseSignedIn = true;
       const token = await credential.user.getIdToken();
@@ -117,6 +120,7 @@ const AdminLoginPage = () => {
     setSubmitting(true);
     let firebaseSignedIn = false;
     try {
+      prepareAdminLogin();
       const credential = await signUpWithEmail(email, password);
       firebaseSignedIn = true;
       const token = await credential.user.getIdToken();
