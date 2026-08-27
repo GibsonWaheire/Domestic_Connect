@@ -46,12 +46,16 @@ export const useGoogleAuth = (
 
 
             if ((response as { status?: string }).status === 'account_exists') {
-                // An account already exists — clear any pending redirects first
+                // An account already exists — set user state first so AuthGuard
+                // doesn't redirect away while loading becomes false.
                 sessionStorage.removeItem('return_after_signup');
                 const existingType = response.user_type;
+                if (response.user) {
+                    setUser(response.user);
+                    setIsFirebaseUser(true);
+                }
                 setLoading(false);
 
-                // Redirect to their actual dashboard regardless
                 toast({ title: 'Login successful' });
                 switch (existingType) {
                     case 'employer': navigate('/employer-dashboard', { replace: true }); break;
@@ -60,7 +64,7 @@ export const useGoogleAuth = (
                     case 'admin': navigate('/admin-dashboard', { replace: true }); break;
                     default: navigate('/login', { replace: true });
                 }
-                return { error: null };
+                return { error: null, user: response.user };
             }
 
             if ((response as { status?: string; uid?: string }).status === 'role_required') {

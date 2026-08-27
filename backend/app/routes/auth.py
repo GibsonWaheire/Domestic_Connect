@@ -215,10 +215,13 @@ def verify_phone_auth():
             stored_user_type = existing_data.get('user_type')
 
             if mode == 'signup' and stored_user_type:
+                user_payload = {**existing_data, 'uid': uid, 'firebase_uid': uid}
+                user_payload.pop('password_hash', None)
                 return jsonify({
                     'status': 'account_exists',
                     'user_type': stored_user_type,
-                    'message': f'This number is already registered as an {stored_user_type}. Would you like to sign in instead?'
+                    'user': user_payload,
+                    'message': f'This account is already registered as an {stored_user_type}.'
                 }), 200
 
             if not stored_user_type:
