@@ -3,16 +3,24 @@ from app.services.auth_service import firebase_auth_required
 from app.firebase_init import db
 from app import limiter
 import logging
-# Commenting out middlewares that might rely on SQLAlchemy or need separate refactoring
-# from app.middleware.security import rate_limit, validate_json_input, JOB_POSTING_SCHEMA
-# from app.middleware.performance import cache_response, compress_response
-# from app.middleware.logging import log_request, log_error, log_user_action
+import re
 from datetime import datetime
 import uuid
 
 
 logger = logging.getLogger(__name__)
 jobs_bp = Blueprint('jobs', __name__)
+
+# Detect phone numbers and email addresses in free-text fields
+_CONTACT_RE = re.compile(
+    r'(\+?254|0[17])\d{7,9}'
+    r'|\b0\d{9}\b'
+    r'|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}',
+    re.IGNORECASE,
+)
+
+def _contains_contact_info(text: str) -> bool:
+    return bool(_CONTACT_RE.search(str(text or '')))
 
 @jobs_bp.route('/', methods=['GET'])
 @limiter.limit("60 per hour")
@@ -297,16 +305,24 @@ def get_job(job_id):
 @jobs_bp.route('/', methods=['POST'])
 @firebase_auth_required
 def create_job():
-    """Create new job posting (employers only)"""
+    """Create new job posting — admin only. Employers must pay via /api/payments/initiate-job-posting."""
     try:
         user = request.current_user
         if not user:
             return jsonify({'error': 'Unauthorized'}), 401
-        
-        # Check if user is employer
-        if getattr(user, 'user_type', '') != 'employer':
+
+        is_admin = getattr(user, 'is_admin', False)
+        user_type = getattr(user, 'user_type', '')
+
+        # Regular employers must go through the paid flow
+        if user_type == 'employer' and not is_admin:
+            return jsonify({
+                'error': 'Job posting requires a KES 1,500 payment. Please use the Post a Job section in your dashboard.'
+            }), 403
+
+        if user_type not in ('employer', 'admin') and not is_admin:
             return jsonify({'error': 'Only employers can create job postings'}), 403
-        
+
         data = request.get_json() or {}
 
         # Required fields
@@ -322,6 +338,12 @@ def create_job():
             return jsonify({'error': 'Description must be 3000 characters or fewer'}), 400
         if len(str(data['location'])) > 100:
             return jsonify({'error': 'Location must be 100 characters or fewer'}), 400
+
+        # Block contact info in title / description
+        if _contains_contact_info(data.get('title', '')):
+            return jsonify({'error': 'Job title must not contain phone numbers or email addresses.'}), 400
+        if _contains_contact_info(data.get('description', '')):
+            return jsonify({'error': 'Job description must not contain phone numbers or email addresses.'}), 400
 
         # Salary must be non-negative numbers
         try:
@@ -486,6 +508,8 @@ def apply_to_job(job_id):
         cover_letter = str(data.get('cover_letter', '') or '').strip()
         if len(cover_letter) > 2000:
             return jsonify({'error': 'Cover letter must be 2000 characters or fewer'}), 400
+        if _contains_contact_info(cover_letter):
+            return jsonify({'error': 'Your application must not include phone numbers or email addresses. The employer will contact you through the platform if interested.'}), 400
 
         # Create job application
         app_id = f'app_{uuid.uuid4().hex[:12]}'

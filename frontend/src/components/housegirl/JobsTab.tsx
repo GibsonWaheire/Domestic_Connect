@@ -127,6 +127,11 @@ const JobsTab = ({ user }: JobsTabProps) => {
   // Paying KSh 100 to apply — store job intent, redirect to Pesapal
   const handlePayAndApply = async () => {
     if (!modalJob) return;
+    const CONTACT_RE = /(\+?254|0[17])\d{7,9}|\b0\d{9}\b|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/i;
+    if (CONTACT_RE.test(coverLetter)) {
+      toast({ title: 'Remove contact info', description: 'Your cover letter must not include phone numbers or email addresses.', variant: 'destructive' });
+      return;
+    }
     setPaying(true);
     try {
       const headers = await authHeaders();
@@ -332,6 +337,7 @@ const JobsTab = ({ user }: JobsTabProps) => {
                 value={coverLetter}
                 onChange={e => setCoverLetter(e.target.value)}
               />
+              <p className="text-xs text-amber-700 mt-1">⚠ Do not include your phone number or email — the employer will contact you through the platform.</p>
             </div>
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
               <div className="flex items-center justify-between font-semibold mb-0.5">

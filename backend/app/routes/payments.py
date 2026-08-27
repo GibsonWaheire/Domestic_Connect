@@ -8,6 +8,7 @@ import uuid
 import logging
 import requests
 import os
+import re
 from urllib.parse import quote as url_quote
 
 
@@ -28,6 +29,19 @@ APPLY_CONTACT_UNLOCK_PACKAGE_ID = 'apply_contact_unlock'
 APPLY_CONTACT_UNLOCK_PRICE = 200
 JOB_POSTING_PACKAGE_ID = 'job_posting'
 JOB_POSTING_PRICE = 1500
+ADMIN_MATCH_PACKAGE_ID = 'admin_match'
+ADMIN_MATCH_PRICE = 1500
+
+# Detect phone numbers and email addresses in free-text fields
+_CONTACT_RE = re.compile(
+    r'(\+?254|0[17])\d{7,9}'       # Kenyan phone: 07xx, 01xx, +254, 254
+    r'|\b0\d{9}\b'                  # generic 10-digit starting with 0
+    r'|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}',  # email
+    re.IGNORECASE,
+)
+
+def _contains_contact_info(text: str) -> bool:
+    return bool(_CONTACT_RE.search(str(text or '')))
 
 PESAPAL_BASE_URL = os.getenv('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3')
 PESAPAL_CONSUMER_KEY = os.getenv('PESAPAL_CONSUMER_KEY', '')
@@ -269,6 +283,31 @@ def _complete_purchase(purchase_doc_id, purchase_data, pesapal_status_data):
                         'updated_at': datetime.utcnow().isoformat(),
                     }, merge=True)
                     logger.info('Job created from payment: job_id=%s employer=%s', job_id, pending_job.get('employer_id'))
+
+    # Create admin match request for admin_match purchases
+    if purchase_data.get('package_id') == ADMIN_MATCH_PACKAGE_ID:
+        match_job_id = purchase_data.get('job_id')
+        match_employer_id = purchase_data.get('user_id')
+        if match_job_id and match_employer_id:
+            existing_match = list(
+                db.collection('admin_match_requests')
+                .where('job_id', '==', match_job_id)
+                .where('employer_id', '==', match_employer_id)
+                .where('status', '==', 'pending')
+                .limit(1).stream()
+            )
+            if not existing_match:
+                match_id = f'match_{uuid.uuid4().hex[:12]}'
+                db.collection('admin_match_requests').document(match_id).set({
+                    'id': match_id,
+                    'job_id': match_job_id,
+                    'employer_id': match_employer_id,
+                    'purchase_id': purchase_doc_id,
+                    'status': 'pending',
+                    'created_at': datetime.utcnow().isoformat(),
+                    'updated_at': datetime.utcnow().isoformat(),
+                })
+                logger.info('Admin match request created: match_id=%s job=%s employer=%s', match_id, match_job_id, match_employer_id)
 
     # Activate employer plan (diy / concierge)
     pkg_id = purchase_data.get('package_id', '')
@@ -928,6 +967,11 @@ def initiate_job_posting():
         if len(str(data.get('description', ''))) > 3000:
             return jsonify({'error': 'Description must be 3000 characters or fewer'}), 400
 
+        if _contains_contact_info(data.get('title', '')):
+            return jsonify({'error': 'Job title must not contain phone numbers or email addresses.'}), 400
+        if _contains_contact_info(data.get('description', '')):
+            return jsonify({'error': 'Job description must not contain phone numbers or email addresses. Applicants will contact you through the platform.'}), 400
+
         try:
             salary_min = int(data['salary_min'])
             salary_max = int(data['salary_max'])
@@ -1011,6 +1055,99 @@ def initiate_job_posting():
 
     except Exception as e:
         logger.error('initiate_job_posting error: %s', e)
+        return jsonify({'error': 'Internal server error. Please try again.'}), 500
+
+
+@payments_bp.route('/request-admin-match', methods=['POST'])
+@firebase_auth_required
+@limiter.limit('5 per hour')
+def request_admin_match():
+    """Pay KES 1,500 for the admin to pick the 2 best candidates and send their details via WhatsApp."""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        if getattr(user, 'user_type', '') != 'employer':
+            return jsonify({'error': 'Only employers can request admin matching'}), 403
+
+        user_id = getattr(user, 'id')
+        data = request.get_json() or {}
+        job_id = data.get('job_id', '').strip()
+        if not job_id:
+            return jsonify({'error': 'job_id is required'}), 400
+
+        # Verify the job belongs to this employer
+        job_doc = db.collection('job_postings').document(job_id).get()
+        if not job_doc.exists:
+            return jsonify({'error': 'Job not found'}), 404
+        job = job_doc.to_dict()
+        if job.get('employer_id') != user_id:
+            return jsonify({'error': 'You can only request matching for your own jobs'}), 403
+
+        # Check no pending match request already exists
+        existing = list(
+            db.collection('admin_match_requests')
+            .where('job_id', '==', job_id)
+            .where('employer_id', '==', user_id)
+            .where('status', '==', 'pending')
+            .limit(1).stream()
+        )
+        if existing:
+            return jsonify({'error': 'A match request is already pending for this job'}), 409
+
+        purchase_id = str(uuid.uuid4())
+        email = getattr(user, 'email', '') or ''
+        first_name = getattr(user, 'first_name', '') or ''
+        job_title = job.get('title', 'Job')[:60]
+
+        # Ensure package exists
+        pkg_doc = db.collection('payment_packages').document(ADMIN_MATCH_PACKAGE_ID).get()
+        if not pkg_doc.exists:
+            db.collection('payment_packages').document(ADMIN_MATCH_PACKAGE_ID).set({
+                'id': ADMIN_MATCH_PACKAGE_ID,
+                'name': 'Admin Candidate Matching',
+                'description': 'Admin picks top 2 candidates and sends their WhatsApp details to employer',
+                'price': ADMIN_MATCH_PRICE,
+                'is_active': True,
+                'created_at': datetime.utcnow().isoformat(),
+            })
+
+        token = get_pesapal_token()
+        pesapal_response = submit_pesapal_order(
+            token=token,
+            amount=ADMIN_MATCH_PRICE,
+            purchase_id=purchase_id,
+            description=f'Candidate Matching: {job_title}',
+            billing_email=email,
+            billing_first_name=first_name,
+        )
+
+        order_tracking_id = pesapal_response.get('order_tracking_id')
+        redirect_url = pesapal_response.get('redirect_url')
+        if not order_tracking_id or not redirect_url:
+            logger.error('Pesapal admin-match payment failed: %s', pesapal_response)
+            return jsonify({'error': 'Failed to create payment. Please try again.'}), 502
+
+        db.collection('user_purchases').document(purchase_id).set({
+            'id': purchase_id,
+            'user_id': user_id,
+            'package_id': ADMIN_MATCH_PACKAGE_ID,
+            'amount': ADMIN_MATCH_PRICE,
+            'status': 'pending',
+            'order_tracking_id': order_tracking_id,
+            'merchant_reference': purchase_id,
+            'job_id': job_id,
+            'purchase_date': datetime.utcnow().isoformat(),
+        })
+
+        return jsonify({
+            'redirect_url': redirect_url,
+            'order_tracking_id': order_tracking_id,
+            'purchase_id': purchase_id,
+        }), 200
+
+    except Exception as e:
+        logger.error('request_admin_match error: %s', e)
         return jsonify({'error': 'Internal server error. Please try again.'}), 500
 
 

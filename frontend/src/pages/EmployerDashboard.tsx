@@ -187,6 +187,7 @@ const EmployerDashboard = () => {
   const [employerPlan, setEmployerPlan] = useState<'diy' | 'concierge' | null>(null);
   const [planPayLoading, setPlanPayLoading] = useState<'diy' | 'concierge' | null>(null);
   const [planPayError, setPlanPayError] = useState('');
+  const [requestingMatchJobId, setRequestingMatchJobId] = useState<string | null>(null);
 
   // Real-time data
   const { dashboardData, loading: dataLoading, error: dataError, refreshing, refreshData, lastUpdated } = useRealTimeData();
@@ -280,6 +281,13 @@ const EmployerDashboard = () => {
         toast({ title: 'Job Posted!', description: 'Payment confirmed. Your job is now live and accepting applications.' });
         setActiveSection('jobs');
         fetchMyJobs();
+      } else if (pending.package_id === 'admin_match') {
+        localStorage.removeItem(PESAPAL_PENDING_KEY);
+        toast({
+          title: 'Admin Matching Requested!',
+          description: 'Our team will review your applicants and send you the top 2 candidates via WhatsApp within 24 hours.',
+        });
+        setActiveSection('jobs');
       }
     } catch {
       localStorage.removeItem(PESAPAL_PENDING_KEY);
@@ -371,6 +379,14 @@ const EmployerDashboard = () => {
       toast({ title: 'Missing required fields', description: 'Please fill in title, location, and salary range.', variant: 'destructive' });
       return;
     }
+    if (containsContactInfo(jobFormData.title)) {
+      toast({ title: 'Invalid job title', description: 'Job title must not contain phone numbers or email addresses.', variant: 'destructive' });
+      return;
+    }
+    if (containsContactInfo(jobFormData.description)) {
+      toast({ title: 'Invalid description', description: 'Job description must not contain phone numbers or email addresses. Applicants will contact you through the platform.', variant: 'destructive' });
+      return;
+    }
     setIsCreatingJob(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
@@ -420,6 +436,32 @@ const EmployerDashboard = () => {
       fetchMyJobs();
     } catch (err: unknown) {
       toast({ title: 'Failed to delete job', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+    }
+  };
+
+  // Regex mirrors the backend — prevents phone numbers and emails in job text
+  const CONTACT_INFO_RE = /(\+?254|0[17])\d{7,9}|\b0\d{9}\b|[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}/i;
+  const containsContactInfo = (text: string) => CONTACT_INFO_RE.test(text);
+
+  const handleRequestAdminMatch = async (jobId: string) => {
+    setRequestingMatchJobId(jobId);
+    try {
+      const token = await FirebaseAuthService.getIdToken();
+      const res = await fetch(`${API_BASE_URL}/api/payments/request-admin-match`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ job_id: jobId }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to initiate payment'); }
+      const data = await res.json();
+      localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+        package_id: 'admin_match',
+        redirect_after: '/employer-dashboard',
+      }));
+      window.location.href = data.redirect_url;
+    } catch (err: unknown) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
+      setRequestingMatchJobId(null);
     }
   };
 
@@ -609,8 +651,14 @@ const EmployerDashboard = () => {
                     ))}
                   </div>
                 </div>
-                <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
-                  Posting a job requires a one-time payment of <strong>KES 1,500</strong> via M-Pesa or card. You will be redirected to Pesapal to complete payment, then your job goes live and you can view up to 7 applicants.
+                <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800 space-y-1">
+                  <p><strong>⚠ Please read before posting:</strong></p>
+                  <ul className="list-disc list-inside space-y-0.5 ml-1">
+                    <li>Posting a job requires a one-time payment of <strong>KES 1,500</strong> via M-Pesa or card.</li>
+                    <li>Once live, you can view up to <strong>7 applicants</strong> for free.</li>
+                    <li>Do <strong>not</strong> include phone numbers or email addresses in the title or description — contact happens through the platform.</li>
+                    <li>After seeing applicants, you can pay an additional <strong>KES 1,500</strong> for our admin to select the top 2 candidates and send you their WhatsApp contacts.</li>
+                  </ul>
                 </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <Button type="button" variant="outline" onClick={() => setShowJobForm(false)}>Cancel</Button>
@@ -685,11 +733,20 @@ const EmployerDashboard = () => {
                             Posted {job.created_at ? new Date(job.created_at).toLocaleDateString() : '—'}
                           </p>
                         </div>
-                        <div className="flex items-center gap-2 ml-3 shrink-0">
+                        <div className="flex items-center gap-2 ml-3 shrink-0 flex-wrap justify-end">
                           <button type="button" onClick={() => handleViewApplicants(job.id)}
                             className="text-xs text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1">
                             <Users className="h-3.5 w-3.5" />
-                            {expandedJobId === job.id ? 'Hide' : 'View Applicants'}
+                            {expandedJobId === job.id ? 'Hide' : `View (max 7)`}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRequestAdminMatch(job.id)}
+                            disabled={requestingMatchJobId === job.id}
+                            title="Pay KES 1,500 — admin picks top 2 candidates and sends their WhatsApp contacts to you"
+                            className="text-xs text-teal-700 hover:text-teal-900 font-medium border border-teal-300 bg-teal-50 hover:bg-teal-100 rounded px-2 py-0.5 transition-colors disabled:opacity-50 whitespace-nowrap"
+                          >
+                            {requestingMatchJobId === job.id ? 'Redirecting…' : '⭐ Get Top 2 — KES 1,500'}
                           </button>
                           <button type="button" onClick={() => handleDeleteJob(job.id)}
                             className="text-gray-400 hover:text-red-600 transition-colors" title="Delete job">
