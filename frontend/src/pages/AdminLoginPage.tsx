@@ -3,10 +3,9 @@ import { Eye, EyeOff, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { signInWithEmail, resetPassword } from '@/lib/firebaseAuth';
-import { signUpWithEmail } from '@/lib/firebaseAuth';
+import { signInWithEmail, signUpWithEmail } from '@/lib/firebaseAuth';
 import { auth } from '@/lib/firebase';
-import { signOut } from 'firebase/auth';
+import { signOut, sendPasswordResetEmail } from 'firebase/auth';
 
 const AdminLoginPage = () => {
   const [mode, setMode] = useState<'login' | 'signup'>('login');
@@ -37,7 +36,12 @@ const AdminLoginPage = () => {
     setResetLoading(true);
     setError(null);
     try {
-      await resetPassword(email);
+      // Use the admin portal as the post-reset redirect so the user lands back here,
+      // not on the regular /login page (where admin sign-in is blocked).
+      await sendPasswordResetEmail(auth, email, {
+        url: 'https://domestic-connect.co.ke/dc-ops9k4/portal',
+        handleCodeInApp: false,
+      });
       setResetSent(true);
     } catch {
       setError('Could not send reset email. Check the address and try again.');
