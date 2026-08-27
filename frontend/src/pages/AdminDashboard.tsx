@@ -36,6 +36,7 @@ import {
   UserWithoutRole,
   AdminNotification,
   PendingAgencyOperator,
+  AdminMatchRequest,
 } from '@/lib/api';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
 import { useAuth } from '@/hooks/useAuthEnhanced';
@@ -191,6 +192,10 @@ const AdminDashboard: React.FC = () => {
   const [paymentsLoading, setPaymentsLoading] = useState(false);
   const [paymentStatusFilter, setPaymentStatusFilter] = useState('all');
 
+  const [matchRequests, setMatchRequests] = useState<AdminMatchRequest[]>([]);
+  const [matchRequestsLoading, setMatchRequestsLoading] = useState(false);
+  const [resolvingMatchId, setResolvingMatchId] = useState<string | null>(null);
+
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
@@ -318,6 +323,35 @@ const AdminDashboard: React.FC = () => {
     loadJobs();
   }, [mainTab, token, jobStatusFilter, debouncedJobSearch, loadJobs]);
 
+  const loadMatchRequests = useCallback(async () => {
+    if (!token) return;
+    setMatchRequestsLoading(true);
+    try {
+      const res = await adminApi.getMatchRequests(token);
+      setMatchRequests((res as { match_requests: AdminMatchRequest[] }).match_requests || []);
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Failed to load match requests', variant: 'destructive' });
+    } finally {
+      setMatchRequestsLoading(false);
+    }
+  }, [token]);
+
+  const handleResolveMatch = async (matchId: string, status: string, notes?: string) => {
+    if (!token) return;
+    setResolvingMatchId(matchId);
+    try {
+      await adminApi.resolveMatchRequest(token, matchId, status, notes);
+      toast({ title: 'Updated', description: `Match request marked as ${status}.` });
+      setMatchRequests(prev => prev.map(m => m.id === matchId ? { ...m, status: status as AdminMatchRequest['status'], admin_notes: notes || m.admin_notes } : m));
+    } catch (e) {
+      console.error(e);
+      toast({ title: 'Error', description: 'Failed to update match request', variant: 'destructive' });
+    } finally {
+      setResolvingMatchId(null);
+    }
+  };
+
   const loadPayments = useCallback(async () => {
     if (!token) return;
     setPaymentsLoading(true);
@@ -339,6 +373,11 @@ const AdminDashboard: React.FC = () => {
     if (mainTab !== 'payments' || !token) return;
     loadPayments();
   }, [mainTab, token, paymentStatusFilter, loadPayments]);
+
+  useEffect(() => {
+    if (mainTab !== 'matches' || !token) return;
+    loadMatchRequests();
+  }, [mainTab, token, loadMatchRequests]);
 
   const fetchUserDetail = useCallback(
     async (uid: string) => {
@@ -832,6 +871,7 @@ const AdminDashboard: React.FC = () => {
             <TabsTrigger value="jobs">Jobs</TabsTrigger>
             <TabsTrigger value="payments">Payments</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="matches">Match Requests</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
 
@@ -1402,6 +1442,82 @@ const AdminDashboard: React.FC = () => {
                 </div>
               </>
             )}
+          </TabsContent>
+
+          <TabsContent value="matches" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Admin Match Requests</CardTitle>
+                <CardDescription>
+                  Employers who paid KES 1,500 for you to find their top 2 candidates and send via WhatsApp.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {matchRequestsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full" />)}
+                  </div>
+                ) : matchRequests.length === 0 ? (
+                  <p className="text-sm text-muted-foreground py-6 text-center">No match requests yet.</p>
+                ) : (
+                  <div className="space-y-4">
+                    {matchRequests.map((mr) => (
+                      <div key={mr.id} className="border rounded-lg p-4 space-y-2">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="font-semibold text-sm">
+                              {mr.job_title || `Job ${mr.job_id}`}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Employer: {mr.employer_name || mr.employer_id}
+                              {mr.employer_email && ` · ${mr.employer_email}`}
+                            </div>
+                            {mr.employer_whatsapp && (
+                              <div className="text-xs text-green-600 font-medium">
+                                WhatsApp: {mr.employer_whatsapp}
+                              </div>
+                            )}
+                            <div className="text-xs text-muted-foreground">
+                              Applicants: {mr.applicant_count ?? '—'} · Requested: {mr.created_at ? new Date(mr.created_at).toLocaleDateString() : '—'}
+                            </div>
+                            {mr.admin_notes && (
+                              <div className="text-xs text-muted-foreground italic">Notes: {mr.admin_notes}</div>
+                            )}
+                          </div>
+                          <Badge
+                            variant={mr.status === 'sent' ? 'default' : mr.status === 'cancelled' ? 'destructive' : 'outline'}
+                            className="shrink-0"
+                          >
+                            {mr.status}
+                          </Badge>
+                        </div>
+                        {mr.status === 'pending' && (
+                          <div className="flex gap-2 pt-1">
+                            <Button
+                              size="sm"
+                              disabled={resolvingMatchId === mr.id}
+                              onClick={() => handleResolveMatch(mr.id, 'sent')}
+                            >
+                              {resolvingMatchId === mr.id ? (
+                                <><RefreshCw className="h-3 w-3 mr-1 animate-spin" />Updating…</>
+                              ) : 'Mark as Sent'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={resolvingMatchId === mr.id}
+                              onClick={() => handleResolveMatch(mr.id, 'cancelled')}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="settings" className="space-y-6">

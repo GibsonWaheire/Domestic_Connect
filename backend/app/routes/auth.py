@@ -224,6 +224,13 @@ def verify_phone_auth():
                     'message': f'This account is already registered as an {stored_user_type}.'
                 }), 200
 
+            # Block admin accounts from regular login — must use /admin-verify
+            if mode == 'login' and (stored_user_type == 'admin' or existing_data.get('is_admin')):
+                return jsonify({
+                    'error': 'Administrator accounts must sign in through the staff portal.',
+                    'use_admin_login': True
+                }), 403
+
             if not stored_user_type:
                 return jsonify({
                     'status': 'role_required',
@@ -802,4 +809,132 @@ def request_password_reset():
 
     except Exception as e:
         logger.error(f'password_reset error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@auth_bp.route('/admin-exists', methods=['GET'])
+@limiter.limit("20 per minute")
+def admin_exists():
+    """Returns whether an admin account already exists (used to show/hide the one-time signup form)."""
+    try:
+        admins = list(db.collection('users').where('is_admin', '==', True).limit(1).stream())
+        return jsonify({'exists': len(admins) > 0}), 200
+    except Exception as e:
+        logger.error(f'admin_exists error: {e}')
+        return jsonify({'exists': True}), 200  # Fail-safe: hide signup form on error
+
+
+@auth_bp.route('/admin-verify', methods=['POST'])
+@firebase_auth_required
+@limiter.limit("5 per 5 minutes", key_func=_email_rate_key)
+@log_request()
+@log_error()
+def admin_verify():
+    """Admin-only sign-in endpoint. Email/password only — Google OAuth is blocked."""
+    try:
+        decoded_token = request.firebase_user or {}
+        uid = decoded_token.get('uid')
+        if not uid:
+            return jsonify({'error': 'Invalid credentials.'}), 401
+
+        # Block Google OAuth — admin must use email + password
+        sign_in_provider = decoded_token.get('firebase', {}).get('sign_in_provider', '')
+        if sign_in_provider == 'google.com':
+            return jsonify({'error': 'Administrator accounts cannot use Google sign-in. Use your email and password.'}), 403
+
+        user_id = f'user_{uid}'
+        user_doc = db.collection('users').document(user_id).get()
+
+        if not user_doc.exists:
+            return jsonify({'error': 'No administrator account found for these credentials.'}), 401
+
+        user_data = user_doc.to_dict() or {}
+        is_admin = user_data.get('is_admin', False)
+        stored_user_type = user_data.get('user_type', '')
+
+        if not is_admin and stored_user_type != 'admin':
+            return jsonify({
+                'error': 'This portal is for administrators only. Use the main sign-in page for your account.',
+                'use_regular_login': True
+            }), 403
+
+        session['user_id'] = user_id
+        session['user_type'] = 'admin'
+
+        payload = {**user_data, 'uid': uid, 'firebase_uid': uid}
+        payload.pop('password_hash', None)
+
+        logger.info(f'Admin login: {user_id}')
+        return jsonify({'status': 'ok', 'user_type': 'admin', 'user': payload}), 200
+
+    except Exception as e:
+        logger.error(f'admin_verify error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@auth_bp.route('/admin-signup', methods=['POST'])
+@firebase_auth_required
+@limiter.limit("3 per hour", key_func=_email_rate_key)
+@log_request()
+@log_error()
+def admin_signup():
+    """
+    One-time admin account creation. Permanently locked once an admin exists.
+    Email/password Firebase auth only — Google OAuth is rejected.
+    """
+    try:
+        decoded_token = request.firebase_user or {}
+        uid = decoded_token.get('uid')
+        if not uid:
+            return jsonify({'error': 'Invalid credentials.'}), 401
+
+        # Block Google OAuth
+        sign_in_provider = decoded_token.get('firebase', {}).get('sign_in_provider', '')
+        if sign_in_provider == 'google.com':
+            return jsonify({'error': 'Administrator accounts must use email and password, not Google.'}), 403
+
+        # Permanently lock: if any admin already exists, reject
+        existing_admins = list(db.collection('users').where('is_admin', '==', True).limit(1).stream())
+        if existing_admins:
+            return jsonify({'error': 'An administrator account already exists. No additional admin accounts can be created.'}), 403
+
+        # Also block if this UID already has a Firestore doc with a different role
+        user_id = f'user_{uid}'
+        existing_doc = db.collection('users').document(user_id).get()
+        if existing_doc.exists:
+            existing_data = existing_doc.to_dict() or {}
+            if existing_data.get('user_type') and existing_data.get('user_type') != 'admin':
+                return jsonify({'error': 'This Firebase account already has a different role and cannot become an admin.'}), 403
+
+        email = decoded_token.get('email', '')
+        timestamp = datetime.utcnow().isoformat()
+
+        user_data = {
+            'id': user_id,
+            'uid': uid,
+            'firebase_uid': uid,
+            'email': email,
+            'user_type': 'admin',
+            'is_admin': True,
+            'is_active': True,
+            'is_firebase_user': True,
+            'first_name': 'Admin',
+            'last_name': '',
+            'phone_number': None,
+            'photo_url': '',
+            'created_at': timestamp,
+            'updated_at': timestamp,
+            'profile_complete': True,
+        }
+
+        db.collection('users').document(user_id).set(user_data)
+        session['user_id'] = user_id
+        session['user_type'] = 'admin'
+
+        payload = {**user_data}
+        logger.info(f'Admin account created: {user_id} ({email})')
+        return jsonify({'status': 'ok', 'user_type': 'admin', 'user': payload}), 201
+
+    except Exception as e:
+        logger.error(f'admin_signup error: {str(e)}')
         return jsonify({'error': 'Something went wrong. Please try again.'}), 500

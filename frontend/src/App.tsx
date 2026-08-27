@@ -103,7 +103,9 @@ const App = () => (
                 <Route path="/home" element={<LandingPage />} />
                 <Route path="/register" element={<Navigate to="/login?mode=signup" replace />} />
                 <Route path="/login" element={<LoginPage />} />
-                <Route path="/admin/login" element={<AdminLoginPage />} />
+                <Route path="/dc-ops9k4/portal" element={<AdminLoginPage />} />
+                <Route path="/admin/login" element={<Navigate to="/" replace />} />
+                <Route path="/admin" element={<Navigate to="/" replace />} />
                 <Route path="/auth/action" element={<AuthActionPage />} />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
                 <Route path="/stats" element={<StatsPage />} />

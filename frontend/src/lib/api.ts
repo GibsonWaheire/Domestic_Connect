@@ -633,6 +633,21 @@ export interface AdminCreateUserResponse {
   };
 }
 
+export interface AdminMatchRequest {
+  id: string;
+  job_id: string;
+  employer_id: string;
+  employer_email?: string;
+  employer_name?: string;
+  employer_whatsapp?: string;
+  job_title?: string;
+  applicant_count?: number;
+  status: 'pending' | 'sent' | 'cancelled';
+  admin_notes?: string;
+  created_at: string;
+  resolved_at?: string;
+}
+
 // Admin API functions
 export const adminApi = {
   getDashboardStats: (token: string) =>
@@ -830,6 +845,18 @@ export const adminApi = {
   getAnalytics: (token: string) =>
     apiRequest<AdminAnalytics>('/api/admin/analytics', {
       headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  getMatchRequests: (token: string) =>
+    apiRequest<{ match_requests: AdminMatchRequest[] }>('/api/admin/match-requests', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+
+  resolveMatchRequest: (token: string, matchId: string, status: string, notes?: string) =>
+    apiRequest<{ success: boolean; status: string }>(`/api/admin/match-requests/${matchId}/resolve`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ status, notes: notes || '' }),
     }),
 };
 

@@ -1339,12 +1339,12 @@ def get_analytics():
                 revenue_growth_dict[pdate] += float(p.get('amount', 0))
                 
         revenue_growth = [{'date': k, 'total': v} for k, v in sorted(revenue_growth_dict.items())]
-        
+
         # Top agencies
         agencies = [a.to_dict() for a in db.collection('agencies').stream()]
         agencies.sort(key=lambda x: x.get('successful_placements', 0), reverse=True)
         top_agencies = agencies[:10]
-        
+
         return jsonify({
             'user_growth': user_growth,
             'user_types': user_types,
@@ -1356,9 +1356,56 @@ def get_analytics():
                 'verified_workers': item.get('verified_workers')
             } for item in top_agencies]
         }), 200
-        
+
     except Exception as e:
         logger.error(f'Error: {str(e)}')
         return jsonify({
             'error': 'Something went wrong. Please try again.'
         }), 500
+
+
+@admin_bp.route('/match-requests', methods=['GET'])
+@firebase_auth_required
+@admin_required
+def get_match_requests():
+    """Return all admin match requests, newest first."""
+    try:
+        docs = list(db.collection('admin_match_requests').stream())
+        requests_list = []
+        for doc in docs:
+            data = doc.to_dict() or {}
+            data['id'] = doc.id
+            requests_list.append(data)
+        requests_list.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        return jsonify({'match_requests': requests_list}), 200
+    except Exception as e:
+        logger.error(f'get_match_requests error: {e}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
+@admin_bp.route('/match-requests/<match_id>/resolve', methods=['PATCH'])
+@firebase_auth_required
+@admin_required
+def resolve_match_request(match_id):
+    """Mark a match request as sent (or update its status)."""
+    try:
+        data = request.get_json() or {}
+        status = data.get('status', 'sent')
+        notes = data.get('notes', '')
+        timestamp = datetime.utcnow().isoformat()
+
+        doc_ref = db.collection('admin_match_requests').document(match_id)
+        doc = doc_ref.get()
+        if not doc.exists:
+            return jsonify({'error': 'Match request not found.'}), 404
+
+        doc_ref.set({
+            'status': status,
+            'admin_notes': notes,
+            'resolved_at': timestamp,
+        }, merge=True)
+
+        return jsonify({'success': True, 'status': status}), 200
+    except Exception as e:
+        logger.error(f'resolve_match_request error: {e}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
