@@ -159,6 +159,17 @@ def firebase_user():
             user.update_profile(**updates)
 
         profile_payload = user.get_full_profile_data()
+
+        # Block admin accounts from signing in via Google / firebase_user sync.
+        # Admins must use email+password through the dedicated staff portal.
+        if profile_payload.get('user_type') == 'admin' or profile_payload.get('is_admin'):
+            session.pop('user_id', None)
+            session.pop('user_type', None)
+            return jsonify({
+                'error': 'Administrator accounts must sign in through the staff portal using email and password.',
+                'use_admin_login': True
+            }), 403
+
         firebase_decoded = getattr(request, 'firebase_user', None) or {}
         if profile_payload.get('user_type') == 'agency':
             allowed, agency_err = agency_staff_session_allowed(profile_payload, firebase_decoded)

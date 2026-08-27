@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { FirebaseAuthService } from '@/lib/firebaseAuth';
+import { auth } from '@/lib/firebase';
 import { API_BASE_URL } from '@/lib/apiConfig';
 import { User } from '@/lib/authUtils';
 
@@ -31,9 +32,13 @@ const PhoneNumberModal = ({ user, onSaved }: PhoneNumberModalProps) => {
       if (token) headers['Authorization'] = `Bearer ${token}`;
 
       const isHousegirl = user.user_type === 'housegirl';
+      // Use the Firebase UID directly so the backend auth check always matches.
+      // user.id in React state can be stale/mismatched for recovered accounts.
+      const firebaseUid = auth.currentUser?.uid;
+      const profileId = firebaseUid ? `user_${firebaseUid}` : user.id;
       const url = isHousegirl
-        ? `${API_BASE_URL}/api/housegirls/${user.id}`
-        : `${API_BASE_URL}/api/employers/${user.id}`;
+        ? `${API_BASE_URL}/api/housegirls/${profileId}`
+        : `${API_BASE_URL}/api/employers/${profileId}`;
       const body = isHousegirl ? { phone_number: cleaned } : { phone: cleaned };
 
       const res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });

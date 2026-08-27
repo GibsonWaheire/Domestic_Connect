@@ -208,6 +208,22 @@ export const useGoogleAuth = (
             const errorCode = typeof error === 'object' && error !== null && 'code' in error
                 ? String((error as { code: unknown }).code)
                 : undefined;
+            const errorMessage = error instanceof Error ? error.message : '';
+
+            // Backend blocked this Google sign-in because the account is an admin.
+            // Sign out of Firebase immediately so onAuthStateChanged doesn't fire
+            // and briefly set the user state before the error is shown.
+            if (errorMessage.toLowerCase().includes('administrator') || errorMessage.toLowerCase().includes('staff portal')) {
+                try { await FirebaseAuthService.signOut(); } catch { /* ignore */ }
+                setUser(null);
+                toast({
+                    title: 'Admin accounts: use the staff portal',
+                    description: 'Go to /dc-ops9k4/portal and sign in with your email and password.',
+                    variant: 'destructive'
+                });
+                return { error: errorMessage };
+            }
+
             const friendlyMessage = mapGoogleAuthError(errorCode);
 
             // Don't show a toast for silent cancellations

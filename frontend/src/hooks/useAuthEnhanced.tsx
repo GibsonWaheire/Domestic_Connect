@@ -124,11 +124,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setIsFirebaseUser(true);
     } catch (error) {
       if (!firebaseUser.email) return;
+      const message = error instanceof Error ? error.message : String(error);
+      // Admin account tried to use Google — sign out of Firebase immediately
+      // so the auth state never briefly shows them as logged in.
+      if (message.toLowerCase().includes('administrator') || message.toLowerCase().includes('staff portal')) {
+        try { await FirebaseAuthService.signOut(); } catch { /* ignore */ }
+        setUser(null);
+        setIsFirebaseUser(false);
+        toast({
+          title: 'Admin accounts: use the staff portal',
+          description: 'Sign in at /dc-ops9k4/portal with email and password.',
+          variant: 'destructive'
+        });
+        return;
+      }
       errorService.logError(error instanceof Error ? error : new Error(String(error)), 'Firebase user sync', 'medium');
       if (!userRef.current) return;
       toast({ title: "Profile Sync Required", description: "We could not verify your account role right now. Please try logging in again.", variant: "destructive" });
     }
-  }, [setNormalizedUser]);
+  }, [setNormalizedUser, setUser, setIsFirebaseUser]);
 
   useEffect(() => {
     let unsubscribe: () => void = () => { };
