@@ -4,9 +4,10 @@ import { Eye, EyeOff, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { signInWithEmail, signUpWithEmail } from '@/lib/firebaseAuth';
+import { signInWithEmail } from '@/lib/firebaseAuth';
 import { auth } from '@/lib/firebase';
 import { signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { API_BASE_URL } from '@/lib/apiConfig';
 import { useAuth } from '@/hooks/useAuthEnhanced';
 
 const AdminLoginPage = () => {
@@ -68,10 +69,10 @@ const AdminLoginPage = () => {
       firebaseSignedIn = true;
       const token = await credential.user.getIdToken();
 
-      const res = await fetch('/api/auth/admin-verify', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/verify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ mode: 'login' }),
         credentials: 'include',
       });
       const data = await res.json();
@@ -83,8 +84,13 @@ const AdminLoginPage = () => {
         return;
       }
 
-      // Directly set admin user state from the verify response — no extra
-      // network calls, no race with onAuthStateChanged, no AuthGuard redirect.
+      if (!data?.user?.is_admin && data?.user?.user_type !== 'admin') {
+        await signOut(auth);
+        firebaseSignedIn = false;
+        setError('This portal is for administrators only.');
+        return;
+      }
+
       if (data?.user) loginAsAdmin(data.user);
       navigate('/admin-dashboard', { replace: true });
     } catch (err: unknown) {

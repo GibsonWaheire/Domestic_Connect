@@ -160,24 +160,17 @@ def firebase_user():
 
         profile_payload = user.get_full_profile_data()
 
-        # Block admin accounts from signing in via Google / firebase_user sync.
-        # Admins must use email+password through the dedicated staff portal.
-        # Exception: allow through when they already have a valid admin session
-        # so that onAuthStateChanged can restore state after the staff-portal redirect.
-        if profile_payload.get('user_type') == 'admin' or profile_payload.get('is_admin'):
-            already_authed = (
-                session.get('user_type') == 'admin' and
-                session.get('user_id') == user.id
-            )
-            if not already_authed:
-                session.pop('user_id', None)
-                session.pop('user_type', None)
-                return jsonify({
-                    'error': 'Administrator accounts must sign in through the staff portal using email and password.',
-                    'use_admin_login': True
-                }), 403
-
+        # Block Google OAuth for admin accounts — must use email+password.
         firebase_decoded = getattr(request, 'firebase_user', None) or {}
+        sign_in_provider = firebase_decoded.get('firebase', {}).get('sign_in_provider', '')
+        if (profile_payload.get('user_type') == 'admin' or profile_payload.get('is_admin')) and sign_in_provider == 'google.com':
+            session.pop('user_id', None)
+            session.pop('user_type', None)
+            return jsonify({
+                'error': 'Administrator accounts must sign in using email and password, not Google.',
+                'use_admin_login': True
+            }), 403
+
         if profile_payload.get('user_type') == 'agency':
             allowed, agency_err = agency_staff_session_allowed(profile_payload, firebase_decoded)
             if not allowed:
@@ -241,20 +234,6 @@ def verify_phone_auth():
                     'user': user_payload,
                     'message': f'This account is already registered as an {stored_user_type}.'
                 }), 200
-
-            # Block admin accounts from regular login — must use /admin-verify.
-            # Exception: allow through when they already have a valid admin session
-            # (e.g. checkSession re-running after a hard redirect from admin-verify).
-            if mode == 'login' and (stored_user_type == 'admin' or existing_data.get('is_admin')):
-                already_authed = (
-                    session.get('user_type') == 'admin' and
-                    session.get('user_id') == user_id
-                )
-                if not already_authed:
-                    return jsonify({
-                        'error': 'Administrator accounts must sign in through the staff portal.',
-                        'use_admin_login': True
-                    }), 403
 
             if not stored_user_type:
                 return jsonify({
