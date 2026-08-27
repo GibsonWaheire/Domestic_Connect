@@ -144,25 +144,25 @@ export const useEmailAuth = (
 
             const pendingUnlockRawSignin = sessionStorage.getItem('unlock_after_login');
             if (pendingUnlockRawSignin) {
-                if (resolvedUserType === 'housegirl') {
-                    sessionStorage.removeItem('unlock_after_login');
-                    setLoading(false);
-                    return { error: 'This is a worker account. Only employer accounts can unlock contacts. Please sign up as an employer to access this feature.' };
-                }
-                try {
-                    const pendingUnlock = JSON.parse(pendingUnlockRawSignin);
-                    sessionStorage.removeItem('unlock_after_login');
-                    if (pendingUnlock.profileId) {
-                        navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
-                    } else if (pendingUnlock.packageId) {
-                        navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
-                    }
-                    return { error: null, user: response.user };
-                } catch {
-                    sessionStorage.removeItem('unlock_after_login');
+                sessionStorage.removeItem('unlock_after_login');
+                // Only follow the unlock redirect for employer accounts
+                if (resolvedUserType !== 'housegirl') {
+                    try {
+                        const pendingUnlock = JSON.parse(pendingUnlockRawSignin);
+                        if (pendingUnlock.profileId) {
+                            toast({ title: 'Login successful' });
+                            navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                            return { error: null, user: response.user };
+                        } else if (pendingUnlock.packageId) {
+                            toast({ title: 'Login successful' });
+                            navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
+                            return { error: null, user: response.user };
+                        }
+                    } catch { /* ignored */ }
                 }
             }
 
+            toast({ title: 'Login successful' });
             switch (resolvedUserType) {
                 case 'employer':
                     navigate('/employer-dashboard', { replace: true });

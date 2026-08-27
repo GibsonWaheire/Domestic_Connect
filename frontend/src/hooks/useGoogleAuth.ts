@@ -51,18 +51,8 @@ export const useGoogleAuth = (
                 const existingType = response.user_type;
                 setLoading(false);
 
-                if (resolvedRedirectUserType && existingType !== resolvedRedirectUserType) {
-                    // Cross-type attempt — deny and redirect to their correct dashboard
-                    const label = existingType === 'employer' ? 'employer' : 'worker';
-                    const otherLabel = resolvedRedirectUserType === 'employer' ? 'employer' : 'worker';
-                    toast({
-                        title: 'Wrong account type',
-                        description: `You have a ${label} account. You cannot log in as a ${otherLabel}.`,
-                        variant: 'destructive',
-                    });
-                }
-
                 // Redirect to their actual dashboard regardless
+                toast({ title: 'Login successful' });
                 switch (existingType) {
                     case 'employer': navigate('/employer-dashboard', { replace: true }); break;
                     case 'housegirl': navigate('/housegirl-dashboard', { replace: true }); break;
@@ -171,41 +161,26 @@ export const useGoogleAuth = (
             const resolvedUserType = response.user_type;
             setLoading(false);
 
-            // Cross-type login guard: deny if they tried to log in as a different type
-            if (resolvedRedirectUserType && resolvedUserType !== resolvedRedirectUserType) {
-                sessionStorage.removeItem('return_after_signup');
-                const label = resolvedUserType === 'employer' ? 'employer' : 'worker';
-                const otherLabel = resolvedRedirectUserType === 'employer' ? 'employer' : 'worker';
-                toast({
-                    title: 'Wrong account type',
-                    description: `You have a ${label} account. You cannot log in as a ${otherLabel}.`,
-                    variant: 'destructive',
-                });
-                switch (resolvedUserType) {
-                    case 'employer': navigate('/employer-dashboard', { replace: true }); break;
-                    case 'housegirl': navigate('/housegirl-dashboard', { replace: true }); break;
-                    case 'agency': navigate('/agency-dashboard', { replace: true }); break;
-                    default: navigate('/login', { replace: true });
-                }
-                return { error: null, user: response.user };
-            }
-
             const pendingUnlockRaw = sessionStorage.getItem('unlock_after_login');
             if (pendingUnlockRaw) {
-                try {
-                    const pendingUnlock = JSON.parse(pendingUnlockRaw);
-                    sessionStorage.removeItem('unlock_after_login');
-                    if (pendingUnlock.profileId) {
-                        navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
-                    } else if (pendingUnlock.packageId) {
-                        navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
-                    }
-                    return { error: null, user: response.user };
-                } catch {
-                    sessionStorage.removeItem('unlock_after_login');
+                sessionStorage.removeItem('unlock_after_login');
+                if (resolvedUserType !== 'housegirl') {
+                    try {
+                        const pendingUnlock = JSON.parse(pendingUnlockRaw);
+                        if (pendingUnlock.profileId) {
+                            toast({ title: 'Login successful' });
+                            navigate(`/housegirls?unlock=${pendingUnlock.profileId}`, { replace: true });
+                            return { error: null, user: response.user };
+                        } else if (pendingUnlock.packageId) {
+                            toast({ title: 'Login successful' });
+                            navigate(`/housegirls?bundle=${pendingUnlock.packageId}`, { replace: true });
+                            return { error: null, user: response.user };
+                        }
+                    } catch { /* ignored */ }
                 }
             }
 
+            toast({ title: 'Login successful' });
             switch (resolvedUserType) {
                 case 'employer':
                     navigate('/employer-dashboard', { replace: true });
