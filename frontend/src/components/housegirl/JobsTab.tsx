@@ -56,15 +56,31 @@ const JobsTab = ({ user }: JobsTabProps) => {
     };
   };
 
-  // After returning from Pesapal, auto-submit any pending application stored before redirect
+  // After returning from Pesapal, auto-submit any pending application — but only if payment was confirmed
   const checkPendingApplication = async () => {
     const raw = localStorage.getItem(PENDING_APPLICATION_KEY);
     if (!raw) return;
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { localStorage.removeItem(PENDING_APPLICATION_KEY); return; }
+
+    const { job_id, cover_letter: cl, order_tracking_id } = parsed;
+    if (!job_id) { localStorage.removeItem(PENDING_APPLICATION_KEY); return; }
+
     try {
-      const { job_id, cover_letter: cl } = JSON.parse(raw);
-      localStorage.removeItem(PENDING_APPLICATION_KEY);
-      if (!job_id) return;
       const headers = await authHeaders();
+
+      // Verify payment was actually completed before submitting
+      if (order_tracking_id) {
+        const statusRes = await fetch(`${API_BASE_URL}/api/payments/purchase-status/${order_tracking_id}`, { headers });
+        const statusData = await statusRes.json();
+        if (statusData.status !== 'completed') {
+          // Payment not confirmed (user cancelled or it failed) — discard pending application silently
+          localStorage.removeItem(PENDING_APPLICATION_KEY);
+          return;
+        }
+      }
+
+      localStorage.removeItem(PENDING_APPLICATION_KEY);
       const res = await fetch(`${API_BASE_URL}/api/jobs/${job_id}/apply`, {
         method: 'POST',
         headers,
@@ -153,10 +169,11 @@ const JobsTab = ({ user }: JobsTabProps) => {
         toast({ title: 'Invalid payment URL', variant: 'destructive' });
         return;
       }
-      // Store the application intent — will be submitted on return
+      // Store the application intent with payment reference — verified on return before submitting
       localStorage.setItem(PENDING_APPLICATION_KEY, JSON.stringify({
         job_id: modalJob.id,
         cover_letter: coverLetter,
+        order_tracking_id: data.order_tracking_id,
       }));
       localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
         order_tracking_id: data.order_tracking_id,
@@ -347,12 +364,12 @@ const JobsTab = ({ user }: JobsTabProps) => {
               <p className="text-xs text-blue-600">One-time fee per application. Pay via M-Pesa, card or bank through Pesapal.</p>
             </div>
           </div>
-          <DialogFooter className="gap-2">
-            <Button variant="outline" onClick={() => setModalJob(null)} disabled={paying}>Cancel</Button>
+          <DialogFooter className="flex-col-reverse sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setModalJob(null)} disabled={paying} className="w-full sm:w-auto">Cancel</Button>
             <Button
               onClick={handlePayAndApply}
               disabled={paying}
-              className="bg-[#111] hover:bg-[#333] text-white"
+              className="w-full sm:w-auto bg-[#111] hover:bg-[#333] text-white"
             >
               {paying
                 ? <><Loader2 className="h-4 w-4 animate-spin mr-2" />Redirecting...</>

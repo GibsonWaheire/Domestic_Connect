@@ -334,7 +334,7 @@ const HousegirlDashboard = () => {
         <div className="mb-6 flex space-x-1 bg-white rounded-lg p-1 shadow-sm">
           {[
             { id: 'overview', label: 'Overview', icon: Home },
-            { id: 'profile', label: 'My Profile', icon: User },
+            { id: 'profile', label: 'Profile', icon: User },
             { id: 'jobs', label: 'Jobs', icon: Briefcase },
             { id: 'messages', label: 'Messages', icon: MessageCircle },
             { id: 'settings', label: 'Settings', icon: Settings },
@@ -343,9 +343,10 @@ const HousegirlDashboard = () => {
               key={tab.id}
               variant={activeTab === tab.id ? 'default' : 'ghost'}
               onClick={() => setActiveTab(tab.id as typeof activeTab)}
-              className={`flex-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-1 text-xs sm:text-sm ${activeTab === tab.id ? 'bg-blue-600 text-white' : 'text-gray-600 hover:text-blue-600'}`}
             >
-              {tab.label}
+              <tab.icon className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">{tab.label}</span>
             </Button>
           ))}
         </div>
