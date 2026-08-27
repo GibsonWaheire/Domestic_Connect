@@ -649,7 +649,7 @@ def update_housegirl(housegirl_id):
                 user_updates['profile_photo_url'] = updates.get('profile_photo_url')
             profile_docs = list(
                 db.collection('profiles')
-                .where('user_id', '==', getattr(user, 'id'))
+                .where('user_id', '==', getattr(user, 'id', None))
                 .limit(1)
                 .stream()
             )
