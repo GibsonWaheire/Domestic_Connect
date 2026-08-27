@@ -109,7 +109,7 @@ Please describe what you were doing when this error occurred:
 [Your description here]
     `);
     
-    window.open(`mailto:support@domesticconnect.com?subject=${subject}&body=${body}`);
+    window.open(`mailto:support@domestic-connect.co.ke?subject=${subject}&body=${body}`);
   };
 
   render() {
@@ -186,10 +186,10 @@ Please describe what you were doing when this error occurred:
                 <p>
                   If this problem persists, please contact our support team at{' '}
                   <a
-                    href="mailto:support@domesticconnect.com"
+                    href="mailto:support@domestic-connect.co.ke"
                     className="text-blue-600 hover:underline"
                   >
-                    support@domesticconnect.com
+                    support@domestic-connect.co.ke
                   </a>
                 </p>
               </div>

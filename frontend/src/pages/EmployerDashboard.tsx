@@ -8,8 +8,6 @@ import { Housegirls } from '@/components/employer/Housegirls';
 import { Settings } from '@/components/employer/Settings';
 import { UnlockModal } from '@/components/employer/UnlockModal';
 import AppliedHousegirlsList from '@/components/employer/AppliedHousegirlsList';
-import PaymentModal from '@/components/PaymentModal';
-import type { PackageDetails } from '@/components/PaymentModal';
 import { MessageThread } from '@/components/employer/MessageThread';
 import { NotificationProvider } from '@/contexts/NotificationContext';
 import { filterHousegirls } from '@/utils/filterUtils';
@@ -29,16 +27,6 @@ import {
 } from '@/constants/employer';
 import { API_BASE_URL } from '@/lib/apiConfig';
 
-const CONTACT_UNLOCK_PACKAGE: PackageDetails = {
-  id: 'contact_unlock',
-  name: 'Contact Unlock',
-  price: 200,
-  agencyFee: 0,
-  platformFee: 200,
-  features: ['Phone number', 'Email address', 'In-platform messaging'],
-  color: 'green',
-  icon: Phone,
-};
 
 // ─── Employer Messages sub-component ─────────────────────────────────────────
 const EmployerMessages = () => {
@@ -157,6 +145,7 @@ const EmployerDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(6);
+  const [selectedRole, setSelectedRole] = useState('');
   const [selectedCommunity, setSelectedCommunity] = useState('');
   const [selectedAgeRange, setSelectedAgeRange] = useState('');
   const [selectedSalaryRange, setSelectedSalaryRange] = useState('');
@@ -236,10 +225,12 @@ const EmployerDashboard = () => {
       workType: hg.accommodation_type,
       livingArrangement: hg.accommodation_type,
       profileImage: hg.profile_photo_url,
+      role: hg.role || '',
     }));
+    // Already-unlocked contacts go to the bottom so fresh candidates appear first
     transformed.sort((a, b) => {
-      if (a.contactUnlocked && !b.contactUnlocked) return -1;
-      if (!a.contactUnlocked && b.contactUnlocked) return 1;
+      if (a.contactUnlocked && !b.contactUnlocked) return 1;
+      if (!a.contactUnlocked && b.contactUnlocked) return -1;
       return 0;
     });
     setHousegirls(transformed);
@@ -250,6 +241,27 @@ const EmployerDashboard = () => {
   useEffect(() => {
     if (dataError) toast({ title: 'Data Sync Error', description: 'Failed to sync latest data.', variant: 'destructive' });
   }, [dataError]);
+
+  // After a successful Pesapal payment, show the relevant toast and clean up
+  useEffect(() => {
+    const raw = localStorage.getItem(PESAPAL_PENDING_KEY);
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw);
+      if (pending.package_id === 'contact_unlock') {
+        localStorage.removeItem(PESAPAL_PENDING_KEY);
+        toast({ title: 'Contact Unlocked!', description: 'The contact details are now available in Browse Workers.' });
+        refreshData(false);
+      } else if (pending.package_id === 'job_posting') {
+        localStorage.removeItem(PESAPAL_PENDING_KEY);
+        toast({ title: 'Job Posted!', description: 'Payment confirmed. Your job is now live and accepting applications.' });
+        refreshData(false);
+      }
+    } catch {
+      localStorage.removeItem(PESAPAL_PENDING_KEY);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Check payment verification status
   useEffect(() => {
@@ -303,7 +315,7 @@ const EmployerDashboard = () => {
   const employerProfileCompletion = employerCompletionItems.reduce((sum, item) => sum + (item.completed ? item.weight : 0), 0);
 
   // Filtered / paginated housegirls
-  const filteredHousegirls = filterHousegirls(housegirls, searchTerm, selectedCommunity, selectedAgeRange, selectedSalaryRange, selectedEducation, selectedWorkType, selectedExperience, selectedLivingArrangement);
+  const filteredHousegirls = filterHousegirls(housegirls, searchTerm, selectedCommunity, selectedAgeRange, selectedSalaryRange, selectedEducation, selectedWorkType, selectedExperience, selectedLivingArrangement, selectedRole);
   const stats = { activeJobs: jobPostings.filter((j: any) => j.status === 'active').length };
 
   // Handlers
@@ -338,7 +350,7 @@ const EmployerDashboard = () => {
     setIsCreatingJob(true);
     try {
       const token = await FirebaseAuthService.getIdToken();
-      const res = await fetch(`${API_BASE_URL}/api/jobs/`, {
+      const res = await fetch(`${API_BASE_URL}/api/payments/initiate-job-posting`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
         body: JSON.stringify({
@@ -353,16 +365,17 @@ const EmployerDashboard = () => {
           application_deadline: jobFormData.deadline,
         }),
       });
-      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to create job'); }
-      const newJob = await res.json();
-      setJobPostings(prev => [newJob, ...prev]);
-      setShowJobForm(false);
-      setJobFormData({ title: '', description: '', location: '', salaryMin: '', salaryMax: '', workType: '', experience: '', education: '', skills: [], deadline: '' });
-      toast({ title: 'Job posted!', description: `"${newJob.title}" is now live.` });
-      refreshData(false);
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed to initiate payment'); }
+      const data = await res.json();
+      localStorage.setItem(PESAPAL_PENDING_KEY, JSON.stringify({
+        package_id: 'job_posting',
+        redirect_after: '/employer-dashboard',
+      }));
+      window.location.href = data.redirect_url;
     } catch (err: unknown) {
       toast({ title: 'Failed to post job', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
-    } finally { setIsCreatingJob(false); }
+      setIsCreatingJob(false);
+    }
   };
 
   const handleViewApplicants = (jobId: string) => {
@@ -435,6 +448,7 @@ const EmployerDashboard = () => {
             housegirls={housegirls}
             filteredHousegirls={filteredHousegirls}
             searchTerm={searchTerm}
+            selectedRole={selectedRole} setSelectedRole={setSelectedRole}
             selectedCommunity={selectedCommunity} setSelectedCommunity={setSelectedCommunity}
             selectedAgeRange={selectedAgeRange} setSelectedAgeRange={setSelectedAgeRange}
             selectedSalaryRange={selectedSalaryRange} setSelectedSalaryRange={setSelectedSalaryRange}
@@ -571,10 +585,13 @@ const EmployerDashboard = () => {
                     ))}
                   </div>
                 </div>
+                <div className="rounded-md bg-amber-50 border border-amber-200 px-4 py-3 text-sm text-amber-800">
+                  Posting a job requires a one-time payment of <strong>KES 1,500</strong> via M-Pesa or card. You will be redirected to Pesapal to complete payment, then your job goes live and you can view up to 7 applicants.
+                </div>
                 <div className="flex justify-end gap-3 pt-2">
                   <Button type="button" variant="outline" onClick={() => setShowJobForm(false)}>Cancel</Button>
                   <Button type="button" onClick={handleCreateJob} disabled={isCreatingJob}>
-                    {isCreatingJob ? 'Posting…' : 'Post Job'}
+                    {isCreatingJob ? 'Redirecting to payment…' : 'Post Job — KES 1,500'}
                   </Button>
                 </div>
               </div>
@@ -853,7 +870,7 @@ const EmployerDashboard = () => {
                     <li className="flex items-center gap-2"><CheckCircle className="h-4 w-4 text-teal-500 shrink-0" /> Unlock as many as you need</li>
                   </ul>
                 </div>
-                <Button onClick={() => setActiveSection('housegirls')} className="bg-teal-700 hover:bg-teal-800 text-white shrink-0 self-start">
+                <Button onClick={() => { setActiveSection('housegirls'); window.scrollTo(0, 0); }} className="bg-teal-700 hover:bg-teal-800 text-white shrink-0 self-start">
                   Browse Workers →
                 </Button>
               </div>
@@ -1062,24 +1079,14 @@ const EmployerDashboard = () => {
 
         {/* Browse-worker contact unlock (no job context — uses credit purchase flow) */}
         {showUnlockModal && housegirlToUnlock && (
-          <PaymentModal
-            package={CONTACT_UNLOCK_PACKAGE}
-            agency={{
-              id: 'contact_unlock_bundle',
-              name: 'Domestic Connect',
-              location: 'Kenya',
-              verification_status: 'verified',
-              subscription_tier: 'premium',
-              license_number: 'DC-2024-001',
-              rating: 5,
-              verified_workers: 0,
-              successful_placements: 0,
-            }}
-            targetProfileId={housegirlToUnlock.id}
-            housegirlId={housegirlToUnlock.id}
-            redirectAfter="/employer-dashboard"
+          <UnlockModal
+            isOpen={showUnlockModal}
             onClose={() => { setShowUnlockModal(false); setHousegirlToUnlock(null); }}
-            onSuccess={handleUnlockSuccess}
+            housegirlId={String(housegirlToUnlock.id)}
+            housegirlName={housegirlToUnlock.name}
+            jobId=""
+            onPaymentInitiated={() => {}}
+            onContactUnlocked={handleUnlockSuccess}
           />
         )}
       </div>

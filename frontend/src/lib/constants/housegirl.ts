@@ -5,7 +5,16 @@ export const COMMUNITY_OPTIONS = [
 ];
 
 export const ROLE_OPTIONS = [
-  'House Help', 'Nanny', 'Cook', 'Caregiver', 'Cleaner',
+  'House Help / Housegirl',
+  'Nanny / Childminder',
+  'Cook / Chef',
+  'Caregiver / Nurse',
+  'Cleaner',
+  'Gardener',
+  'Gateman / Security',
+  'Driver',
+  'Laundry Worker',
+  'Daily Casual',
 ];
 
 export const WORK_TYPE_OPTIONS = [
@@ -15,6 +24,7 @@ export const WORK_TYPE_OPTIONS = [
 export const SKILLS_OPTIONS = [
   'Cooking', 'Cleaning', 'Childcare', 'Eldercare', 'Laundry',
   'Ironing', 'Gardening', 'Driving', 'Shopping', 'Pet Care', 'First Aid',
+  'Security / Guarding', 'Gate Management', 'Car Washing', 'Planting / Landscaping',
 ];
 
 export const SALARY_RANGES = [

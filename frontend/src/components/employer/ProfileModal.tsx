@@ -126,17 +126,19 @@ export const ProfileModal = ({
                     <Phone className="h-5 w-5 text-green-600" />
                     <div>
                       <div className="font-medium text-gray-900">Phone Number</div>
-                      <div className="text-sm text-gray-600">+254 700 123 456</div>
+                      <div className="text-sm text-gray-600">{housegirl.phone || 'Not provided'}</div>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                    <Mail className="h-5 w-5 text-blue-600" />
-                    <div>
-                      <div className="font-medium text-gray-900">Email Address</div>
-                      <div className="text-sm text-gray-600">{housegirl.name.toLowerCase().replace(' ', '.')}@email.com</div>
+
+                  {housegirl.email && (
+                    <div className="flex items-center space-x-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <Mail className="h-5 w-5 text-blue-600" />
+                      <div>
+                        <div className="font-medium text-gray-900">Email Address</div>
+                        <div className="text-sm text-gray-600">{housegirl.email}</div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                   
                   <div className="flex items-center space-x-2">
                     <Button
@@ -205,21 +207,22 @@ export const ProfileModal = ({
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">About</h4>
                 <p className="text-sm text-gray-600">
-                  Experienced housegirl with {housegirl.experience} of professional experience. 
-                  Specializes in {housegirl.workType.toLowerCase()} work and is available for {housegirl.livingArrangement.toLowerCase()}.
+                  {housegirl.bio
+                    ? housegirl.bio
+                    : `Experienced worker with ${housegirl.experience || 'some'} of professional experience${housegirl.workType ? `. Work type: ${housegirl.workType}` : ''}${housegirl.livingArrangement ? `. Living arrangement: ${housegirl.livingArrangement}` : ''}.`}
                 </p>
               </div>
               
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Skills</h4>
-                <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-blue-100 text-blue-800">Cooking</Badge>
-                  <Badge className="bg-green-100 text-green-800">Cleaning</Badge>
-                  <Badge className="bg-purple-100 text-purple-800">Laundry</Badge>
-                  <Badge className="bg-orange-100 text-orange-800">Childcare</Badge>
-                  <Badge className="bg-pink-100 text-pink-800">Elderly Care</Badge>
+              {housegirl.skills && housegirl.skills.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Skills</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {housegirl.skills.map((skill) => (
+                      <Badge key={skill} className="bg-blue-100 text-blue-800">{skill}</Badge>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Languages</h4>

@@ -8,10 +8,10 @@ import {
   Filter, Users, MapPin, Clock, Star, Phone, MessageCircle, Eye, Edit, Trash2, AlertTriangle
 } from 'lucide-react';
 import { Housegirl } from '@/types/employer';
-import { 
-  COMMUNITY_OPTIONS, AGE_RANGE_OPTIONS, SALARY_RANGE_OPTIONS, 
-  EDUCATION_OPTIONS, WORK_TYPE_OPTIONS, EXPERIENCE_OPTIONS, 
-  LIVING_ARRANGEMENT_OPTIONS 
+import {
+  COMMUNITY_OPTIONS, AGE_RANGE_OPTIONS, SALARY_RANGE_OPTIONS,
+  EDUCATION_OPTIONS, WORK_TYPE_OPTIONS, EXPERIENCE_OPTIONS,
+  LIVING_ARRANGEMENT_OPTIONS, WORKER_ROLE_OPTIONS
 } from '@/constants/employer';
 import { useNotificationActions } from '@/hooks/useNotificationActions';
 import { ProfileModal } from '@/components/employer/ProfileModal';
@@ -20,6 +20,8 @@ interface HousegirlsProps {
   housegirls: Housegirl[];
   filteredHousegirls: Housegirl[];
   searchTerm: string;
+  selectedRole: string;
+  setSelectedRole: (role: string) => void;
   selectedCommunity: string;
   setSelectedCommunity: (community: string) => void;
   selectedAgeRange: string;
@@ -44,6 +46,8 @@ export const Housegirls = ({
   housegirls,
   filteredHousegirls,
   searchTerm,
+  selectedRole,
+  setSelectedRole,
   selectedCommunity,
   setSelectedCommunity,
   selectedAgeRange,
@@ -74,6 +78,7 @@ export const Housegirls = ({
   };
 
   const resetFilters = () => {
+    setSelectedRole('');
     setSelectedCommunity('');
     setSelectedAgeRange('');
     setSelectedSalaryRange('');
@@ -81,10 +86,7 @@ export const Housegirls = ({
     setSelectedWorkType('');
     setSelectedExperience('');
     setSelectedLivingArrangement('');
-    showSuccessNotification(
-      "Filters Reset", 
-      "All filters have been cleared."
-    );
+    showSuccessNotification('Filters Reset', 'All filters have been cleared.');
   };
 
   const paginatedHousegirls = filteredHousegirls.slice(
@@ -108,12 +110,12 @@ export const Housegirls = ({
                 <h2 className="text-2xl font-bold text-gray-900">
                   {filteredHousegirls.length}
                 </h2>
-                <p className="text-sm text-gray-600">Available Housegirls</p>
+                <p className="text-sm text-gray-600">Available Workers</p>
               </div>
             </div>
             <div className="text-right text-sm text-gray-500">
               <div>{housegirls.length} Total Profiles</div>
-              <div>{filteredHousegirls.length} Matching Criteria</div>
+              <div>{filteredHousegirls.length} Matching Filters</div>
             </div>
           </div>
         </CardContent>
@@ -146,7 +148,21 @@ export const Housegirls = ({
           </div>
         </div>
         {showFilters && (
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+              <div>
+                <label className="text-xs font-medium text-gray-300 mb-1 block">Role</label>
+                <select
+                  value={selectedRole}
+                  onChange={(e) => setSelectedRole(e.target.value)}
+                  className="w-full h-8 px-2 text-xs border border-gray-600 rounded bg-[#1b0c1a] text-gray-100 focus:outline-none focus:ring-1 focus:ring-gray-400"
+                >
+                  <option value="">All Roles</option>
+                  {WORKER_ROLE_OPTIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <label className="text-xs font-medium text-gray-300 mb-1 block">Community</label>
                 <select
@@ -269,6 +285,9 @@ export const Housegirls = ({
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-lg font-semibold text-gray-900">{housegirl.name}</h3>
+                      {housegirl.role && (
+                        <Badge className="bg-blue-50 text-blue-700 border-blue-200 text-xs">{housegirl.role}</Badge>
+                      )}
                       {housegirl.status === 'available' ? (
                         <Badge className="bg-green-100 text-green-800 border-green-200">AVAILABLE</Badge>
                       ) : (

@@ -9,13 +9,19 @@ export const filterHousegirls = (
   selectedEducation: string,
   selectedWorkType: string,
   selectedExperience: string,
-  selectedLivingArrangement: string
+  selectedLivingArrangement: string,
+  selectedRole: string = ''
 ): Housegirl[] => {
   return housegirls.filter((housegirl) => {
     // Search term filter
     if (searchTerm && !housegirl.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !housegirl.location.toLowerCase().includes(searchTerm.toLowerCase()) &&
         !housegirl.bio?.toLowerCase().includes(searchTerm.toLowerCase())) {
+      return false;
+    }
+
+    // Role filter
+    if (selectedRole && housegirl.role !== selectedRole) {
       return false;
     }
 

@@ -181,6 +181,7 @@ def get_housegirls_for_employer(current_user_id=None, include_unavailable=False)
                 'profile_id': profile_id,
                 'age': hg_profile.get('age'),
                 'bio': hg_profile.get('bio'),
+                'role': hg_profile.get('role') or user_data.get('role', ''),
                 'current_location': hg_profile.get('current_location') or user_data.get('location'),
                 'location': hg_profile.get('location') or user_data.get('location'),
                 'education': hg_profile.get('education'),

@@ -493,7 +493,9 @@ def get_job_applications(job_id):
             return jsonify({'error': 'You can only view applications for your own job postings'}), 403
         
         apps_docs = db.collection('job_applications').where('job_id', '==', job_id).stream()
-        
+
+        MAX_APPLICANTS_VISIBLE = 7
+
         result = []
         for doc in apps_docs:
             app = doc.to_dict()
@@ -501,7 +503,7 @@ def get_job_applications(job_id):
             hg_name = ""
             hg_email = ""
             hg_phone = ""
-            
+
             if hg_id:
                 hg_user_doc = db.collection('users').document(hg_id).get()
                 if hg_user_doc.exists:
@@ -509,7 +511,7 @@ def get_job_applications(job_id):
                     hg_name = f"{hg_u.get('first_name', '')} {hg_u.get('last_name', '')}".strip()
                     hg_email = hg_u.get('email', '')
                     hg_phone = hg_u.get('phone_number', '')
-                    
+
             result.append({
                 'id': app.get('id'),
                 'job_id': app.get('job_id'),
@@ -525,8 +527,10 @@ def get_job_applications(job_id):
                     'phone_number': hg_phone
                 }
             })
-        
-        return jsonify({'applications': result}), 200
+
+        result = result[:MAX_APPLICANTS_VISIBLE]
+
+        return jsonify({'applications': result, 'applicants_cap': MAX_APPLICANTS_VISIBLE}), 200
 
     except Exception as e:
         logger.error(f'Error: {str(e)}')

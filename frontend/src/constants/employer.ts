@@ -50,3 +50,16 @@ export const EXPERIENCE_OPTIONS = [
 export const LIVING_ARRANGEMENT_OPTIONS = [
   'Live-in', 'Live-out', 'Flexible'
 ];
+
+export const WORKER_ROLE_OPTIONS = [
+  'House Help / Housegirl',
+  'Nanny / Childminder',
+  'Cook / Chef',
+  'Caregiver / Nurse',
+  'Cleaner',
+  'Gardener',
+  'Gateman / Security',
+  'Driver',
+  'Laundry Worker',
+  'Daily Casual',
+];

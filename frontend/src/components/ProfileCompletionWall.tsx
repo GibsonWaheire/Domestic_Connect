@@ -262,10 +262,10 @@ const ProfileCompletionWall = ({ userId, user, onComplete }: ProfileCompletionWa
           {/* Sticky header */}
           <div className="p-6 border-b border-gray-100 sticky top-0 bg-white rounded-t-2xl z-10">
             <div className="text-center">
-              <div className="text-3xl mb-1">👩‍💼</div>
+              <div className="text-3xl mb-1">🪪</div>
               <h2 className="text-xl font-bold text-gray-900">Complete Your Profile</h2>
               <p className="text-sm text-gray-500 mt-1">
-                Fill in these details to appear in employer searches and gain full dashboard access.
+                Fill in your details to appear in employer searches and unlock full dashboard access.
               </p>
             </div>
           </div>

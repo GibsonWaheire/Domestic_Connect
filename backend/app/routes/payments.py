@@ -26,6 +26,8 @@ JOB_ACCESS_PACKAGE_ID = 'job_access'
 JOB_ACCESS_PACKAGE_PRICE = 100
 APPLY_CONTACT_UNLOCK_PACKAGE_ID = 'apply_contact_unlock'
 APPLY_CONTACT_UNLOCK_PRICE = 200
+JOB_POSTING_PACKAGE_ID = 'job_posting'
+JOB_POSTING_PRICE = 1500
 
 PESAPAL_BASE_URL = os.getenv('PESAPAL_BASE_URL', 'https://pay.pesapal.com/v3')
 PESAPAL_CONSUMER_KEY = os.getenv('PESAPAL_CONSUMER_KEY', '')
@@ -232,6 +234,42 @@ def _complete_purchase(purchase_doc_id, purchase_data, pesapal_status_data):
                 details={'access_id': access_id, 'housegirl_id': housegirl_id, 'job_id': job_id, 'package_id': APPLY_CONTACT_UNLOCK_PACKAGE_ID}
             )
 
+    # Create job posting for job_posting purchases
+    if purchase_data.get('package_id') == JOB_POSTING_PACKAGE_ID:
+        pending_job_id = purchase_data.get('pending_job_id')
+        if pending_job_id:
+            pending_doc = db.collection('pending_job_postings').document(pending_job_id).get()
+            if pending_doc.exists:
+                pending_job = pending_doc.to_dict()
+                if pending_job.get('status') != 'completed':
+                    job_id = f'job_{uuid.uuid4().hex[:12]}'
+                    job_data = {
+                        'id': job_id,
+                        'employer_id': pending_job.get('employer_id'),
+                        'title': pending_job.get('title', ''),
+                        'description': pending_job.get('description', ''),
+                        'location': pending_job.get('location', ''),
+                        'salary_min': pending_job.get('salary_min', 0),
+                        'salary_max': pending_job.get('salary_max', 0),
+                        'accommodation_type': pending_job.get('accommodation_type'),
+                        'required_experience': pending_job.get('required_experience'),
+                        'required_education': pending_job.get('required_education'),
+                        'skills_required': pending_job.get('skills_required', []),
+                        'languages_required': [],
+                        'status': 'active',
+                        'application_deadline': pending_job.get('application_deadline'),
+                        'applicants_cap': 7,
+                        'created_at': datetime.utcnow().isoformat(),
+                        'updated_at': datetime.utcnow().isoformat(),
+                    }
+                    db.collection('job_postings').document(job_id).set(job_data)
+                    db.collection('pending_job_postings').document(pending_job_id).set({
+                        'status': 'completed',
+                        'job_id': job_id,
+                        'updated_at': datetime.utcnow().isoformat(),
+                    }, merge=True)
+                    logger.info('Job created from payment: job_id=%s employer=%s', job_id, pending_job.get('employer_id'))
+
     # Activate employer plan (diy / concierge)
     pkg_id = purchase_data.get('package_id', '')
     if pkg_id in ('employer_plan_diy', 'employer_plan_concierge'):
@@ -373,6 +411,18 @@ def create_purchase():
                     'created_at': datetime.utcnow().isoformat()
                 }
                 db.collection('payment_packages').document(APPLY_CONTACT_UNLOCK_PACKAGE_ID).set(package_data)
+                package_dict = package_data
+            elif package_id == JOB_POSTING_PACKAGE_ID:
+                package_data = {
+                    'id': JOB_POSTING_PACKAGE_ID,
+                    'name': 'Job Posting',
+                    'description': 'Post a job listing and view up to 7 applicants',
+                    'price': JOB_POSTING_PRICE,
+                    'contacts_included': 0,
+                    'is_active': True,
+                    'created_at': datetime.utcnow().isoformat()
+                }
+                db.collection('payment_packages').document(JOB_POSTING_PACKAGE_ID).set(package_data)
                 package_dict = package_data
             else:
                 return jsonify({'error': 'Payment package not found'}), 404
@@ -849,6 +899,118 @@ def initiate_employer_plan():
 
     except Exception as e:
         logger.error('initiate_employer_plan error: %s', e)
+        return jsonify({'error': 'Internal server error. Please try again.'}), 500
+
+
+@payments_bp.route('/initiate-job-posting', methods=['POST'])
+@firebase_auth_required
+@limiter.limit('10 per hour')
+def initiate_job_posting():
+    """Initiate a KES 1,500 Pesapal payment to post a job. Creates a pending job record, creates the actual job on payment completion."""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        if getattr(user, 'user_type', '') != 'employer':
+            return jsonify({'error': 'Only employers can post jobs'}), 403
+
+        user_id = getattr(user, 'id')
+        data = request.get_json() or {}
+
+        # Required fields
+        required = ['title', 'location', 'salary_min', 'salary_max']
+        missing = [f for f in required if not data.get(f) and data.get(f) != 0]
+        if missing:
+            return jsonify({'error': f'Missing required fields: {", ".join(missing)}'}), 400
+
+        if len(str(data.get('title', ''))) > 200:
+            return jsonify({'error': 'Title must be 200 characters or fewer'}), 400
+        if len(str(data.get('description', ''))) > 3000:
+            return jsonify({'error': 'Description must be 3000 characters or fewer'}), 400
+
+        try:
+            salary_min = int(data['salary_min'])
+            salary_max = int(data['salary_max'])
+            if salary_min < 0 or salary_max < 0 or salary_min > salary_max:
+                raise ValueError
+        except (TypeError, ValueError):
+            return jsonify({'error': 'Invalid salary values. Min must be ≤ max and both non-negative.'}), 400
+
+        purchase_id = str(uuid.uuid4())
+        pending_job_id = f'pending_job_{uuid.uuid4().hex[:12]}'
+
+        pending_job_data = {
+            'id': pending_job_id,
+            'purchase_id': purchase_id,
+            'employer_id': user_id,
+            'title': str(data['title']).strip(),
+            'description': str(data.get('description', '')).strip(),
+            'location': str(data['location']).strip(),
+            'salary_min': salary_min,
+            'salary_max': salary_max,
+            'accommodation_type': data.get('accommodation_type'),
+            'required_experience': data.get('required_experience'),
+            'required_education': data.get('required_education'),
+            'skills_required': data.get('skills_required', []),
+            'application_deadline': data.get('application_deadline'),
+            'status': 'pending_payment',
+            'created_at': datetime.utcnow().isoformat(),
+        }
+        db.collection('pending_job_postings').document(pending_job_id).set(pending_job_data)
+
+        # Ensure package exists in Firestore
+        pkg_doc = db.collection('payment_packages').document(JOB_POSTING_PACKAGE_ID).get()
+        if not pkg_doc.exists:
+            db.collection('payment_packages').document(JOB_POSTING_PACKAGE_ID).set({
+                'id': JOB_POSTING_PACKAGE_ID,
+                'name': 'Job Posting',
+                'description': 'Post a job listing and view up to 7 applicants',
+                'price': JOB_POSTING_PRICE,
+                'contacts_included': 0,
+                'is_active': True,
+                'created_at': datetime.utcnow().isoformat(),
+            })
+
+        email = getattr(user, 'email', '') or ''
+        first_name = getattr(user, 'first_name', '') or ''
+
+        token = get_pesapal_token()
+        pesapal_response = submit_pesapal_order(
+            token=token,
+            amount=JOB_POSTING_PRICE,
+            purchase_id=purchase_id,
+            description=f'Job Posting: {str(data["title"]).strip()[:60]}',
+            billing_email=email,
+            billing_first_name=first_name,
+        )
+
+        order_tracking_id = pesapal_response.get('order_tracking_id')
+        redirect_url = pesapal_response.get('redirect_url')
+        if not order_tracking_id or not redirect_url:
+            db.collection('pending_job_postings').document(pending_job_id).delete()
+            logger.error('Pesapal job-posting payment failed: %s', pesapal_response)
+            return jsonify({'error': 'Failed to create payment. Please try again.'}), 502
+
+        db.collection('user_purchases').document(purchase_id).set({
+            'id': purchase_id,
+            'user_id': user_id,
+            'package_id': JOB_POSTING_PACKAGE_ID,
+            'amount': JOB_POSTING_PRICE,
+            'status': 'pending',
+            'order_tracking_id': order_tracking_id,
+            'merchant_reference': purchase_id,
+            'pending_job_id': pending_job_id,
+            'purchase_date': datetime.utcnow().isoformat(),
+        })
+
+        return jsonify({
+            'redirect_url': redirect_url,
+            'order_tracking_id': order_tracking_id,
+            'purchase_id': purchase_id,
+        }), 200
+
+    except Exception as e:
+        logger.error('initiate_job_posting error: %s', e)
         return jsonify({'error': 'Internal server error. Please try again.'}), 500
 
 

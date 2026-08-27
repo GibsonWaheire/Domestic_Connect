@@ -19,6 +19,7 @@ export interface Housegirl {
   workType: string;
   livingArrangement: string;
   profileImage?: string;
+  role?: string;
 }
 
 export interface JobPosting {
