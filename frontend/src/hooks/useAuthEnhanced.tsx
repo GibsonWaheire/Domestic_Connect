@@ -68,27 +68,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (firebaseCurrentUser) {
         const token = await FirebaseAuthService.getIdToken();
         if (token) {
-          const firebaseResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User; status?: string; uid?: string }>('/api/auth/verify', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
-            body: JSON.stringify({ mode: 'login' })
-          });
-          if (firebaseResponse.status === 'role_required') {
-            // User exists in Firebase Auth but has no role yet (e.g. incomplete signup recovery).
-            // Redirect to role selection so they can complete their account.
-            const pendingUid = firebaseResponse.uid || firebaseCurrentUser.uid;
-            navigate(`/login?mode=select-role&uid=${encodeURIComponent(pendingUid)}`, { replace: true });
-            return;
+          let verifyBlocked = false;
+          try {
+            const firebaseResponse = await apiRequest<{ user_type: 'employer' | 'housegirl' | 'agency' | 'admin'; user?: User; status?: string; uid?: string }>('/api/auth/verify', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` },
+              body: JSON.stringify({ mode: 'login' })
+            });
+            if (firebaseResponse.status === 'role_required') {
+              const pendingUid = firebaseResponse.uid || firebaseCurrentUser.uid;
+              navigate(`/login?mode=select-role&uid=${encodeURIComponent(pendingUid)}`, { replace: true });
+              return;
+            }
+            if (firebaseResponse.user) {
+              const normalizedUser = normalizeUser(firebaseResponse.user);
+              setUser(normalizedUser);
+              setIsFirebaseUser(true);
+              checkSessionDoneRef.current = true;
+              return;
+            }
+          } catch (verifyError) {
+            // If /verify returned 403 because this is an admin account, fall through to
+            // check_session so the cookie session set by admin-verify is used instead.
+            const msg = verifyError instanceof Error ? verifyError.message : '';
+            const isAdminBlock = msg.toLowerCase().includes('administrator') || msg.toLowerCase().includes('staff portal');
+            if (!isAdminBlock) throw verifyError;
+            verifyBlocked = true;
           }
-          if (firebaseResponse.user) {
-            const normalizedUser = normalizeUser(firebaseResponse.user);
-            setUser(normalizedUser);
-            setIsFirebaseUser(true);
-            checkSessionDoneRef.current = true;
-            return;
-          }
+          if (!verifyBlocked) return;
         }
       }
+      // Cookie-session fallback — also handles admin users whose Firebase token
+      // is blocked by /verify but whose server session was set by /admin-verify.
       const response = await apiRequest<{ user: User | null }>('/api/auth/check_session');
       if (response.user) {
         const normalizedUser = normalizeUser(response.user);
@@ -125,17 +136,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     } catch (error) {
       if (!firebaseUser.email) return;
       const message = error instanceof Error ? error.message : String(error);
-      // Admin account tried to use Google — sign out of Firebase immediately
-      // so the auth state never briefly shows them as logged in.
+      // The /firebase_user endpoint blocked this user because they are an admin.
+      // Two cases:
+      //   a) Admin signed in via Google → sign out of Firebase (Google not allowed for admin)
+      //   b) Admin signed in via email+password at the staff portal → the cookie session is
+      //      already set by /admin-verify; fall through to check_session to restore state.
       if (message.toLowerCase().includes('administrator') || message.toLowerCase().includes('staff portal')) {
-        try { await FirebaseAuthService.signOut(); } catch { /* ignore */ }
-        setUser(null);
-        setIsFirebaseUser(false);
-        toast({
-          title: 'Admin accounts: use the staff portal',
-          description: 'Sign in at /dc-ops9k4/portal with email and password.',
-          variant: 'destructive'
-        });
+        const signInProvider = firebaseUser.providerData?.[0]?.providerId;
+        if (signInProvider === 'google.com') {
+          // Google sign-in not allowed for admin — sign out and show message
+          try { await FirebaseAuthService.signOut(); } catch { /* ignore */ }
+          setUser(null);
+          setIsFirebaseUser(false);
+          toast({
+            title: 'Admin accounts: use the staff portal',
+            description: 'Sign in at /dc-ops9k4/portal with email and password.',
+            variant: 'destructive'
+          });
+        } else {
+          // Email/password admin — use the cookie session instead
+          try {
+            const sessionResp = await apiRequest<{ user: User | null }>('/api/auth/check_session');
+            if (sessionResp.user) {
+              setNormalizedUser(sessionResp.user);
+              setIsFirebaseUser(true);
+            }
+          } catch { /* ignore — admin dashboard will handle auth itself */ }
+        }
         return;
       }
       errorService.logError(error instanceof Error ? error : new Error(String(error)), 'Firebase user sync', 'medium');
