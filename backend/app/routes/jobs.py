@@ -133,6 +133,51 @@ def get_jobs():
             'error': 'Something went wrong. Please try again.'
         }), 500
 
+@jobs_bp.route('/my-jobs', methods=['GET'])
+@firebase_auth_required
+def get_my_jobs():
+    """Get all job postings created by the current employer"""
+    try:
+        user = request.current_user
+        if not user:
+            return jsonify({'error': 'Unauthorized'}), 401
+        if getattr(user, 'user_type', '') != 'employer':
+            return jsonify({'error': 'Only employers can view their jobs'}), 403
+
+        user_id = getattr(user, 'id')
+        job_docs = list(
+            db.collection('job_postings')
+            .where('employer_id', '==', user_id)
+            .stream()
+        )
+
+        result = []
+        for doc in job_docs:
+            job = doc.to_dict()
+            job_id = job.get('id') or doc.id
+            apps_count = len(list(
+                db.collection('job_applications').where('job_id', '==', job_id).stream()
+            ))
+            result.append({
+                'id': job_id,
+                'title': job.get('title', ''),
+                'location': job.get('location', ''),
+                'salary_min': job.get('salary_min'),
+                'salary_max': job.get('salary_max'),
+                'status': job.get('status', 'active'),
+                'applications_count': apps_count,
+                'created_at': job.get('created_at', ''),
+                'updated_at': job.get('updated_at', ''),
+            })
+
+        result.sort(key=lambda x: x.get('created_at', ''), reverse=True)
+        return jsonify({'jobs': result}), 200
+
+    except Exception as e:
+        logger.error(f'get_my_jobs error: {str(e)}')
+        return jsonify({'error': 'Something went wrong. Please try again.'}), 500
+
+
 @jobs_bp.route('/my-applications', methods=['GET'])
 @firebase_auth_required
 def get_my_applications():

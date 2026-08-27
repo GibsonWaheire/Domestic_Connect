@@ -162,6 +162,7 @@ const EmployerDashboard = () => {
   const [expandedJobId, setExpandedJobId] = useState<string | null>(null);
   const [jobApplicants, setJobApplicants] = useState<Record<string, any[]>>({});
   const [fetchingApplicants, setFetchingApplicants] = useState<string | null>(null);
+  const [loadingJobs, setLoadingJobs] = useState(false);
   const [jobFormData, setJobFormData] = useState({
     title: '', description: '', location: '',
     salaryMin: '', salaryMax: '', workType: '',
@@ -200,6 +201,28 @@ const EmployerDashboard = () => {
       }
     }
   }, [user, loading, navigate]);
+
+  // Fetch employer's own job postings directly (independent of dashboardData)
+  const fetchMyJobs = async () => {
+    if (!user?.id) return;
+    setLoadingJobs(true);
+    try {
+      const token = await FirebaseAuthService.getIdToken().catch(() => null);
+      const res = await fetch(`${API_BASE_URL}/api/jobs/my-jobs`, {
+        headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setJobPostings(data.jobs || []);
+      }
+    } catch { /* silent */ } finally { setLoadingJobs(false); }
+  };
+
+  // Reload jobs whenever the user navigates to the jobs section
+  useEffect(() => {
+    if (activeSection === 'jobs') fetchMyJobs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSection]);
 
   // Transform dashboard data
   useEffect(() => {
@@ -255,7 +278,8 @@ const EmployerDashboard = () => {
       } else if (pending.package_id === 'job_posting') {
         localStorage.removeItem(PESAPAL_PENDING_KEY);
         toast({ title: 'Job Posted!', description: 'Payment confirmed. Your job is now live and accepting applications.' });
-        refreshData(false);
+        setActiveSection('jobs');
+        fetchMyJobs();
       }
     } catch {
       localStorage.removeItem(PESAPAL_PENDING_KEY);
@@ -392,8 +416,8 @@ const EmployerDashboard = () => {
         headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
-      setJobPostings(prev => prev.filter((j: any) => j.id !== jobId));
       toast({ title: 'Job deleted.' });
+      fetchMyJobs();
     } catch (err: unknown) {
       toast({ title: 'Failed to delete job', description: err instanceof Error ? err.message : 'Unknown error', variant: 'destructive' });
     }
@@ -599,9 +623,17 @@ const EmployerDashboard = () => {
 
             {/* Job postings list */}
             <div className="rounded-xl border border-gray-200 bg-white p-4">
-              <h3 className="text-base font-semibold text-gray-900 mb-3">My Job Postings</h3>
-              {jobPostings.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-6">No job postings yet. Click "New Job" to get started.</p>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-base font-semibold text-gray-900">My Job Postings</h3>
+                <Button type="button" variant="outline" size="sm" onClick={fetchMyJobs} disabled={loadingJobs}>
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loadingJobs ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+              </div>
+              {loadingJobs ? (
+                <div className="py-6 text-center text-sm text-gray-400">Loading…</div>
+              ) : jobPostings.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-6">No job postings yet. Pay KES 1,500 to post your first job.</p>
               ) : (
                 <div className="space-y-3">
                   {jobPostings.map((job: any) => (
