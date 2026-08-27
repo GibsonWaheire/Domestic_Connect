@@ -42,7 +42,15 @@ def get_dashboard_stats():
         
         purchases_ref = list(db.collection('user_purchases').stream())
         total_purchases = len(purchases_ref)
-        total_revenue = sum(p.to_dict().get('amount', 0) for p in purchases_ref)
+        # Revenue = confirmed paid transactions only
+        total_revenue = sum(
+            p.to_dict().get('amount', 0) for p in purchases_ref
+            if p.to_dict().get('status') == 'completed'
+        )
+        unpaid_count = sum(
+            1 for p in purchases_ref
+            if p.to_dict().get('status') not in ('completed',)
+        )
         
         # Recent activity
         sorted_users = sorted([u.to_dict() for u in users_ref], key=lambda x: x.get('created_at', ''), reverse=True)
@@ -72,7 +80,8 @@ def get_dashboard_stats():
             'payments': {
                 'total_packages': total_packages,
                 'total_purchases': total_purchases,
-                'total_revenue': float(total_revenue)
+                'total_revenue': float(total_revenue),
+                'unpaid_count': unpaid_count
             },
             'recent_activity': {
                 'users': [{
