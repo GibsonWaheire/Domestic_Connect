@@ -11,7 +11,7 @@ import { useAuth } from '@/hooks/useAuthEnhanced';
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
-  const { checkSession } = useAuth();
+  const { loginAsAdmin } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [adminExists, setAdminExists] = useState<boolean | null>(null); // null = loading
 
@@ -80,9 +80,9 @@ const AdminLoginPage = () => {
         return;
       }
 
-      // Restore auth context (checkSession now works for admins with a valid session),
-      // then navigate without a hard reload so the user state is already set.
-      await checkSession();
+      // Directly set admin user state from the verify response — no extra
+      // network calls, no race with onAuthStateChanged, no AuthGuard redirect.
+      if (data?.user) loginAsAdmin(data.user);
       navigate('/admin-dashboard', { replace: true });
     } catch (err: unknown) {
       if (firebaseSignedIn) { try { await signOut(auth); } catch { /* ignore */ } }
@@ -137,7 +137,7 @@ const AdminLoginPage = () => {
         return;
       }
 
-      await checkSession();
+      if (data?.user) loginAsAdmin(data.user);
       navigate('/admin-dashboard', { replace: true });
     } catch (err: unknown) {
       if (firebaseSignedIn) { try { await signOut(auth); } catch { /* ignore */ } }

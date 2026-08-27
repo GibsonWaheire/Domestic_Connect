@@ -18,6 +18,7 @@ interface AuthContextType {
   handleGoogleRedirectResult: (mode?: 'login' | 'signup', userType?: 'employer' | 'housegirl' | 'agency' | 'admin') => Promise<{ error: string | null; user?: User }>;
   signOut: (redirectTo?: string) => Promise<void>;
   checkSession: () => Promise<void>;
+  loginAsAdmin: (adminUser: User) => void;
   patchUser: (updates: Partial<User>) => void;
   resetPassword: (email: string) => Promise<{ error: string | null }>;
   isFirebaseUser: boolean;
@@ -257,6 +258,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const googleAuth = useGoogleAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
   const emailAuth = useEmailAuth(navigate, setLoading, setNormalizedUser, setIsFirebaseUser, shouldSyncFirebaseUserRef);
 
+  const loginAsAdmin = useCallback((adminUser: User) => {
+    const normalized = normalizeUser({ ...adminUser, is_firebase_user: true, user_type: 'admin' as const });
+    setUser(normalized);
+    setIsFirebaseUser(true);
+    checkSessionDoneRef.current = true;
+    setAuthReady({ firebase: true, session: true });
+  }, [normalizeUser]);
+
   const patchUser = useCallback((updates: Partial<User>) => {
     setUser(prev => prev ? { ...prev, ...updates } : prev);
   }, []);
@@ -267,7 +276,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle: googleAuth.handleGoogleSignIn,
     handleGoogleSignIn: googleAuth.handleGoogleSignIn,
     handleGoogleRedirectResult: googleAuth.handleGoogleRedirectResult,
-    signOut, checkSession, patchUser, isFirebaseUser,
+    signOut, checkSession, loginAsAdmin, patchUser, isFirebaseUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
