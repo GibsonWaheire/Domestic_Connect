@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Shield } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -6,8 +7,11 @@ import { Button } from '@/components/ui/button';
 import { signInWithEmail, signUpWithEmail } from '@/lib/firebaseAuth';
 import { auth } from '@/lib/firebase';
 import { signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { useAuth } from '@/hooks/useAuthEnhanced';
 
 const AdminLoginPage = () => {
+  const navigate = useNavigate();
+  const { checkSession } = useAuth();
   const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [adminExists, setAdminExists] = useState<boolean | null>(null); // null = loading
 
@@ -76,7 +80,10 @@ const AdminLoginPage = () => {
         return;
       }
 
-      window.location.href = '/admin-dashboard';
+      // Restore auth context (checkSession now works for admins with a valid session),
+      // then navigate without a hard reload so the user state is already set.
+      await checkSession();
+      navigate('/admin-dashboard', { replace: true });
     } catch (err: unknown) {
       if (firebaseSignedIn) { try { await signOut(auth); } catch { /* ignore */ } }
       const code = (err as { code?: string })?.code;
@@ -130,7 +137,8 @@ const AdminLoginPage = () => {
         return;
       }
 
-      window.location.href = '/admin-dashboard';
+      await checkSession();
+      navigate('/admin-dashboard', { replace: true });
     } catch (err: unknown) {
       if (firebaseSignedIn) { try { await signOut(auth); } catch { /* ignore */ } }
       const code = (err as { code?: string })?.code;
